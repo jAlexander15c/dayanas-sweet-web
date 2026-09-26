@@ -219,6 +219,9 @@ body{background:var(--ds-blush);color:var(--ds-ink);-webkit-font-smoothing:antia
   .ds-story__img{aspect-ratio:4/3}
   .ds-announce{height:44px;font-size:12px}
 }
+/* Aparición al hacer scroll: solo con JS y sin movimiento reducido */
+.ds-js .ds-reveal{opacity:0;transform:translateY(18px);transition:opacity .6s var(--ds-ease),transform .7s var(--ds-ease);transition-delay:var(--ds-delay,0ms)}
+.ds-js .ds-reveal.is-in{opacity:1;transform:none}
 @media (hover:hover) and (pointer:fine){
   .ds-tile:hover{transform:translateY(-3px)}
   .ds-tile:hover img{transform:scale(1.05)}
@@ -226,6 +229,7 @@ body{background:var(--ds-blush);color:var(--ds-ink);-webkit-font-smoothing:antia
   .ds-insta a:hover img{transform:scale(1.06)}
 }
 @media (prefers-reduced-motion:reduce){
+  .ds-js .ds-reveal{opacity:1;transform:none;transition:none}
   .ds-hero__slide,.ds-hero__img,.ds-announce__msg{transform:none!important;transition:opacity .25s ease,visibility 0s}
   .ds-tile,.ds-tile img,.ds-insta img,.ds-btn,.ds-btn .ds-ico{transition:none}
   .ds-hero__dots .is-on i{animation:none;transform:scaleX(1)}

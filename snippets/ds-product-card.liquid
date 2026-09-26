@@ -50,7 +50,7 @@
   </a>
   <div class="ds-card__body">
     <h3 class="ds-card__title"><a href="{{ product.url }}">{{ product.title | escape }}</a></h3>
-    {%- assign excerpt = product.description | strip_html | truncatewords: 10, '…' -%}
+    {%- assign excerpt = product.description | replace: '</p>', ' </p>' | replace: '<br', ' <br' | strip_html | strip_newlines | truncatewords: 10, '…' -%}
     {%- if excerpt != blank -%}<p class="ds-card__desc">{{ excerpt }}</p>{%- endif -%}
     {%- if low -%}<p class="ds-card__stock">Quedan {{ variant.inventory_quantity }} en esta tanda</p>{%- endif -%}
     <div class="ds-card__foot">

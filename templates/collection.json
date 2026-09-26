@@ -1,13 +1,5 @@
 {
   "sections": {
-    "banner": {
-      "type": "main-collection-banner",
-      "settings": {
-        "show_collection_description": true,
-        "show_collection_image": false,
-        "color_scheme": "scheme-1"
-      }
-    },
     "product-grid": {
       "type": "main-collection-product-grid",
       "settings": {
@@ -24,13 +16,21 @@
         "filter_type": "horizontal",
         "enable_sorting": true,
         "columns_mobile": "2",
-        "padding_top": 36,
+        "padding_top": 12,
         "padding_bottom": 36
+      }
+    },
+    "hero": {
+      "type": "ds-collection-hero",
+      "settings": {
+        "all_title": "Todo el menú",
+        "fallback_text": "<p>Todo se hornea para la [tanda]. Elige, agrega al carrito y te lo despachamos [despacho].</p>",
+        "show_batch": true
       }
     }
   },
   "order": [
-    "banner",
+    "hero",
     "product-grid"
   ]
 }

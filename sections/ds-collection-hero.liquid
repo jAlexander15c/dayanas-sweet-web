@@ -1,0 +1,65 @@
+{%- liquid
+  assign title = collection.title
+  if collection.handle == 'all' or collection.handle == blank
+    assign title = section.settings.all_title
+  endif
+  assign intro = collection.description
+  if intro == blank
+    assign intro = section.settings.fallback_text
+  endif
+-%}
+<section class="ds-chero ds-wrap" aria-labelledby="DSCollection-{{ section.id }}">
+  <nav class="ds-chero__crumbs" aria-label="Ruta de navegación">
+    <a href="{{ routes.root_url }}">Inicio</a><span aria-hidden="true">/</span><span>Menú</span>
+  </nav>
+  <div class="ds-chero__grid">
+    <div>
+      <h1 class="ds-display ds-chero__title" id="DSCollection-{{ section.id }}">{{ title | escape }}</h1>
+      {%- if intro != blank -%}
+        <div class="ds-chero__text rte">{% render 'ds-batch-text', text: intro %}</div>
+      {%- endif -%}
+    </div>
+    {%- if section.settings.show_batch -%}
+      <ul class="ds-chero__batch" role="list" aria-label="Fechas de la tanda">
+        {%- if settings.ds_batch_open -%}
+          <li>{% render 'ds-icon', name: 'clock' %}<span>Pedidos hasta el <strong>{{ settings.ds_batch_close | escape }}</strong></span></li>
+        {%- else -%}
+          <li>{% render 'ds-icon', name: 'clock' %}<span>{{ settings.ds_batch_closed_text | escape }}</span></li>
+        {%- endif -%}
+        <li>{% render 'ds-icon', name: 'box' %}<span>Horneamos el <strong>{{ settings.ds_batch_bake | escape }}</strong></span></li>
+        <li>{% render 'ds-icon', name: 'truck' %}<span>Despacho <strong>{{ settings.ds_batch_ship | escape }}</strong></span></li>
+      </ul>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "DS · Encabezado de menú",
+  "class": "ds-chero-wrap",
+  "settings": [
+    {
+      "type": "text",
+      "id": "all_title",
+      "label": "Título para \"todos los productos\"",
+      "default": "Todo el menú"
+    },
+    {
+      "type": "richtext",
+      "id": "fallback_text",
+      "label": "Texto si la colección no tiene descripción",
+      "info": "Puedes usar [tanda], [cierre], [horneado] y [despacho].",
+      "default": "<p>Todo se hornea para la [tanda]. Elige, agrega al carrito y te lo despachamos [despacho].</p>"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_batch",
+      "label": "Mostrar fechas de la tanda",
+      "default": true
+    }
+  ],
+  "enabled_on": {
+    "templates": ["collection"]
+  }
+}
+{% endschema %}

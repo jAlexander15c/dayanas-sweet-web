@@ -45,11 +45,11 @@
       "block_order": [
         "title",
         "price",
-        "description",
-        "ds_batch",
         "variant_picker",
         "quantity_selector",
         "buy_buttons",
+        "ds_batch",
+        "description",
         "ds_sticky"
       ],
       "settings": {

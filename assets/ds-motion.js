@@ -103,12 +103,64 @@
     });
   }
 
+
+  var REVEAL = '.ds-rail__head, .ds-rail > li, .ds-batch__title, .ds-batch__intro, .ds-step, .ds-cats__title, .ds-tile, .ds-season__copy, .ds-season__cards > li, .ds-story__img, .ds-story__copy, .ds-social__copy, .ds-insta > *, .ds-faq__side, .ds-qa, .product-grid .grid__item';
+  function initReveal(root) {
+    if (reduce.matches || !('IntersectionObserver' in window)) return;
+    document.documentElement.classList.add('ds-js');
+    if (!window.dsRevealIO) {
+      window.dsRevealIO = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (!en.isIntersecting) return;
+          en.target.classList.add('is-in');
+          window.dsRevealIO.unobserve(en.target);
+        });
+      }, { rootMargin: '0px 0px -6% 0px' });
+    }
+    root.querySelectorAll(REVEAL).forEach(function (el) {
+      if (el.classList.contains('ds-reveal')) return;
+      var i = Array.prototype.indexOf.call(el.parentElement.children, el);
+      el.style.setProperty('--ds-delay', Math.min(i, 6) * 60 + 'ms');
+      el.classList.add('ds-reveal');
+      window.dsRevealIO.observe(el);
+    });
+  }
+
+  function initCartFeedback() {
+    if (window.dsCartFeedback || typeof subscribe !== 'function' || typeof PUB_SUB_EVENTS === 'undefined') return;
+    window.dsCartFeedback = true;
+    subscribe(PUB_SUB_EVENTS.cartUpdate, function (event) {
+      if (!event || event.source !== 'product-form') return;
+      var input = document.querySelector('.ds-card__form input[name="id"][value="' + event.productVariantId + '"]');
+      var btn = input && input.form.querySelector('.ds-add');
+      if (btn && !btn.classList.contains('is-added')) {
+        var label = btn.querySelector('span');
+        var prev = label ? label.textContent : '';
+        btn.classList.add('is-added');
+        if (label) label.textContent = 'Agregado';
+        setTimeout(function () {
+          btn.classList.remove('is-added');
+          if (label) label.textContent = prev;
+        }, 1600);
+      }
+      setTimeout(function () {
+        document.querySelectorAll('.cart-count-bubble').forEach(function (b) {
+          b.classList.remove('ds-bump');
+          void b.offsetWidth;
+          if (!reduce.matches) b.classList.add('ds-bump');
+        });
+      }, 350);
+    });
+  }
+
   function init(root) {
     root = root || document;
     initAnnouncement(root);
     initHero(root);
     initRails(root);
     initSticky(root);
+    initReveal(root);
+    initCartFeedback();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { init(); });
