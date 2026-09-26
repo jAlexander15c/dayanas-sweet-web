@@ -52,7 +52,10 @@
         "link_label": "Ver todo el menú",
         "empty_text": "El menú se publica muy pronto. Pedidos de la [tanda] hasta el [cierre].",
         "color_scheme": "scheme-2",
-        "collection": "mas-vendidos"
+        "collection": "mas-vendidos",
+        "auto_badge": false,
+        "badge_count": 3,
+        "badge_label": "Más pedido"
       }
     },
     "batch": {

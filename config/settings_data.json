@@ -184,7 +184,7 @@
     "cart_type": "drawer",
     "show_vendor": false,
     "show_cart_note": true,
-    "cart_drawer_collection": "",
+    "cart_drawer_collection": "mas-vendidos",
     "cart_color_scheme": "scheme-2",
     "sections": {
       "main-password-header": {

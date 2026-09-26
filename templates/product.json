@@ -92,11 +92,26 @@
         "padding_top": 36,
         "padding_bottom": 28
       }
+    },
+    "ds-bestsellers": {
+      "type": "ds-product-rail",
+      "settings": {
+        "title": "Los más pedidos",
+        "collection": "mas-vendidos",
+        "limit": 8,
+        "auto_badge": false,
+        "badge_count": 3,
+        "badge_label": "Más pedido",
+        "link_label": "Ver todo el menú",
+        "empty_text": "El menú se publica muy pronto. Pedidos de la [tanda] hasta el [cierre].",
+        "color_scheme": "scheme-2"
+      }
     }
   },
   "order": [
     "main",
     "disclosures",
-    "related-products"
+    "related-products",
+    "ds-bestsellers"
   ]
 }

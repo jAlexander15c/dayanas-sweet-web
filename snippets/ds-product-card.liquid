@@ -4,6 +4,7 @@
     - product: {Object}
     - section_id: {string} para el formulario de producto de Dawn
     - lazy: {boolean} carga diferida de la imagen (por defecto true)
+    - rank_badge: {string} etiqueta por posición en ventas (la pone ds-product-rail)
   Etiquetas del producto:
     - "badge:Texto" muestra una etiqueta sobre la foto (por ejemplo badge:Favorito)
   La sección que lo usa debe cargar product-form.js.
@@ -21,6 +22,9 @@
       break
     endif
   endfor
+  if rank_badge != blank
+    assign badge = rank_badge
+  endif
   assign low = false
   if variant.inventory_management == 'shopify' and variant.inventory_policy == 'deny' and variant.inventory_quantity > 0 and variant.inventory_quantity <= settings.ds_low_stock
     assign low = true

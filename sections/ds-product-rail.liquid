@@ -6,6 +6,11 @@
     assign source = collections.all
   endif
   assign rail_id = 'DSRail-' | append: section.id
+  assign current_id = 0
+  if template.name == 'product'
+    assign current_id = product.id
+  endif
+  assign shown = 0
 -%}
 <section class="ds-rail-section color-{{ section.settings.color_scheme }} ds-scallop-top ds-scallop-bottom" aria-labelledby="{{ rail_id }}-title">
   <div class="ds-wrap ds-rail__head">
@@ -19,8 +24,21 @@
   </div>
   {%- if source.products_count > 0 -%}
     <ul class="ds-rail" id="{{ rail_id }}" role="list">
-      {%- for product in source.products limit: section.settings.limit -%}
-        <li>{% render 'ds-product-card', product: product, section_id: section.id %}</li>
+      {%- for product in source.products -%}
+        {%- liquid
+          if product.id == current_id
+            continue
+          endif
+          if shown >= section.settings.limit
+            break
+          endif
+          assign shown = shown | plus: 1
+          assign rank_badge = ''
+          if section.settings.auto_badge and forloop.index <= section.settings.badge_count
+            assign rank_badge = section.settings.badge_label
+          endif
+        -%}
+        <li>{% render 'ds-product-card', product: product, section_id: section.id, rank_badge: rank_badge %}</li>
       {%- endfor -%}
     </ul>
     {%- if section.settings.link_label != blank -%}
@@ -56,6 +74,32 @@
       "max": 12,
       "step": 1,
       "default": 8
+    },
+    {
+      "type": "header",
+      "content": "Etiqueta automática por ventas"
+    },
+    {
+      "type": "checkbox",
+      "id": "auto_badge",
+      "label": "Marcar los primeros puestos por ventas",
+      "info": "Usa el orden de ventas reales de la colección (ordénala por Más vendidos en Shopify). Actívalo cuando ya haya pedidos: sin ventas, el orden es arbitrario.",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "badge_count",
+      "label": "Cuántos productos marcar",
+      "min": 1,
+      "max": 5,
+      "step": 1,
+      "default": 3
+    },
+    {
+      "type": "text",
+      "id": "badge_label",
+      "label": "Texto de la etiqueta",
+      "default": "Más pedido"
     },
     {
       "type": "text",
