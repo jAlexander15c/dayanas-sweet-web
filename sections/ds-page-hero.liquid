@@ -1,0 +1,23 @@
+<article class="ds-page ds-wrap" aria-labelledby="DSPage-{{ section.id }}">
+  <header class="ds-page-head">
+    <h1 class="ds-display ds-page-title" id="DSPage-{{ section.id }}">{{ page.title | escape }}</h1>
+    {%- if section.settings.intro != blank -%}<div class="ds-page-lead rte">{% render 'ds-batch-text', text: section.settings.intro %}</div>{%- endif -%}
+  </header>
+  <div class="ds-page__layout{% if section.settings.image == blank %} ds-page__layout--text{% endif %}">
+    {%- if section.settings.image != blank -%}
+      <div class="ds-page__media">{{ section.settings.image | image_url: width: 1200 | image_tag: widths: '480, 750, 1000, 1200', sizes: '(min-width: 750px) 38vw, 100vw', loading: 'lazy' }}</div>
+    {%- endif -%}
+    <div class="ds-page__content rte">{{ page.content }}</div>
+  </div>
+</article>
+
+{% schema %}
+{
+  "name": "DS · Página editorial",
+  "settings": [
+    { "type": "richtext", "id": "intro", "label": "Introducción" },
+    { "type": "image_picker", "id": "image", "label": "Imagen editorial" }
+  ],
+  "presets": [{ "name": "DS · Página editorial" }]
+}
+{% endschema %}

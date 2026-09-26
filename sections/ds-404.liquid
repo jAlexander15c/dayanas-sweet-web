@@ -1,0 +1,24 @@
+<section class="ds-not-found ds-wrap" aria-labelledby="DS404-{{ section.id }}">
+  <div class="ds-not-found__card">
+    <span class="ds-not-found__number" aria-hidden="true">404</span>
+    <h1 class="ds-display ds-page-title" id="DS404-{{ section.id }}">{{ section.settings.title | escape }}</h1>
+    <p>{{ section.settings.text | escape }}</p>
+    <div class="ds-ctas">
+      <a class="ds-btn" href="{{ routes.all_products_collection_url }}">{{ section.settings.shop_label | escape }}{% render 'ds-icon', name: 'arrow' %}</a>
+      <a class="ds-btn ds-btn--ghost" href="{{ routes.root_url }}">{{ section.settings.home_label | escape }}</a>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "DS · Página 404",
+  "settings": [
+    { "type": "text", "id": "title", "label": "Título", "default": "Esta página se nos escapó del horno." },
+    { "type": "textarea", "id": "text", "label": "Mensaje", "default": "Parece que el enlace no lleva a ninguna parte. Vuelve al menú o a la portada para seguir explorando Dayana's Sweet." },
+    { "type": "text", "id": "shop_label", "label": "Botón al menú", "default": "Ver el menú" },
+    { "type": "text", "id": "home_label", "label": "Botón a la portada", "default": "Ir a la portada" }
+  ],
+  "presets": [{ "name": "DS · Página 404" }]
+}
+{% endschema %}

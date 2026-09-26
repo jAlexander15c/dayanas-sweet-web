@@ -1,0 +1,79 @@
+<section class="ds-contact ds-wrap" aria-labelledby="DSContact-{{ section.id }}">
+  <header class="ds-page-head">
+    <h1 class="ds-display ds-page-title" id="DSContact-{{ section.id }}">{{ page.title | default: section.settings.title | escape }}</h1>
+    {%- if section.settings.intro != blank -%}<div class="ds-page-lead rte">{% render 'ds-batch-text', text: section.settings.intro %}</div>{%- endif -%}
+    {%- if page.content != blank -%}<div class="ds-page-lead rte">{{ page.content }}</div>{%- endif -%}
+  </header>
+  <div class="ds-contact__grid">
+    <div class="ds-contact__form-card">
+      <h2 class="ds-display ds-contact__heading">{{ section.settings.form_title | escape }}</h2>
+      {%- form 'contact', id: 'DSContactForm' -%}
+        {%- if form.posted_successfully? -%}
+          <p class="ds-contact__status" role="status" tabindex="-1">{{ section.settings.success_text | escape }}</p>
+        {%- endif -%}
+        {%- if form.errors -%}
+          <div class="ds-contact__error" role="alert" tabindex="-1">
+            <p>{{ section.settings.error_text | escape }}</p>
+            <ul role="list">
+              {%- for field in form.errors -%}
+                <li><a href="#DSContactForm-{{ field }}">{{ form.errors.translated_fields[field] | default: field | capitalize }}: {{ form.errors.messages[field] }}</a></li>
+              {%- endfor -%}
+            </ul>
+          </div>
+        {%- endif -%}
+        <div class="ds-contact__fields">
+          <div class="ds-contact__field">
+            <label for="DSContactForm-name">{{ section.settings.name_label | escape }}</label>
+            <input id="DSContactForm-name" type="text" name="contact[name]" autocomplete="name" value="{{ form.name | default: customer.name | escape }}">
+          </div>
+          <div class="ds-contact__field">
+            <label for="DSContactForm-email">{{ section.settings.email_label | escape }} <span aria-hidden="true">*</span></label>
+            <input id="DSContactForm-email" type="email" name="contact[email]" autocomplete="email" autocapitalize="off" spellcheck="false" required aria-required="true" value="{{ form.email | default: customer.email | escape }}"{% if form.errors contains 'email' %} aria-invalid="true" aria-describedby="DSContactForm-email-error"{% endif %}>
+            {%- if form.errors contains 'email' -%}<small id="DSContactForm-email-error">{{ form.errors.messages.email }}</small>{%- endif -%}
+          </div>
+          <div class="ds-contact__field ds-contact__field--wide">
+            <label for="DSContactForm-body">{{ section.settings.message_label | escape }} <span aria-hidden="true">*</span></label>
+            <textarea id="DSContactForm-body" name="contact[body]" rows="7" required aria-required="true">{{ form.body | escape }}</textarea>
+          </div>
+        </div>
+        <button type="submit" class="ds-btn">{{ section.settings.submit_label | escape }}{% render 'ds-icon', name: 'arrow' %}</button>
+      {%- endform -%}
+    </div>
+    <aside class="ds-contact__aside" aria-labelledby="DSContactAside-{{ section.id }}">
+      {%- if section.settings.image != blank -%}
+        {{ section.settings.image | image_url: width: 900 | image_tag: widths: '360, 540, 750, 900', sizes: '(min-width: 750px) 32vw, 100vw', loading: 'lazy', class: 'ds-contact__image' }}
+      {%- endif -%}
+      <div class="ds-contact__aside-copy">
+        <h2 class="ds-display ds-contact__heading" id="DSContactAside-{{ section.id }}">{{ section.settings.aside_title | escape }}</h2>
+        <div class="rte">{% render 'ds-batch-text', text: section.settings.aside_text %}</div>
+        <nav class="ds-contact__links" aria-label="{{ section.settings.aside_title | escape }}">
+          <a href="/#ds-preguntas">{{ section.settings.faq_label | escape }}{% render 'ds-icon', name: 'arrow' %}</a>
+          <a href="/#ds-tandas">{{ section.settings.batch_label | escape }}{% render 'ds-icon', name: 'arrow' %}</a>
+        </nav>
+      </div>
+    </aside>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "DS · Contacto",
+  "settings": [
+    { "type": "text", "id": "title", "label": "Título alternativo", "default": "Hablemos" },
+    { "type": "richtext", "id": "intro", "label": "Introducción", "default": "<p>¿Tienes una pregunta sobre tu pedido o nuestras tandas? Escríbenos y te responderemos.</p>" },
+    { "type": "text", "id": "form_title", "label": "Título del formulario", "default": "Escríbenos" },
+    { "type": "text", "id": "name_label", "label": "Etiqueta de nombre", "default": "Nombre" },
+    { "type": "text", "id": "email_label", "label": "Etiqueta de correo", "default": "Correo electrónico" },
+    { "type": "text", "id": "message_label", "label": "Etiqueta de mensaje", "default": "Mensaje" },
+    { "type": "text", "id": "submit_label", "label": "Texto del botón", "default": "Enviar mensaje" },
+    { "type": "text", "id": "success_text", "label": "Mensaje de éxito", "default": "Gracias por escribirnos. Recibimos tu mensaje." },
+    { "type": "text", "id": "error_text", "label": "Mensaje de error", "default": "Revisa los campos señalados e inténtalo de nuevo." },
+    { "type": "image_picker", "id": "image", "label": "Imagen lateral" },
+    { "type": "text", "id": "aside_title", "label": "Título lateral", "default": "Antes de escribir" },
+    { "type": "richtext", "id": "aside_text", "label": "Texto lateral", "default": "<p>Horneamos por tandas y enviamos solo por transportista. No ofrecemos retiro presencial. Nuestros productos se preparan en equipos compartidos con trigo, huevo, leche y frutos secos.</p>" },
+    { "type": "text", "id": "faq_label", "label": "Enlace a preguntas", "default": "Preguntas frecuentes" },
+    { "type": "text", "id": "batch_label", "label": "Enlace a tandas", "default": "Cómo funcionan las tandas" }
+  ],
+  "presets": [{ "name": "DS · Contacto" }]
+}
+{% endschema %}
