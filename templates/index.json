@@ -51,7 +51,8 @@
         "limit": 8,
         "link_label": "Ver todo el menú",
         "empty_text": "El menú se publica muy pronto. Pedidos de la [tanda] hasta el [cierre].",
-        "color_scheme": "scheme-2"
+        "color_scheme": "scheme-2",
+        "collection": "mas-vendidos"
       }
     },
     "batch": {
@@ -102,7 +103,8 @@
             "title": "Galletas",
             "text": "",
             "style": "photo",
-            "fallback": "ds-editorial-cookies.png"
+            "fallback": "ds-editorial-cookies.png",
+            "collection": "galletas"
           }
         },
         "tile-brownies": {
@@ -111,7 +113,8 @@
             "title": "Brownies",
             "text": "",
             "style": "photo",
-            "fallback": "ds-brownie.png"
+            "fallback": "ds-brownie.png",
+            "collection": "brownies"
           }
         },
         "tile-boxes": {
@@ -120,7 +123,8 @@
             "title": "Cajas para regalar",
             "text": "Varios sabores en una caja rosa, con tu nota adentro.",
             "style": "pink",
-            "fallback": "none"
+            "fallback": "none",
+            "collection": "cajas-para-regalar"
           }
         },
         "tile-desserts": {
@@ -129,7 +133,8 @@
             "title": "Postres",
             "text": "Horneados en la misma tanda que las galletas. Cada uno indica en su ficha cómo conservarlo.",
             "style": "orange",
-            "fallback": "none"
+            "fallback": "none",
+            "collection": "postres"
           }
         }
       },

@@ -64,7 +64,7 @@ body{background:var(--ds-blush);color:var(--ds-ink);-webkit-font-smoothing:antia
 /* Pie Dawn */
 .footer{background:var(--ds-ink);color:var(--ds-blush);position:relative}
 .footer::before{content:"";position:absolute;left:0;right:0;top:-13px;height:14px;background:radial-gradient(circle at 16px 14px,var(--ds-ink) 13.5px,transparent 14px) 0 0/32px 14px repeat-x}
-.ds-footer-logo{display:block;height:64px;width:auto;margin-bottom:16px}
+.footer .ds-footer-logo{display:block;height:64px!important;width:auto!important;max-width:min(240px,100%)!important;object-fit:contain;margin-bottom:16px}
 .footer-block__heading{font:600 13px/1.4 var(--ds-body);letter-spacing:.08em;text-transform:uppercase;color:var(--ds-rose)}
 .footer .list-menu__item--link{font-size:15px;color:var(--ds-blush);opacity:.9;text-underline-offset:4px}
 .footer .list-menu__item--link:hover{opacity:1;text-decoration:underline}
