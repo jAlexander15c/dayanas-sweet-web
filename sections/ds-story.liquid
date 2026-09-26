@@ -1,0 +1,50 @@
+
+<section class="ds-story ds-wrap" id="ds-esencia" aria-labelledby="StoryTitle-{{ section.id }}">
+  <div class="ds-story__art">
+    {% if section.settings.image != blank %}{{ section.settings.image | image_url: width: 1200 | image_tag: loading: 'lazy', sizes: '(min-width: 990px) 45vw, 100vw', widths: '480, 750, 1200' }}{% else %}<div class="ds-brand-orbit"><span class="ds-star ds-star--one" aria-hidden="true">✳</span><img src="{{ 'logo-badge.png' | asset_url }}" alt="Dayana’s Sweet, pastelería artesanal" width="850" height="822" loading="lazy"><span class="ds-star ds-star--two" aria-hidden="true">✳</span></div>{% endif %}
+    <p>{{ section.settings.caption | escape }}</p>
+  </div>
+  <div class="ds-story__copy"><p class="ds-eyebrow">{{ section.settings.eyebrow | escape }}</p><h2 id="StoryTitle-{{ section.id }}">{{ section.settings.title | escape }}</h2><div class="ds-story__text">{{ section.settings.text }}</div><span class="ds-signature">Dayana’s Sweet</span><a class="ds-text-link" href="#ds-universo">Así preparamos cada hornada <span aria-hidden="true">↗</span></a></div>
+</section>
+
+{% schema %}
+{
+  "name": "DS · Esencia artesanal",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Texto superior",
+      "default": "NUESTRA ESENCIA"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Título",
+      "default": "Lo especial está en los pequeños detalles."
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "Texto",
+      "default": "<p>Una pausa, una sobremesa, una celebración. Nos gusta pensar que los mejores momentos siempre tienen un lado dulce.</p><p>Ese es el universo de Dayana’s Sweet: pastelería artesanal y el placer de compartir algo especial.</p>"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Fotografía de la marca (opcional)"
+    },
+    {
+      "type": "text",
+      "id": "caption",
+      "label": "Pie de imagen",
+      "default": "PASTELERÍA CON PERSONALIDAD"
+    }
+  ],
+  "presets": [
+    {
+      "name": "DS · Esencia artesanal"
+    }
+  ]
+}
+{% endschema %}

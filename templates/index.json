@@ -1,0 +1,107 @@
+{
+  "sections": {
+    "hero": {
+      "type": "ds-hero",
+      "settings": {
+        "eyebrow": "GALLETAS Y POSTRES · HECHOS EN TEXAS",
+        "title": "Un antojo",
+        "accent": "que vale la espera.",
+        "button_label": "Ver galletas y postres",
+        "text": "Galletas doradas, mucho chocolate y ese primer mordisco que alegra el día. Inspiración cubana, horneada en pequeñas tandas en Texas.",
+        "footnote": "Primera hornada: domingo 18 de octubre. Pedidos hasta el 17 a las 11:59 p. m. CT; despacho a más tardar el martes 20.",
+        "caption": "Imágenes ilustrativas · menú en desarrollo"
+      }
+    },
+    "catalog": {
+      "type": "ds-collection",
+      "settings": {
+        "eyebrow": "TU PRÓXIMO FAVORITO EMPIEZA AQUÍ",
+        "title": "Para abrir el apetito.",
+        "text": "Un primer vistazo a las ideas dulces que estamos preparando.",
+        "empty_label": "PRIMERA HORNADA · 18 DE OCTUBRE",
+        "empty_title": "Lo bueno está en preparación.",
+        "empty_text": "El menú, los precios y la disponibilidad aparecerán aquí cuando confirmemos la primera hornada."
+      }
+    },
+    "universe": {
+      "type": "ds-universe",
+      "settings": {"eyebrow":"HECHO EN PEQUEÑAS TANDAS","title":"De nuestro horno a tu puerta."},
+      "blocks": {
+        "moment0": {
+          "type": "moment",
+          "settings": {
+            "title": "Reserva tu pedido.",
+            "text": "La primera tanda cierra el sábado 17 de octubre a las 11:59 p. m., hora de Fulshear, Texas. Cupo limitado."
+          }
+        },
+        "moment1": {
+          "type": "moment",
+          "settings": {
+            "title": "Horneamos el domingo.",
+            "text": "Preparamos cada hornada por encargo, con el cuidado y la atención que merece cada detalle."
+          }
+        },
+        "moment2": {
+          "type": "moment",
+          "settings": {
+            "title": "Despachamos el martes.",
+            "text": "Entregamos los pedidos al transportista a más tardar el 20 de octubre. La fecha de llegada depende del servicio elegido."
+          }
+        }
+      },
+      "block_order": [
+        "moment0",
+        "moment1",
+        "moment2"
+      ]
+    },
+    "story": {
+      "type": "ds-story",
+      "settings": {"text":"<p>Dayana’s Sweet nace de más de 15 años de experiencia en la pastelería y de una historia que comenzó en Cuba. Hoy, desde Fulshear, Texas, unimos nuestras raíces con sabores e ingredientes de Estados Unidos para crear galletas y postres con personalidad propia.</p><p>Cada creación refleja nuestra dedicación, el cuidado por los detalles y el gusto de compartir algo delicioso.</p>"}
+    },
+    "faq": {
+      "type": "ds-faq",
+      "settings": {},
+      "blocks": {
+        "q0": {
+          "type": "question",
+          "settings": {
+            "question": "¿Cómo hago mi pedido?",
+            "answer": "<p>Recibimos pedidos en línea las 24 horas, sujetos a disponibilidad. Para la primera tanda, el cierre es el sábado 17 de octubre de 2026 a las 11:59 p. m., hora de Texas. Horneamos el domingo 18 y despachamos a más tardar el martes 20.</p>"
+          }
+        },
+        "q1": {
+          "type": "question",
+          "settings": {
+            "question": "¿Dónde consulto los ingredientes?",
+            "answer": "<p>Trabajamos con harina de trigo, huevo, leche y frutos secos. Compartimos utensilios y equipos, por lo que puede existir contacto cruzado. Consulta los ingredientes específicos de cada producto antes de comprar.</p>"
+          }
+        },
+        "q2": {
+          "type": "question",
+          "settings": {
+            "question": "¿Cómo veo las opciones de entrega?",
+            "answer": "<p>Realizamos únicamente envíos, sin retiro presencial. Las opciones y costos disponibles para tu dirección se muestran antes del pago. La fecha de despacho indica cuándo entregamos tu pedido al transportista; la llegada depende del servicio seleccionado.</p>"
+          }
+        }
+      },
+      "block_order": [
+        "q0",
+        "q1",
+        "q2"
+      ]
+    },
+    "signoff": {
+      "type": "ds-signoff",
+      "settings": {"eyebrow":"LA PRIMERA HORNADA ESTÁ EN CAMINO","title":"¿Ya se te antojó?"}
+    }
+  },
+  "order": [
+    "hero",
+    "catalog",
+    "universe",
+    "story",
+    "faq",
+    "signoff"
+  ]
+}

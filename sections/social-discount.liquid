@@ -1,0 +1,177 @@
+{%- style -%}
+  .section-{{ section.id }}-padding {
+    padding-top: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;
+    padding-bottom: {{ section.settings.padding_bottom | times: 0.75 | round: 0 }}px;
+  }
+
+  @media screen and (min-width: 750px) {
+    .section-{{ section.id }}-padding {
+      padding-top: {{ section.settings.padding_top }}px;
+      padding-bottom: {{ section.settings.padding_bottom }}px;
+    }
+  }
+{%- endstyle -%}
+
+<div class="social-discount color-{{ section.settings.color_scheme }} gradient">
+  <div class="page-width section-{{ section.id }}-padding">
+    <div class="social-discount__grid">
+      <div class="social-discount__panel social-discount__panel--social">
+        {%- if section.settings.social_heading != blank -%}
+          <h2 class="social-discount__heading inline-richtext h1">{{ section.settings.social_heading }}</h2>
+        {%- endif -%}
+        {%- if section.settings.social_text != blank -%}
+          <div class="social-discount__text rte">{{ section.settings.social_text }}</div>
+        {%- endif -%}
+        <div class="social-discount__buttons">
+          {%- if section.settings.instagram_url != blank -%}
+            <a href="{{ section.settings.instagram_url }}" class="button button--secondary" target="_blank" rel="noopener">
+              <span class="svg-wrapper">{{ 'icon-instagram.svg' | inline_asset_content }}</span>
+              {{ section.settings.instagram_handle | escape }}
+            </a>
+          {%- endif -%}
+          {%- if section.settings.tiktok_url != blank -%}
+            <a href="{{ section.settings.tiktok_url }}" class="button button--secondary" target="_blank" rel="noopener">
+              <span class="svg-wrapper">{{ 'icon-tiktok.svg' | inline_asset_content }}</span>
+              {{ section.settings.tiktok_handle | escape }}
+            </a>
+          {%- endif -%}
+        </div>
+      </div>
+
+      <div class="social-discount__panel social-discount__panel--highlight">
+        {%- if section.settings.discount_heading != blank -%}
+          <h2 class="social-discount__heading inline-richtext h1">{{ section.settings.discount_heading }}</h2>
+        {%- endif -%}
+        {%- if section.settings.discount_text != blank -%}
+          <div class="social-discount__text rte">{{ section.settings.discount_text }}</div>
+        {%- endif -%}
+        {%- if section.settings.discount_button_label != blank -%}
+          <a
+            href="{{ section.settings.discount_button_link }}"
+            class="button button--primary"
+          >
+            {{- section.settings.discount_button_label | escape -}}
+          </a>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Social + discount",
+  "tag": "section",
+  "class": "section",
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  },
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Esquema de color general",
+      "default": "scheme-1"
+    },
+    {
+      "type": "header",
+      "content": "Columna: redes sociales"
+    },
+    {
+      "type": "text",
+      "id": "social_heading",
+      "default": "Síguenos y sé parte de la mesa",
+      "label": "Encabezado"
+    },
+    {
+      "type": "richtext",
+      "id": "social_text",
+      "default": "<p>Nuevos sabores, detrás de cámaras del horno y avisos de cuando abrimos pedidos de temporada.</p>",
+      "label": "Texto"
+    },
+    {
+      "type": "url",
+      "id": "instagram_url",
+      "label": "Enlace de Instagram"
+    },
+    {
+      "type": "text",
+      "id": "instagram_handle",
+      "default": "@dayanasweet02",
+      "label": "Usuario de Instagram"
+    },
+    {
+      "type": "url",
+      "id": "tiktok_url",
+      "label": "Enlace de TikTok"
+    },
+    {
+      "type": "text",
+      "id": "tiktok_handle",
+      "default": "@dayanasweet",
+      "label": "Usuario de TikTok"
+    },
+    {
+      "type": "header",
+      "content": "Columna: descuento"
+    },
+    {
+      "type": "text",
+      "id": "discount_heading",
+      "default": "10% en tu primer pedido",
+      "label": "Encabezado"
+    },
+    {
+      "type": "richtext",
+      "id": "discount_text",
+      "default": "<p>Escríbenos mencionando que vienes de la página y te damos el código para tu primera caja.</p>",
+      "label": "Texto"
+    },
+    {
+      "type": "text",
+      "id": "discount_button_label",
+      "default": "Quiero mi 10%",
+      "label": "Texto del botón"
+    },
+    {
+      "type": "url",
+      "id": "discount_button_link",
+      "label": "Enlace del botón"
+    },
+    {
+      "type": "header",
+      "content": "Espaciado de sección"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Espaciado superior",
+      "default": 36
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Espaciado inferior",
+      "default": 36
+    }
+  ],
+  "presets": [
+    {
+      "name": "Social + discount",
+      "settings": {
+        "instagram_url": "https://instagram.com/dayanasweet02",
+        "tiktok_url": "https://tiktok.com/@dayanasweet",
+        "discount_button_link": "mailto:dayanaoramasgalano@gmail.com?subject=Quiero%20mi%2010%25%20de%20descuento"
+      }
+    }
+  ]
+}
+{% endschema %}

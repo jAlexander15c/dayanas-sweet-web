@@ -1,0 +1,168 @@
+{%- style -%}
+  .section-{{ section.id }}-padding {
+    padding-top: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;
+    padding-bottom: {{ section.settings.padding_bottom | times: 0.75 | round: 0 }}px;
+  }
+
+  @media screen and (min-width: 750px) {
+    .section-{{ section.id }}-padding {
+      padding-top: {{ section.settings.padding_top }}px;
+      padding-bottom: {{ section.settings.padding_bottom }}px;
+    }
+  }
+{%- endstyle -%}
+
+{%- liquid
+  assign shipping_icons = 'icon-discount.svg|icon-map-pin.svg|icon-stopwatch.svg|icon-box.svg' | split: '|'
+-%}
+
+<div class="shipping-info color-{{ section.settings.color_scheme }} gradient">
+  <div class="page-width section-{{ section.id }}-padding">
+    {%- unless section.settings.heading == blank and section.settings.subheading == blank -%}
+      <div class="title-wrapper-with-link title-wrapper--self-padded-mobile title-wrapper--no-top-margin shipping-info__header center">
+        {%- if section.settings.heading != blank -%}
+          <h2 class="title inline-richtext h1">{{ section.settings.heading }}</h2>
+        {%- endif -%}
+        {%- if section.settings.subheading != blank -%}
+          <div class="shipping-info__subheading rte">{{ section.settings.subheading }}</div>
+        {%- endif -%}
+      </div>
+    {%- endunless -%}
+
+    <ul class="shipping-info__grid grid grid--2-col-tablet-down grid--4-col-desktop list-unstyled" role="list">
+      {%- for block in section.blocks -%}
+        {%- assign icon_index = forloop.index0 | modulo: shipping_icons.size -%}
+        {%- assign icon_file = shipping_icons[icon_index] -%}
+        <li class="shipping-info__card grid__item" {{ block.shopify_attributes }}>
+          <span class="shipping-info__icon svg-wrapper">{{ icon_file | inline_asset_content }}</span>
+          {%- if block.settings.title != blank -%}
+            <h3 class="shipping-info__card-title h4">{{ block.settings.title }}</h3>
+          {%- endif -%}
+          {%- if block.settings.text != blank -%}
+            <div class="shipping-info__card-text rte">{{ block.settings.text }}</div>
+          {%- endif -%}
+        </li>
+      {%- endfor -%}
+    </ul>
+
+    {%- if section.settings.note != blank -%}
+      <div class="shipping-info__note rte caption">{{ section.settings.note }}</div>
+    {%- endif -%}
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Shipping info",
+  "tag": "section",
+  "class": "section",
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  },
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "default": "Enviamos a todo Estados Unidos",
+      "label": "Encabezado"
+    },
+    {
+      "type": "richtext",
+      "id": "subheading",
+      "default": "<p>Tu caja sale directo de nuestra cocina, empacada para que las galletas lleguen tan frescas como el día que las horneamos.</p>",
+      "label": "Subtítulo"
+    },
+    {
+      "type": "richtext",
+      "id": "note",
+      "default": "<p>Por favor verifica que tu dirección esté completa y correcta antes de pagar — no nos hacemos responsables por retrasos o reenvíos causados por direcciones incompletas. En temporada alta o clima extremo, los tiempos de entrega pueden variar; te avisaremos si tu envío se retrasa.</p>",
+      "label": "Nota legal"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Esquema de color",
+      "default": "scheme-2"
+    },
+    {
+      "type": "header",
+      "content": "Espaciado de sección"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Espaciado superior",
+      "default": 36
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Espaciado inferior",
+      "default": 36
+    }
+  ],
+  "blocks": [
+    {
+      "type": "card",
+      "name": "Tarjeta",
+      "settings": [
+        {
+          "type": "text",
+          "id": "title",
+          "default": "Título",
+          "label": "Título"
+        },
+        {
+          "type": "richtext",
+          "id": "text",
+          "default": "<p>Descripción breve.</p>",
+          "label": "Texto"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Shipping info",
+      "blocks": [
+        {
+          "type": "card",
+          "settings": {
+            "title": "Envío gratis desde $75",
+            "text": "<p>En pedidos menores, el envío se calcula según tu código postal.</p>"
+          }
+        },
+        {
+          "type": "card",
+          "settings": {
+            "title": "A los 50 estados",
+            "text": "<p>Incluyendo Alaska y Hawái, vía USPS.</p>"
+          }
+        },
+        {
+          "type": "card",
+          "settings": {
+            "title": "Horneamos y enviamos lunes y miércoles",
+            "text": "<p>Para que tu caja pase el menor tiempo posible en camino.</p>"
+          }
+        },
+        {
+          "type": "card",
+          "settings": {
+            "title": "Empaque aislante",
+            "text": "<p>Diseñado para proteger el relleno y la frescura en tránsito.</p>"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,191 @@
+{%- style -%}
+  .section-{{ section.id }}-padding {
+    padding-top: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;
+    padding-bottom: {{ section.settings.padding_bottom | times: 0.75 | round: 0 }}px;
+  }
+
+  @media screen and (min-width: 750px) {
+    .section-{{ section.id }}-padding {
+      padding-top: {{ section.settings.padding_top }}px;
+      padding-bottom: {{ section.settings.padding_bottom }}px;
+    }
+  }
+{%- endstyle -%}
+
+{%- liquid
+  assign phone_e164 = '+13462548436'
+  assign mailto_link = 'mailto:' | append: section.settings.email
+  assign tel_link = 'tel:' | append: phone_e164
+-%}
+
+<div class="contact-cards color-{{ section.settings.color_scheme }} gradient">
+  <div class="page-width section-{{ section.id }}-padding">
+    <div class="contact-cards__header title-wrapper-with-link title-wrapper--self-padded-mobile title-wrapper--no-top-margin center">
+      {%- if section.settings.heading != blank -%}
+        <h2 class="title inline-richtext h1">{{ section.settings.heading }}</h2>
+      {%- endif -%}
+      {%- if section.settings.text != blank -%}
+        <div class="contact-cards__text rte">{{ section.settings.text }}</div>
+      {%- endif -%}
+      <div class="contact-cards__ctas">
+        {%- if section.settings.email != blank -%}
+          <a href="{{ mailto_link }}" class="button button--primary">Escribir por correo</a>
+        {%- endif -%}
+        {%- if section.settings.phone != blank -%}
+          <a href="{{ tel_link }}" class="button button--secondary">Llamar</a>
+        {%- endif -%}
+      </div>
+    </div>
+
+    <ul class="contact-cards__grid grid grid--2-col-tablet-down grid--4-col-desktop list-unstyled" role="list">
+      {%- if section.settings.email != blank -%}
+        <li class="contact-cards__card grid__item">
+          <a href="{{ mailto_link }}" class="contact-cards__link">
+            <span class="contact-cards__icon svg-wrapper">
+              <svg class="icon icon-mail" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <rect x="2" y="4" width="16" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+                <path d="M3 5.5L10 11L17 5.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="contact-cards__card-title h4">Correo</span>
+            <span class="contact-cards__card-value">{{ section.settings.email }}</span>
+          </a>
+        </li>
+      {%- endif -%}
+      {%- if section.settings.phone != blank -%}
+        <li class="contact-cards__card grid__item">
+          <a href="{{ tel_link }}" class="contact-cards__link">
+            <span class="contact-cards__icon svg-wrapper">
+              <svg class="icon icon-phone" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M4.5 3h2.6l1.2 3.4-1.8 1.4a10 10 0 0 0 4.7 4.7l1.4-1.8L16 12v2.6c0 .8-.7 1.4-1.5 1.3A13 13 0 0 1 3.2 4.5C3.1 3.7 3.7 3 4.5 3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span class="contact-cards__card-title h4">Teléfono</span>
+            <span class="contact-cards__card-value">{{ section.settings.phone }}</span>
+          </a>
+        </li>
+      {%- endif -%}
+      {%- if section.settings.instagram_handle != blank -%}
+        <li class="contact-cards__card grid__item">
+          <a href="{{ section.settings.instagram_url }}" class="contact-cards__link" target="_blank" rel="noopener">
+            <span class="contact-cards__icon svg-wrapper">{{ 'icon-instagram.svg' | inline_asset_content }}</span>
+            <span class="contact-cards__card-title h4">Instagram</span>
+            <span class="contact-cards__card-value">{{ section.settings.instagram_handle }}</span>
+          </a>
+        </li>
+      {%- endif -%}
+      {%- if section.settings.tiktok_handle != blank -%}
+        <li class="contact-cards__card grid__item">
+          <a href="{{ section.settings.tiktok_url }}" class="contact-cards__link" target="_blank" rel="noopener">
+            <span class="contact-cards__icon svg-wrapper">{{ 'icon-tiktok.svg' | inline_asset_content }}</span>
+            <span class="contact-cards__card-title h4">TikTok</span>
+            <span class="contact-cards__card-value">{{ section.settings.tiktok_handle }}</span>
+          </a>
+        </li>
+      {%- endif -%}
+    </ul>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Contact cards",
+  "tag": "section",
+  "class": "section",
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  },
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "default": "Hablemos de tu próxima caja",
+      "label": "Encabezado"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "default": "<p>Pedidos personalizados, cajas de regalo y pedidos por mayor — escríbenos o llámanos, respondemos en 24–48 horas.</p>",
+      "label": "Texto"
+    },
+    {
+      "type": "text",
+      "id": "email",
+      "default": "dayanaoramasgalano@gmail.com",
+      "label": "Correo"
+    },
+    {
+      "type": "text",
+      "id": "phone",
+      "default": "(346) 254-8436",
+      "label": "Teléfono (solo para mostrar)",
+      "info": "El enlace para llamar usa el número fijo +13462548436."
+    },
+    {
+      "type": "text",
+      "id": "instagram_handle",
+      "default": "@dayanasweet02",
+      "label": "Usuario de Instagram"
+    },
+    {
+      "type": "url",
+      "id": "instagram_url",
+      "label": "Enlace de Instagram"
+    },
+    {
+      "type": "text",
+      "id": "tiktok_handle",
+      "default": "@dayanasweet",
+      "label": "Usuario de TikTok"
+    },
+    {
+      "type": "url",
+      "id": "tiktok_url",
+      "label": "Enlace de TikTok"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Esquema de color",
+      "default": "scheme-2"
+    },
+    {
+      "type": "header",
+      "content": "Espaciado de sección"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Espaciado superior",
+      "default": 36
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Espaciado inferior",
+      "default": 52
+    }
+  ],
+  "presets": [
+    {
+      "name": "Contact cards",
+      "settings": {
+        "email": "dayanaoramasgalano@gmail.com",
+        "phone": "(346) 254-8436",
+        "instagram_handle": "@dayanasweet02",
+        "instagram_url": "https://instagram.com/dayanasweet02",
+        "tiktok_handle": "@dayanasweet",
+        "tiktok_url": "https://tiktok.com/@dayanasweet"
+      }
+    }
+  ]
+}
+{% endschema %}

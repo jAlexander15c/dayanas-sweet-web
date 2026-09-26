@@ -1,0 +1,53 @@
+
+<section class="ds-faq ds-wrap" aria-labelledby="FaqTitle-{{ section.id }}"><div><p class="ds-eyebrow">{{ section.settings.eyebrow | escape }}</p><h2 id="FaqTitle-{{ section.id }}">{{ section.settings.title | escape }}</h2><p>{{ section.settings.text | escape }}</p></div><div class="ds-faq__items">{% for block in section.blocks %}<details {{ block.shopify_attributes }}><summary>{{ block.settings.question | escape }}<span aria-hidden="true">+</span></summary><div>{{ block.settings.answer }}</div></details>{% endfor %}</div></section>
+
+{% schema %}
+{
+  "name": "DS · Preguntas frecuentes",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Texto superior",
+      "default": "ANTES DEL PRIMER MORDISCO"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Título",
+      "default": "¿Se te antoja saber más?"
+    },
+    {
+      "type": "textarea",
+      "id": "text",
+      "label": "Descripción",
+      "default": "Los detalles también forman parte de una buena experiencia."
+    }
+  ],
+  "presets": [
+    {
+      "name": "DS · Preguntas frecuentes"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "question",
+      "name": "Pregunta",
+      "settings": [
+        {
+          "type": "text",
+          "id": "question",
+          "label": "Pregunta",
+          "default": "¿Cómo hago mi pedido?"
+        },
+        {
+          "type": "richtext",
+          "id": "answer",
+          "label": "Respuesta",
+          "default": "<p>Elige tus productos, selecciona las opciones disponibles y añádelos al carrito. Podrás revisar tu pedido antes de finalizar la compra.</p>"
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

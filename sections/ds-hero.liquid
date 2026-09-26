@@ -1,0 +1,92 @@
+
+<section class="ds-hero" aria-labelledby="HeroTitle-{{ section.id }}">
+  <div class="ds-hero__copy">
+    <p class="ds-eyebrow"><span class="ds-dot"></span> {{ section.settings.eyebrow | escape }}</p>
+    <h1 id="HeroTitle-{{ section.id }}">{{ section.settings.title | escape }} <em>{{ section.settings.accent | escape }}</em></h1>
+    <p class="ds-hero__text">{{ section.settings.text | escape }}</p>
+    <div class="ds-actions">
+      {% if collections.all.products.size > 0 %}
+        <a class="ds-button" href="{{ section.settings.button_link | default: '#ds-catalogo' }}">{{ section.settings.button_label | escape }} <span aria-hidden="true">→</span></a>
+      {% else %}
+        <a class="ds-button" href="#ds-catalogo">Descubre la primera hornada <span aria-hidden="true">→</span></a>
+      {% endif %}
+      <a class="ds-text-link" href="#ds-universo">Cómo funciona <span aria-hidden="true">↗</span></a>
+    </div>
+    <div class="ds-hero__foot"><span aria-hidden="true">✳</span><span>{{ section.settings.footnote | escape }}</span></div>
+  </div>
+  <div class="ds-hero__visual">
+    {% if section.settings.image != blank %}
+      {{ section.settings.image | image_url: width: 1800 | image_tag: widths: '480, 750, 1100, 1500, 1800', sizes: '(min-width: 990px) 53vw, 100vw', class: 'ds-hero__photo', fetchpriority: 'high', loading: 'eager' }}
+    {% else %}
+      <img class="ds-hero__photo" src="{{ 'ds-editorial-cookies.png' | asset_url }}" alt="Composición editorial de galletas con chocolate" width="1536" height="1024" fetchpriority="high">
+    {% endif %}
+    <div class="ds-seal"><span>UN POQUITO DE</span><strong>dulce<br>felicidad</strong><span>DAYANA’S SWEET</span></div>
+    <div class="ds-photo-caption"><span>{{ section.settings.caption | escape }}</span><span aria-hidden="true">01 / DS</span></div>
+  </div>
+</section>
+<div class="ds-ribbon" aria-label="Horneado en Texas, hecho por encargo, enviado a tu puerta"><span>HORNEADO EN TEXAS</span><b aria-hidden="true">✳</b><span>HECHO POR ENCARGO</span><b aria-hidden="true">✳</b><span>ENVIADO A TU PUERTA</span></div>
+
+{% schema %}
+{
+  "name": "DS · Portada editorial",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Texto superior",
+      "default": "PASTELERÍA ARTESANAL"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Título",
+      "default": "La vida sabe"
+    },
+    {
+      "type": "text",
+      "id": "accent",
+      "label": "Título destacado",
+      "default": "mejor con algo dulce."
+    },
+    {
+      "type": "textarea",
+      "id": "text",
+      "label": "Descripción",
+      "default": "Galletas y postres para convertir un antojo en tu momento favorito del día."
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Botón",
+      "default": "Descubre los sabores"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "Enlace del botón"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Fotografía principal"
+    },
+    {
+      "type": "text",
+      "id": "footnote",
+      "label": "Detalle inferior",
+      "default": "Para regalar, compartir… o quedártelo todo."
+    },
+    {
+      "type": "text",
+      "id": "caption",
+      "label": "Pie de fotografía",
+      "default": "El lado dulce de la vida"
+    }
+  ],
+  "presets": [
+    {
+      "name": "DS · Portada editorial"
+    }
+  ]
+}
+{% endschema %}
