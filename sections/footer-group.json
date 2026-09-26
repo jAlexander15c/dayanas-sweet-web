@@ -10,13 +10,21 @@
           "settings": {
             "show_social": true
           }
+        },
+        "menu": {
+          "type": "link_list",
+          "settings": {
+            "heading": "Menú",
+            "menu": "main-menu"
+          }
         }
       },
       "block_order": [
-        "brand"
+        "brand",
+        "menu"
       ],
       "settings": {
-        "color_scheme": "scheme-1",
+        "color_scheme": "scheme-4",
         "newsletter_enable": false,
         "newsletter_heading": "Un poquito más cerca",
         "enable_follow_on_shop": true,
@@ -26,7 +34,7 @@
         "payment_enable": true,
         "show_policy": true,
         "margin_top": 0,
-        "padding_top": 40,
+        "padding_top": 56,
         "padding_bottom": 28
       }
     }

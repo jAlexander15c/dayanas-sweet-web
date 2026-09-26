@@ -1,0 +1,123 @@
+<section class="ds-social color-{{ section.settings.color_scheme }} ds-scallop-top" aria-labelledby="DSSocial-{{ section.id }}">
+  <div class="ds-wrap ds-social__grid">
+    <div class="ds-social__copy">
+      <h2 class="ds-display ds-h2" id="DSSocial-{{ section.id }}">{{ section.settings.title | escape }}</h2>
+      {%- if section.settings.text != blank -%}<p class="ds-social__text">{% render 'ds-batch-text', text: section.settings.text, escape: true %}</p>{%- endif -%}
+      {%- assign news_id = 'DSNews-' | append: section.id -%}
+      {%- form 'customer', class: 'ds-news', id: news_id -%}
+        <input type="hidden" name="contact[tags]" value="newsletter">
+        <label for="DSNewsEmail-{{ section.id }}">Tu correo electrónico</label>
+        <div class="ds-news__row">
+          <input id="DSNewsEmail-{{ section.id }}" type="email" name="contact[email]" required autocomplete="email" autocapitalize="off" autocorrect="off" placeholder="nombre@correo.com" value="{{ form.email }}"{% if form.errors %} aria-invalid="true" aria-describedby="DSNewsMsg-{{ section.id }}"{% endif %}>
+          <button type="submit" class="ds-btn ds-btn--ink">Suscribirme</button>
+        </div>
+        <p class="ds-news__msg" id="DSNewsMsg-{{ section.id }}" role="status">
+          {%- if form.posted_successfully? -%}Listo. Te escribiremos el día que abra el próximo menú.
+          {%- elsif form.errors -%}Revisa el correo: parece que falta el @ o el dominio.
+          {%- endif -%}
+        </p>
+      {%- endform -%}
+    </div>
+    {%- if section.blocks.size > 0 -%}
+      <div class="ds-insta ds-insta--{{ section.blocks.size }}">
+        {%- for block in section.blocks -%}
+          {%- assign link = block.settings.link | default: section.settings.profile_link -%}
+          {%- if block.type == 'handle' -%}
+            <a class="ds-insta__handle" href="{{ link | default: '#' }}" target="_blank" rel="noopener" {{ block.shopify_attributes }}>{{ block.settings.label | escape | newline_to_br }}</a>
+          {%- else -%}
+            <a class="ds-insta__img" href="{{ link | default: '#' }}" target="_blank" rel="noopener" {{ block.shopify_attributes }}>
+              {%- if block.settings.image != blank -%}
+                {{ block.settings.image | image_url: width: 800 | image_tag: widths: '300, 500, 800', sizes: '(min-width: 990px) 20vw, 33vw', loading: 'lazy' }}
+              {%- else -%}
+                <img src="{{ block.settings.fallback | asset_url }}" alt="" width="1254" height="1254" loading="lazy">
+              {%- endif -%}
+            </a>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "DS · Correo y redes",
+  "class": "ds-social-wrap",
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Título",
+      "default": "Lo más dulce, primero en tu correo."
+    },
+    {
+      "type": "textarea",
+      "id": "text",
+      "label": "Texto"
+    },
+    {
+      "type": "url",
+      "id": "profile_link",
+      "label": "Perfil de Instagram"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Colores",
+      "default": "scheme-5"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "photo",
+      "name": "Foto",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Foto"
+        },
+        {
+          "type": "select",
+          "id": "fallback",
+          "label": "Foto de respaldo",
+          "options": [
+            { "value": "ds-cookie-box-concept.png", "label": "Caja de galletas" },
+            { "value": "ds-brownie.png", "label": "Brownie" },
+            { "value": "ds-editorial-cookies.png", "label": "Galletas apiladas" }
+          ],
+          "default": "ds-cookie-box-concept.png"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Enlace (vacío = perfil)"
+        }
+      ]
+    },
+    {
+      "type": "handle",
+      "name": "Cuenta",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "textarea",
+          "id": "label",
+          "label": "Texto",
+          "default": "Síguenos\n@dayanassweet"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Enlace (vacío = perfil)"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "DS · Correo y redes"
+    }
+  ]
+}
+{% endschema %}

@@ -1,32 +1,34 @@
-
-<section class="ds-faq ds-wrap" aria-labelledby="FaqTitle-{{ section.id }}"><div><p class="ds-eyebrow">{{ section.settings.eyebrow | escape }}</p><h2 id="FaqTitle-{{ section.id }}">{{ section.settings.title | escape }}</h2><p>{{ section.settings.text | escape }}</p></div><div class="ds-faq__items">{% for block in section.blocks %}<details {{ block.shopify_attributes }}><summary>{{ block.settings.question | escape }}<span aria-hidden="true">+</span></summary><div>{{ block.settings.answer }}</div></details>{% endfor %}</div></section>
+<section class="ds-faq ds-wrap" id="ds-preguntas" aria-labelledby="DSFaq-{{ section.id }}">
+  <div class="ds-faq__side">
+    <h2 class="ds-display ds-h2" id="DSFaq-{{ section.id }}">{{ section.settings.title | escape }}</h2>
+    {%- if section.settings.text != blank -%}<p>{{ section.settings.text | escape }}</p>{%- endif -%}
+  </div>
+  <div class="ds-faq__items">
+    {%- for block in section.blocks -%}
+      <details class="ds-qa"{% if forloop.first %} open{% endif %} {{ block.shopify_attributes }}>
+        <summary>{{ block.settings.question | escape }}{% render 'ds-icon', name: 'plus' %}</summary>
+        <div class="ds-qa__a rte">{% render 'ds-batch-text', text: block.settings.answer %}</div>
+      </details>
+    {%- endfor -%}
+  </div>
+</section>
 
 {% schema %}
 {
   "name": "DS · Preguntas frecuentes",
+  "class": "ds-faq-wrap",
   "settings": [
-    {
-      "type": "text",
-      "id": "eyebrow",
-      "label": "Texto superior",
-      "default": "ANTES DEL PRIMER MORDISCO"
-    },
     {
       "type": "text",
       "id": "title",
       "label": "Título",
-      "default": "¿Se te antoja saber más?"
+      "default": "Antes de pedir"
     },
     {
       "type": "textarea",
       "id": "text",
       "label": "Descripción",
-      "default": "Los detalles también forman parte de una buena experiencia."
-    }
-  ],
-  "presets": [
-    {
-      "name": "DS · Preguntas frecuentes"
+      "default": "Lo que conviene saber antes de elegir, para que tu caja llegue justo cuando la necesitas."
     }
   ],
   "blocks": [
@@ -44,8 +46,17 @@
           "type": "richtext",
           "id": "answer",
           "label": "Respuesta",
-          "default": "<p>Elige tus productos, selecciona las opciones disponibles y añádelos al carrito. Podrás revisar tu pedido antes de finalizar la compra.</p>"
+          "info": "Puedes usar [tanda], [cierre], [horneado] y [despacho].",
+          "default": "<p>Elige tus productos y agrégalos al carrito mientras el menú esté abierto.</p>"
         }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "DS · Preguntas frecuentes",
+      "blocks": [
+        { "type": "question" }
       ]
     }
   ]

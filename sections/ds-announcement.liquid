@@ -1,0 +1,60 @@
+<div class="ds-announce" data-ds-rotate="{{ section.settings.speed }}" role="region" aria-label="Anuncios">
+  {%- for block in section.blocks -%}
+    <p class="ds-announce__msg{% if forloop.first %} is-on{% endif %}" {{ block.shopify_attributes }}>
+      {%- if block.settings.link != blank -%}<a href="{{ block.settings.link }}">{%- endif -%}
+      {%- render 'ds-batch-text', text: block.settings.text, escape: true -%}
+      {%- if block.settings.link != blank -%}</a>{%- endif -%}
+    </p>
+  {%- endfor -%}
+</div>
+
+{% schema %}
+{
+  "name": "DS · Barra de anuncios",
+  "class": "ds-announce-section",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Puedes usar [tanda], [cierre], [horneado] y [despacho]; se reemplazan por las fechas de Ajustes del tema > DS · Tanda de pedidos."
+    },
+    {
+      "type": "range",
+      "id": "speed",
+      "label": "Segundos por mensaje",
+      "min": 3,
+      "max": 10,
+      "step": 1,
+      "default": 5
+    }
+  ],
+  "blocks": [
+    {
+      "type": "message",
+      "name": "Mensaje",
+      "settings": [
+        {
+          "type": "text",
+          "id": "text",
+          "label": "Texto",
+          "default": "[tanda]: pedidos hasta el [cierre]"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Enlace (opcional)"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "DS · Barra de anuncios",
+      "blocks": [
+        {
+          "type": "message"
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

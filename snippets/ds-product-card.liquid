@@ -1,0 +1,79 @@
+{% comment %}
+  Tarjeta de producto de la capa DS: etiqueta de caja con agregar rápido.
+  Acepta:
+    - product: {Object}
+    - section_id: {string} para el formulario de producto de Dawn
+    - lazy: {boolean} carga diferida de la imagen (por defecto true)
+  Etiquetas del producto:
+    - "badge:Texto" muestra una etiqueta sobre la foto (por ejemplo badge:Favorito)
+  La sección que lo usa debe cargar product-form.js.
+{% endcomment %}
+{%- liquid
+  assign variant = product.selected_or_first_available_variant
+  assign sold_out = false
+  unless product.available
+    assign sold_out = true
+  endunless
+  assign badge = ''
+  for tag in product.tags
+    if tag contains 'badge:'
+      assign badge = tag | remove_first: 'badge:' | strip
+      break
+    endif
+  endfor
+  assign low = false
+  if variant.inventory_management == 'shopify' and variant.inventory_policy == 'deny' and variant.inventory_quantity > 0 and variant.inventory_quantity <= settings.ds_low_stock
+    assign low = true
+  endif
+  assign form_id = 'DSCard-' | append: section_id | append: '-' | append: product.id
+  assign img_alt = product.featured_media.alt | default: product.title | escape
+  assign loading = 'lazy'
+  if lazy == false
+    assign loading = 'eager'
+  endif
+-%}
+<article class="ds-card{% if sold_out %} is-out{% endif %}">
+  <a class="ds-card__media" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
+    {%- if product.featured_media -%}
+      {{ product.featured_media | image_url: width: 720 | image_tag: widths: '300, 450, 600, 720', sizes: '(min-width: 990px) 300px, 70vw', loading: loading, class: 'ds-card__img', alt: img_alt }}
+      {%- if product.media[1] -%}
+        {{ product.media[1] | image_url: width: 720 | image_tag: widths: '300, 450, 600, 720', sizes: '(min-width: 990px) 300px, 70vw', loading: 'lazy', class: 'ds-card__img ds-card__img--alt', alt: '' }}
+      {%- endif -%}
+    {%- else -%}
+      <span class="ds-card__ph">Foto próximamente</span>
+    {%- endif -%}
+    {%- if sold_out -%}
+      <span class="ds-badge ds-badge--ink">Agotado en esta tanda</span>
+    {%- elsif badge != blank -%}
+      <span class="ds-badge">{{ badge | escape }}</span>
+    {%- endif -%}
+  </a>
+  <div class="ds-card__body">
+    <h3 class="ds-card__title"><a href="{{ product.url }}">{{ product.title | escape }}</a></h3>
+    {%- assign excerpt = product.description | strip_html | truncatewords: 10, '…' -%}
+    {%- if excerpt != blank -%}<p class="ds-card__desc">{{ excerpt }}</p>{%- endif -%}
+    {%- if low -%}<p class="ds-card__stock">Quedan {{ variant.inventory_quantity }} en esta tanda</p>{%- endif -%}
+    <div class="ds-card__foot">
+      <span class="ds-card__price">
+        {%- if product.price_varies -%}Desde {% endif -%}
+        {{ product.price | money }}
+      </span>
+      {%- if sold_out or settings.ds_batch_open == false -%}
+        <span class="ds-add is-disabled">{% if sold_out %}Agotado{% else %}Cerrado{% endif %}</span>
+      {%- elsif product.has_only_default_variant -%}
+        <product-form class="ds-card__form" data-section-id="{{ section_id }}" data-hide-errors="true">
+          {%- form 'product', product, id: form_id, novalidate: 'novalidate', data-type: 'add-to-cart-form' -%}
+            <input type="hidden" name="id" value="{{ variant.id }}" class="product-variant-id">
+            <input type="hidden" name="quantity" value="1">
+            <button type="submit" name="add" class="ds-add" aria-label="Agregar {{ product.title | escape }} al carrito">
+              {% render 'ds-icon', name: 'plus' %}<span>Agregar</span>
+              {%- render 'loading-spinner' -%}
+            </button>
+          {%- endform -%}
+        </product-form>
+      {%- else -%}
+        <a class="ds-add" href="{{ product.url }}" aria-label="Elegir opciones de {{ product.title | escape }}">Elegir</a>
+      {%- endif -%}
+    </div>
+  </div>
+</article>

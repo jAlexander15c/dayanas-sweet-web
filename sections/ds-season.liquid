@@ -1,0 +1,70 @@
+{{ 'quick-add.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'product-form.js' | asset_url }}" defer="defer"></script>
+{%- assign c = section.settings.collection -%}
+{%- if c != blank and c.products_count > 0 -%}
+  <section class="ds-season color-{{ section.settings.color_scheme }} ds-scallop-top ds-scallop-bottom" aria-labelledby="DSSeason-{{ section.id }}">
+    <div class="ds-wrap ds-season__grid">
+      <div class="ds-season__copy">
+        <h2 class="ds-display ds-season__title" id="DSSeason-{{ section.id }}">{{ section.settings.title | default: c.title | escape }}</h2>
+        {%- if section.settings.text != blank -%}<p class="ds-season__lead">{% render 'ds-batch-text', text: section.settings.text, escape: true %}</p>{%- endif -%}
+        {%- if section.settings.dates != blank -%}<p class="ds-pill">{% render 'ds-batch-text', text: section.settings.dates, escape: true %}</p>{%- endif -%}
+        <div class="ds-ctas"><a class="ds-btn ds-btn--ink" href="{{ c.url }}">{{ section.settings.button_label | escape }}</a></div>
+      </div>
+      <ul class="ds-season__cards" role="list">
+        {%- for product in c.products limit: 3 -%}
+          <li>{% render 'ds-product-card', product: product, section_id: section.id %}</li>
+        {%- endfor -%}
+      </ul>
+    </div>
+  </section>
+{%- elsif request.design_mode -%}
+  <div class="ds-wrap"><p class="ds-empty">DS · Temporada: elige una colección con productos para mostrar esta sección. Mientras no la elijas, no aparece en la tienda.</p></div>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "DS · Edición de temporada",
+  "class": "ds-season-wrap",
+  "settings": [
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "Colección de temporada",
+      "info": "La sección solo aparece cuando la colección tiene productos."
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Título (vacío = nombre de la colección)"
+    },
+    {
+      "type": "textarea",
+      "id": "text",
+      "label": "Texto"
+    },
+    {
+      "type": "text",
+      "id": "dates",
+      "label": "Fechas de la edición",
+      "info": "Por ejemplo: Pedidos del 19 al 23 de octubre · despacho el 27"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Botón",
+      "default": "Ver la edición"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Colores",
+      "default": "scheme-6"
+    }
+  ],
+  "presets": [
+    {
+      "name": "DS · Edición de temporada"
+    }
+  ]
+}
+{% endschema %}

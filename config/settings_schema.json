@@ -1466,5 +1466,72 @@
         "label": "t:settings_schema.customer_accounts.settings.customer_account_menu.label"
       }
     ]
+  },
+  {
+    "name": "DS · Tanda de pedidos",
+    "settings": [
+      {
+        "type": "paragraph",
+        "content": "Estas fechas se usan en la barra de anuncios, la sección de tandas, la ficha de producto y el carrito. En los textos puedes escribir [tanda], [cierre], [horneado] y [despacho] y se reemplazan por estos valores."
+      },
+      {
+        "type": "checkbox",
+        "id": "ds_batch_open",
+        "label": "Menú abierto para pedidos",
+        "default": true
+      },
+      {
+        "type": "text",
+        "id": "ds_batch_name",
+        "label": "Nombre de la tanda",
+        "default": "Primera hornada"
+      },
+      {
+        "type": "text",
+        "id": "ds_batch_close",
+        "label": "Cierre de pedidos",
+        "default": "sábado 17 de octubre a las 11:59 p. m. CT"
+      },
+      {
+        "type": "text",
+        "id": "ds_batch_bake",
+        "label": "Día de horneado",
+        "default": "domingo 18 de octubre"
+      },
+      {
+        "type": "text",
+        "id": "ds_batch_ship",
+        "label": "Despacho",
+        "default": "a más tardar el martes 20 de octubre"
+      },
+      {
+        "type": "text",
+        "id": "ds_batch_closed_text",
+        "label": "Mensaje con el menú cerrado",
+        "default": "El menú está cerrado. Suscríbete y te avisamos cuando abra la próxima tanda."
+      },
+      {
+        "type": "range",
+        "id": "ds_low_stock",
+        "label": "Mostrar \"Quedan N\" desde",
+        "min": 1,
+        "max": 50,
+        "step": 1,
+        "default": 15,
+        "info": "Solo para productos con inventario controlado en Shopify."
+      },
+      {
+        "type": "text",
+        "id": "ds_storage_tag",
+        "label": "Etiqueta de producto para mostrar la conservación de galletas",
+        "default": "galletas"
+      },
+      {
+        "type": "richtext",
+        "id": "ds_cookie_storage",
+        "label": "Conservación de galletas",
+        "default": "<p>Cuatro días fuera de la nevera en su caja cerrada, ocho días en la nevera y hasta tres meses en el congelador. Para revivirlas: 20 segundos en el microondas o 5 minutos en el horno a 350 °F.</p>"
+      }
+    ]
   }
 ]

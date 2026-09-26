@@ -1,0 +1,85 @@
+{{ 'quick-add.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'product-form.js' | asset_url }}" defer="defer"></script>
+{%- liquid
+  assign source = section.settings.collection
+  if source == blank
+    assign source = collections.all
+  endif
+  assign rail_id = 'DSRail-' | append: section.id
+-%}
+<section class="ds-rail-section color-{{ section.settings.color_scheme }} ds-scallop-top ds-scallop-bottom" aria-labelledby="{{ rail_id }}-title">
+  <div class="ds-wrap ds-rail__head">
+    <h2 class="ds-display ds-h2" id="{{ rail_id }}-title">{{ section.settings.title | escape }}</h2>
+    {%- if source.products_count > 3 -%}
+      <div class="ds-rail__arrows">
+        <button type="button" data-ds-rail="{{ rail_id }}" data-dir="-1" aria-label="Productos anteriores">{% render 'ds-icon', name: 'left' %}</button>
+        <button type="button" data-ds-rail="{{ rail_id }}" data-dir="1" aria-label="Productos siguientes">{% render 'ds-icon', name: 'right' %}</button>
+      </div>
+    {%- endif -%}
+  </div>
+  {%- if source.products_count > 0 -%}
+    <ul class="ds-rail" id="{{ rail_id }}" role="list">
+      {%- for product in source.products limit: section.settings.limit -%}
+        <li>{% render 'ds-product-card', product: product, section_id: section.id %}</li>
+      {%- endfor -%}
+    </ul>
+    {%- if section.settings.link_label != blank -%}
+      <div class="ds-wrap ds-rail__more"><a href="{{ source.url | default: routes.all_products_collection_url }}">{{ section.settings.link_label | escape }}</a></div>
+    {%- endif -%}
+  {%- else -%}
+    <div class="ds-wrap"><p class="ds-empty">{% render 'ds-batch-text', text: section.settings.empty_text, escape: true %}</p></div>
+  {%- endif -%}
+</section>
+
+{% schema %}
+{
+  "name": "DS · Riel de productos",
+  "class": "ds-rail-wrap",
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Título",
+      "default": "Los más pedidos"
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "Colección",
+      "info": "Para \"Los más pedidos\", crea en Shopify una colección automática ordenada por más vendidos. Vacía muestra todos los productos."
+    },
+    {
+      "type": "range",
+      "id": "limit",
+      "label": "Productos visibles",
+      "min": 3,
+      "max": 12,
+      "step": 1,
+      "default": 8
+    },
+    {
+      "type": "text",
+      "id": "link_label",
+      "label": "Texto del enlace inferior",
+      "default": "Ver todo el menú"
+    },
+    {
+      "type": "textarea",
+      "id": "empty_text",
+      "label": "Texto sin productos",
+      "default": "El menú de [tanda] se publica muy pronto. Pedidos hasta el [cierre]."
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Colores",
+      "default": "scheme-2"
+    }
+  ],
+  "presets": [
+    {
+      "name": "DS · Riel de productos"
+    }
+  ]
+}
+{% endschema %}

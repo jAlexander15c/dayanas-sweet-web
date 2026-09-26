@@ -3,13 +3,6 @@
     "main": {
       "type": "main-product",
       "blocks": {
-        "vendor": {
-          "type": "text",
-          "settings": {
-            "text": "{{ product.vendor }}",
-            "text_style": "uppercase"
-          }
-        },
         "title": {
           "type": "title"
         },
@@ -36,33 +29,39 @@
         "description": {
           "type": "description"
         },
-        "share": {
-          "type": "share",
+        "ds_batch": {
+          "type": "custom_liquid",
           "settings": {
-            "share_label": "Compartir"
+            "custom_liquid": "{% render 'ds-product-batch', product: product %}"
+          }
+        },
+        "ds_sticky": {
+          "type": "custom_liquid",
+          "settings": {
+            "custom_liquid": "{% render 'ds-sticky-buy', product: product %}"
           }
         }
       },
       "block_order": [
-        "vendor",
         "title",
         "price",
+        "description",
+        "ds_batch",
         "variant_picker",
         "quantity_selector",
         "buy_buttons",
-        "description",
-        "share"
+        "ds_sticky"
       ],
       "settings": {
         "enable_sticky_info": true,
         "color_scheme": "scheme-1",
         "media_position": "left",
-        "gallery_layout": "stacked",
+        "gallery_layout": "thumbnail",
         "media_size": "large",
         "constrain_to_viewport": true,
-        "media_fit": "contain",
+        "media_fit": "cover",
         "image_zoom": "lightbox",
-        "mobile_thumbnails": "hide",
+        "mobile_thumbnails": "show",
         "hide_variants": true,
         "enable_video_looping": false,
         "padding_top": 36,
@@ -79,11 +78,11 @@
     "related-products": {
       "type": "related-products",
       "settings": {
-        "heading": "Otro antojo para tu lista",
+        "heading": "También te puede gustar",
         "heading_size": "h2",
         "products_to_show": 4,
         "columns_desktop": 4,
-        "color_scheme": "scheme-1",
+        "color_scheme": "scheme-2",
         "image_ratio": "square",
         "image_shape": "default",
         "show_secondary_image": true,

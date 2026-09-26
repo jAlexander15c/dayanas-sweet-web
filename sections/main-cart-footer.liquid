@@ -38,6 +38,7 @@
       {%- endif -%}
 
       <div class="cart__blocks">
+        {%- render 'ds-cart-batch' -%}
         {% for block in section.blocks %}
           {%- case block.type -%}
             {%- when '@app' -%}

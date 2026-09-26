@@ -1,0 +1,15 @@
+{% comment %}
+  Barra de compra fija en celular. Envía el formulario principal de la ficha,
+  así respeta la variante y la cantidad elegidas. Se muestra cuando el botón
+  principal sale de pantalla (assets/ds-motion.js).
+  Uso desde un bloque "Liquid personalizado": {% render 'ds-sticky-buy', product: product %}
+{% endcomment %}
+{%- if product.available and settings.ds_batch_open -%}
+  <div class="ds-sticky-buy" data-ds-sticky hidden>
+    <div class="ds-sticky-buy__info">
+      <strong>{{ product.title | escape }}</strong>
+      <span>{{ product.selected_or_first_available_variant.price | money }}</span>
+    </div>
+    <button type="button" class="ds-btn" data-ds-sticky-submit>Agregar al carrito</button>
+  </div>
+{%- endif -%}

@@ -1,49 +1,55 @@
-
-<section class="ds-story ds-wrap" id="ds-esencia" aria-labelledby="StoryTitle-{{ section.id }}">
-  <div class="ds-story__art">
-    {% if section.settings.image != blank %}{{ section.settings.image | image_url: width: 1200 | image_tag: loading: 'lazy', sizes: '(min-width: 990px) 45vw, 100vw', widths: '480, 750, 1200' }}{% else %}<div class="ds-brand-orbit"><span class="ds-star ds-star--one" aria-hidden="true">✳</span><img src="{{ 'logo-badge.png' | asset_url }}" alt="Dayana’s Sweet, pastelería artesanal" width="850" height="822" loading="lazy"><span class="ds-star ds-star--two" aria-hidden="true">✳</span></div>{% endif %}
-    <p>{{ section.settings.caption | escape }}</p>
+<section class="ds-story ds-wrap" id="ds-historia" aria-labelledby="DSStory-{{ section.id }}">
+  <div class="ds-story__img">
+    {%- if section.settings.image != blank -%}
+      {{ section.settings.image | image_url: width: 1200 | image_tag: widths: '480, 750, 1000, 1200', sizes: '(min-width: 990px) 40vw, 100vw', loading: 'lazy' }}
+    {%- else -%}
+      <img src="{{ 'ds-cookie-box-concept.png' | asset_url }}" alt="Caja rosa abierta con seis galletas sobre papel encerado" width="1254" height="1254" loading="lazy">
+    {%- endif -%}
   </div>
-  <div class="ds-story__copy"><p class="ds-eyebrow">{{ section.settings.eyebrow | escape }}</p><h2 id="StoryTitle-{{ section.id }}">{{ section.settings.title | escape }}</h2><div class="ds-story__text">{{ section.settings.text }}</div><span class="ds-signature">Dayana’s Sweet</span><a class="ds-text-link" href="#ds-universo">Así preparamos cada hornada <span aria-hidden="true">↗</span></a></div>
+  <div class="ds-story__copy">
+    <h2 class="ds-display ds-h2" id="DSStory-{{ section.id }}">{{ section.settings.title | escape }}</h2>
+    <div class="ds-story__text">{% render 'ds-batch-text', text: section.settings.text %}</div>
+    {%- assign facts = section.settings.facts | newline_to_br | split: '<br />' -%}
+    {%- if section.settings.facts != blank -%}
+      <ul class="ds-facts" role="list">
+        {%- for fact in facts -%}{%- assign f = fact | strip -%}{%- if f != blank -%}<li>{{ f | escape }}</li>{%- endif -%}{%- endfor -%}
+      </ul>
+    {%- endif -%}
+  </div>
 </section>
 
 {% schema %}
 {
-  "name": "DS · Esencia artesanal",
+  "name": "DS · Nuestra historia",
+  "class": "ds-story-wrap",
   "settings": [
     {
-      "type": "text",
-      "id": "eyebrow",
-      "label": "Texto superior",
-      "default": "NUESTRA ESENCIA"
+      "type": "image_picker",
+      "id": "image",
+      "label": "Foto",
+      "info": "Vertical. Sin foto se usa la caja de galletas de la marca."
     },
     {
       "type": "text",
       "id": "title",
       "label": "Título",
-      "default": "Lo especial está en los pequeños detalles."
+      "default": "Recetas con memoria cubana, horneadas en Texas."
     },
     {
       "type": "richtext",
       "id": "text",
-      "label": "Texto",
-      "default": "<p>Una pausa, una sobremesa, una celebración. Nos gusta pensar que los mejores momentos siempre tienen un lado dulce.</p><p>Ese es el universo de Dayana’s Sweet: pastelería artesanal y el placer de compartir algo especial.</p>"
+      "label": "Texto"
     },
     {
-      "type": "image_picker",
-      "id": "image",
-      "label": "Fotografía de la marca (opcional)"
-    },
-    {
-      "type": "text",
-      "id": "caption",
-      "label": "Pie de imagen",
-      "default": "PASTELERÍA CON PERSONALIDAD"
+      "type": "textarea",
+      "id": "facts",
+      "label": "Datos destacados (uno por línea)",
+      "default": "Menú abierto por tandas\nHorneado para tu fecha de despacho\nCupos según lo que sale del horno"
     }
   ],
   "presets": [
     {
-      "name": "DS · Esencia artesanal"
+      "name": "DS · Nuestra historia"
     }
   ]
 }

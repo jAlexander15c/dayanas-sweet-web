@@ -2,106 +2,265 @@
   "sections": {
     "hero": {
       "type": "ds-hero",
-      "settings": {
-        "eyebrow": "GALLETAS Y POSTRES · HECHOS EN TEXAS",
-        "title": "Un antojo",
-        "accent": "que vale la espera.",
-        "button_label": "Ver galletas y postres",
-        "text": "Galletas doradas, mucho chocolate y ese primer mordisco que alegra el día. Inspiración cubana, horneada en pequeñas tandas en Texas.",
-        "footnote": "Primera hornada: domingo 18 de octubre. Pedidos hasta el 17 a las 11:59 p. m. CT; despacho a más tardar el martes 20.",
-        "caption": "Imágenes ilustrativas · menú en desarrollo"
-      }
-    },
-    "catalog": {
-      "type": "ds-collection",
-      "settings": {
-        "eyebrow": "TU PRÓXIMO FAVORITO EMPIEZA AQUÍ",
-        "title": "Para abrir el apetito.",
-        "text": "Un primer vistazo a las ideas dulces que estamos preparando.",
-        "empty_label": "PRIMERA HORNADA · 18 DE OCTUBRE",
-        "empty_title": "Lo bueno está en preparación.",
-        "empty_text": "El menú, los precios y la disponibilidad aparecerán aquí cuando confirmemos la primera hornada."
-      }
-    },
-    "universe": {
-      "type": "ds-universe",
-      "settings": {"eyebrow":"HECHO EN PEQUEÑAS TANDAS","title":"De nuestro horno a tu puerta."},
       "blocks": {
-        "moment0": {
-          "type": "moment",
+        "slide-cookies": {
+          "type": "slide",
           "settings": {
-            "title": "Reserva tu pedido.",
-            "text": "La primera tanda cierra el sábado 17 de octubre a las 11:59 p. m., hora de Fulshear, Texas. Cupo limitado."
+            "title": "Galletas gruesas, *recién* horneadas.",
+            "text": "Borde tostado, centro que todavía se dobla y trozos de chocolate que se derriten al abrir la caja.",
+            "button_label": "Ver el menú",
+            "button_link": "",
+            "button2_label": "Cómo funcionan las tandas",
+            "button2_link": "#ds-tandas"
           }
         },
-        "moment1": {
-          "type": "moment",
+        "slide-brownie": {
+          "type": "slide",
           "settings": {
-            "title": "Horneamos el domingo.",
-            "text": "Preparamos cada hornada por encargo, con el cuidado y la atención que merece cada detalle."
+            "title": "Chocolate *sin prisa*, cortado en cuadros generosos.",
+            "text": "La costra cruje como papel de azúcar y debajo espera un centro denso, casi de trufa.",
+            "button_label": "Ver el menú",
+            "button_link": ""
           }
         },
-        "moment2": {
-          "type": "moment",
+        "slide-box": {
+          "type": "slide",
           "settings": {
-            "title": "Despachamos el martes.",
-            "text": "Entregamos los pedidos al transportista a más tardar el 20 de octubre. La fecha de llegada depende del servicio elegido."
+            "title": "Una caja rosa *dice* más que una tarjeta.",
+            "text": "Elige los sabores, escribe una nota en el pedido y la despachamos lista para regalar.",
+            "button_label": "Ver el menú",
+            "button_link": ""
           }
         }
       },
       "block_order": [
-        "moment0",
-        "moment1",
-        "moment2"
-      ]
+        "slide-cookies",
+        "slide-brownie",
+        "slide-box"
+      ],
+      "settings": {
+        "interval": 6,
+        "tag_label": "",
+        "tag_value": ""
+      }
+    },
+    "bestsellers": {
+      "type": "ds-product-rail",
+      "settings": {
+        "title": "Los más pedidos",
+        "limit": 8,
+        "link_label": "Ver todo el menú",
+        "empty_text": "El menú se publica muy pronto. Pedidos de la [tanda] hasta el [cierre].",
+        "color_scheme": "scheme-2"
+      }
+    },
+    "batch": {
+      "type": "ds-batch",
+      "blocks": {
+        "step-open": {
+          "type": "step",
+          "settings": {
+            "when": "Hasta el [cierre]",
+            "text": "El menú está abierto. Cada producto tiene cupos según lo que sale del horno; cuando uno llega a cero, se cierra hasta la próxima tanda.",
+            "current": true
+          }
+        },
+        "step-bake": {
+          "type": "step",
+          "settings": {
+            "when": "Horneamos el [horneado]",
+            "text": "Todos los pedidos de la tanda salen del horno el mismo día. Armamos las cajas una por una y las cerramos con tu nota.",
+            "current": false
+          }
+        },
+        "step-ship": {
+          "type": "step",
+          "settings": {
+            "when": "Despacho [despacho]",
+            "text": "Entregamos tu pedido al transportista. La fecha de llegada depende del servicio de envío que elijas al pagar.",
+            "current": false
+          }
+        }
+      },
+      "block_order": [
+        "step-open",
+        "step-bake",
+        "step-ship"
+      ],
+      "settings": {
+        "title": "Horneamos por tandas, no para una vitrina.",
+        "text": "<p>Abrimos el menú unos días, reunimos todos los pedidos y los horneamos juntos para una misma fecha de despacho. No horneamos en el minuto en que pides, pero nada sale del horno para quedarse esperando en un mostrador: se hace para tu tanda.</p>",
+        "color_scheme": "scheme-3"
+      }
+    },
+    "categories": {
+      "type": "ds-categories",
+      "blocks": {
+        "tile-cookies": {
+          "type": "tile",
+          "settings": {
+            "title": "Galletas",
+            "text": "",
+            "style": "photo",
+            "fallback": "ds-editorial-cookies.png"
+          }
+        },
+        "tile-brownies": {
+          "type": "tile",
+          "settings": {
+            "title": "Brownies",
+            "text": "",
+            "style": "photo",
+            "fallback": "ds-brownie.png"
+          }
+        },
+        "tile-boxes": {
+          "type": "tile",
+          "settings": {
+            "title": "Cajas para regalar",
+            "text": "Varios sabores en una caja rosa, con tu nota adentro.",
+            "style": "pink",
+            "fallback": "none"
+          }
+        },
+        "tile-desserts": {
+          "type": "tile",
+          "settings": {
+            "title": "Postres",
+            "text": "Horneados en la misma tanda que las galletas. Cada uno indica en su ficha cómo conservarlo.",
+            "style": "orange",
+            "fallback": "none"
+          }
+        }
+      },
+      "block_order": [
+        "tile-cookies",
+        "tile-brownies",
+        "tile-boxes",
+        "tile-desserts"
+      ],
+      "settings": {
+        "title": "¿Qué se te antoja hoy?"
+      }
+    },
+    "season": {
+      "type": "ds-season",
+      "settings": {
+        "title": "",
+        "text": "Recetas que solo salen del horno mientras dura la temporada. Cuando termina la edición, vuelven al cuaderno hasta el próximo año.",
+        "dates": "",
+        "button_label": "Ver la edición",
+        "color_scheme": "scheme-6"
+      }
     },
     "story": {
       "type": "ds-story",
-      "settings": {"text":"<p>Dayana’s Sweet nace de más de 15 años de experiencia en la pastelería y de una historia que comenzó en Cuba. Hoy, desde Fulshear, Texas, unimos nuestras raíces con sabores e ingredientes de Estados Unidos para crear galletas y postres con personalidad propia.</p><p>Cada creación refleja nuestra dedicación, el cuidado por los detalles y el gusto de compartir algo delicioso.</p>"}
+      "settings": {
+        "title": "Recetas con memoria cubana, horneadas en Texas.",
+        "text": "<p>Dayana’s Sweet nace de más de 15 años de experiencia en la pastelería y de una historia que comenzó en Cuba. Hoy, desde Fulshear, Texas, unimos nuestras raíces con sabores e ingredientes de Estados Unidos para crear galletas y postres con personalidad propia.</p><p>Trabajamos por tandas porque así cada caja sale del horno para su fecha de despacho, y los cupos dependen de lo que podemos hornear bien en un día. Cuando algo se acaba, esperamos a la próxima tanda en lugar de apurar el horno.</p>",
+        "facts": "Más de 15 años de oficio\nHorneado para tu fecha de despacho\nCupos según lo que sale del horno"
+      }
+    },
+    "social": {
+      "type": "ds-social",
+      "blocks": {
+        "photo-box": {
+          "type": "photo",
+          "settings": {
+            "fallback": "ds-cookie-box-concept.png"
+          }
+        },
+        "photo-brownie": {
+          "type": "photo",
+          "settings": {
+            "fallback": "ds-brownie.png"
+          }
+        },
+        "photo-cookies": {
+          "type": "photo",
+          "settings": {
+            "fallback": "ds-editorial-cookies.png"
+          }
+        },
+        "handle": {
+          "type": "handle",
+          "settings": {
+            "label": "Síguenos\n@dayanassweet"
+          }
+        }
+      },
+      "block_order": [
+        "photo-box",
+        "photo-brownie",
+        "photo-cookies",
+        "handle"
+      ],
+      "settings": {
+        "title": "Lo más dulce, primero en tu correo.",
+        "text": "Los cupos de cada tanda dependen de lo que sale del horno y los favoritos se agotan primero. Te escribimos el día que abre el menú, antes de anunciarlo en redes.",
+        "color_scheme": "scheme-5"
+      }
     },
     "faq": {
       "type": "ds-faq",
-      "settings": {},
       "blocks": {
-        "q0": {
+        "q-order": {
           "type": "question",
           "settings": {
-            "question": "¿Cómo hago mi pedido?",
-            "answer": "<p>Recibimos pedidos en línea las 24 horas, sujetos a disponibilidad. Para la primera tanda, el cierre es el sábado 17 de octubre de 2026 a las 11:59 p. m., hora de Texas. Horneamos el domingo 18 y despachamos a más tardar el martes 20.</p>"
+            "question": "¿Cuándo puedo hacer mi pedido?",
+            "answer": "<p>Mientras el menú esté abierto. Para la [tanda], recibimos pedidos hasta el [cierre]. Horneamos el [horneado] y despachamos [despacho]. Las fechas de la tanda actual siempre están en la barra superior.</p>"
           }
         },
-        "q1": {
+        "q-soldout": {
           "type": "question",
           "settings": {
-            "question": "¿Dónde consulto los ingredientes?",
-            "answer": "<p>Trabajamos con harina de trigo, huevo, leche y frutos secos. Compartimos utensilios y equipos, por lo que puede existir contacto cruzado. Consulta los ingredientes específicos de cada producto antes de comprar.</p>"
+            "question": "¿Por qué se agota un producto?",
+            "answer": "<p>Cada tanda tiene cupos según lo que podemos hornear bien ese día. Cuando un producto llega a cero, se cierra hasta la próxima tanda. Suscríbete y te avisamos cuando vuelva a abrir el menú.</p>"
           }
         },
-        "q2": {
+        "q-shipping": {
           "type": "question",
           "settings": {
             "question": "¿Cómo veo las opciones de entrega?",
             "answer": "<p>Realizamos únicamente envíos, sin retiro presencial. Las opciones y costos disponibles para tu dirección se muestran antes del pago. La fecha de despacho indica cuándo entregamos tu pedido al transportista; la llegada depende del servicio seleccionado.</p>"
           }
+        },
+        "q-storage": {
+          "type": "question",
+          "settings": {
+            "question": "¿Cómo conservo las galletas?",
+            "answer": "<p>Cuatro días fuera de la nevera en su caja cerrada, ocho días en la nevera y hasta tres meses en el congelador. Para revivirlas: 20 segundos en el microondas o 5 minutos en el horno a 350 °F. Los postres indican su conservación en la descripción de cada uno.</p>"
+          }
+        },
+        "q-ingredients": {
+          "type": "question",
+          "settings": {
+            "question": "¿Dónde consulto los ingredientes?",
+            "answer": "<p>En la descripción de cada producto. Trabajamos con harina de trigo, huevo, leche y frutos secos, y compartimos utensilios y equipos, por lo que puede existir contacto cruzado. Revisa los ingredientes específicos antes de comprar.</p>"
+          }
         }
       },
       "block_order": [
-        "q0",
-        "q1",
-        "q2"
-      ]
-    },
-    "signoff": {
-      "type": "ds-signoff",
-      "settings": {"eyebrow":"LA PRIMERA HORNADA ESTÁ EN CAMINO","title":"¿Ya se te antojó?"}
+        "q-order",
+        "q-soldout",
+        "q-shipping",
+        "q-storage",
+        "q-ingredients"
+      ],
+      "settings": {
+        "title": "Antes de pedir",
+        "text": "Lo que conviene saber antes de elegir, para que tu caja llegue justo cuando la esperas."
+      }
     }
   },
   "order": [
     "hero",
-    "catalog",
-    "universe",
+    "bestsellers",
+    "batch",
+    "categories",
+    "season",
     "story",
-    "faq",
-    "signoff"
+    "social",
+    "faq"
   ]
 }

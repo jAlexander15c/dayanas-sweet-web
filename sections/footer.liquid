@@ -103,7 +103,7 @@
                     {%- endif -%}
                   {%- when 'brand_information' -%}
                     <div class="footer-block__brand-info">
-                      {% if settings.brand_image == blank %}<img class="ds-footer-logo" src="{{ 'logo-horizontal.png' | asset_url }}" alt="Dayana’s Sweet" width="974" height="338" loading="lazy">{% endif %}
+                      {% if settings.brand_image == blank %}<img class="ds-footer-logo" src="{{ 'ds-logo-horizontal-claro.png' | asset_url }}" alt="Dayana’s Sweet" width="936" height="302" loading="lazy">{% endif %}
                       {%- if settings.brand_image != blank -%}
                         {%- assign brand_image_height = settings.brand_image_width
                           | divided_by: settings.brand_image.aspect_ratio

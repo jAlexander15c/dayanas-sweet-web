@@ -2,30 +2,6 @@
   "name": "t:sections.header.name",
   "type": "header",
   "sections": {
-    "announcement-bar": {
-      "type": "announcement-bar",
-      "settings": {
-        "color_scheme": "scheme-5",
-        "show_line_separator": false,
-        "show_social": false,
-        "auto_rotate": false,
-        "change_slides_speed": 5,
-        "enable_country_selector": false,
-        "enable_language_selector": false
-      },
-      "blocks": {
-        "announcement-bar-0": {
-          "type": "announcement",
-          "settings": {
-            "text": "PRIMERA HORNADA · 18 OCTUBRE · PEDIDOS HASTA EL 17 A LAS 11:59 P. M. CT",
-            "link": ""
-          }
-        }
-      },
-      "block_order": [
-        "announcement-bar-0"
-      ]
-    },
     "header": {
       "type": "header",
       "settings": {
@@ -34,19 +10,53 @@
         "logo_position": "middle-left",
         "menu": "main-menu",
         "menu_type_desktop": "dropdown",
-        "sticky_header_type": "on-scroll-up",
+        "sticky_header_type": "always",
         "show_line_separator": false,
         "enable_country_selector": false,
         "enable_language_selector": false,
         "mobile_logo_position": "center",
         "margin_bottom": 0,
-        "padding_top": 16,
-        "padding_bottom": 16
+        "padding_top": 10,
+        "padding_bottom": 10
       }
+    },
+    "ds-announcement": {
+      "type": "ds-announcement",
+      "settings": {
+        "speed": 5
+      },
+      "blocks": {
+        "msg-close": {
+          "type": "message",
+          "settings": {
+            "text": "[tanda]: pedidos hasta el [cierre]",
+            "link": ""
+          }
+        },
+        "msg-bake": {
+          "type": "message",
+          "settings": {
+            "text": "Horneamos el [horneado] y despachamos [despacho]",
+            "link": ""
+          }
+        },
+        "msg-ship": {
+          "type": "message",
+          "settings": {
+            "text": "Solo envíos: eliges el servicio y ves el costo antes de pagar",
+            "link": ""
+          }
+        }
+      },
+      "block_order": [
+        "msg-close",
+        "msg-bake",
+        "msg-ship"
+      ]
     }
   },
   "order": [
-    "announcement-bar",
+    "ds-announcement",
     "header"
   ]
 }

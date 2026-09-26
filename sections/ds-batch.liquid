@@ -1,0 +1,85 @@
+<section class="ds-batch color-{{ section.settings.color_scheme }}" id="ds-tandas" aria-labelledby="DSBatch-{{ section.id }}">
+  <div class="ds-wrap">
+    <h2 class="ds-display ds-h2 ds-batch__title" id="DSBatch-{{ section.id }}">{{ section.settings.title | escape }}</h2>
+    {%- if section.settings.text != blank -%}
+      <div class="ds-batch__intro">{% render 'ds-batch-text', text: section.settings.text %}</div>
+    {%- endif -%}
+    <ol class="ds-steps" role="list">
+      {%- for block in section.blocks -%}
+        <li class="ds-step{% if block.settings.current %} is-now{% endif %}" {{ block.shopify_attributes }}>
+          <span class="ds-step__num" aria-hidden="true">{{ forloop.index }}</span>
+          <span class="ds-step__when">{% render 'ds-batch-text', text: block.settings.when, escape: true %}</span>
+          <p>{% render 'ds-batch-text', text: block.settings.text, escape: true %}</p>
+        </li>
+      {%- endfor -%}
+    </ol>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "DS · Tandas de pedidos",
+  "class": "ds-batch-wrap",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Puedes usar [tanda], [cierre], [horneado] y [despacho]; se reemplazan por las fechas de Ajustes del tema > DS · Tanda de pedidos."
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Título",
+      "default": "Horneamos por tandas, no para una vitrina."
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "Introducción",
+      "default": "<p>Abrimos el menú unos días, reunimos todos los pedidos y los horneamos juntos para una misma fecha de despacho.</p>"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Colores",
+      "default": "scheme-3"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "step",
+      "name": "Paso",
+      "limit": 4,
+      "settings": [
+        {
+          "type": "text",
+          "id": "when",
+          "label": "Cuándo",
+          "default": "Hasta el [cierre]"
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "Texto",
+          "default": "El menú está abierto."
+        },
+        {
+          "type": "checkbox",
+          "id": "current",
+          "label": "Resaltar como paso actual",
+          "default": false
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "DS · Tandas de pedidos",
+      "blocks": [
+        { "type": "step" },
+        { "type": "step" },
+        { "type": "step" }
+      ]
+    }
+  ]
+}
+{% endschema %}

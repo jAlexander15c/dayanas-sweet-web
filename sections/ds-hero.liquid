@@ -1,91 +1,157 @@
-
-<section class="ds-hero" aria-labelledby="HeroTitle-{{ section.id }}">
+{% comment %}
+  Portada con diapositivas. En el título, las palabras entre asteriscos se
+  destacan en rosa itálica: "Galletas gruesas, *recién* horneadas."
+{% endcomment %}
+{%- liquid
+  assign fallbacks = 'ds-editorial-cookies.png,ds-brownie.png,ds-cookie-box-concept.png' | split: ','
+  assign slide_count = section.blocks.size
+-%}
+<section class="ds-hero ds-wrap" data-ds-hero data-interval="{{ section.settings.interval }}" aria-roledescription="carrusel" aria-label="Destacados">
   <div class="ds-hero__copy">
-    <p class="ds-eyebrow"><span class="ds-dot"></span> {{ section.settings.eyebrow | escape }}</p>
-    <h1 id="HeroTitle-{{ section.id }}">{{ section.settings.title | escape }} <em>{{ section.settings.accent | escape }}</em></h1>
-    <p class="ds-hero__text">{{ section.settings.text | escape }}</p>
-    <div class="ds-actions">
-      {% if collections.all.products.size > 0 %}
-        <a class="ds-button" href="{{ section.settings.button_link | default: '#ds-catalogo' }}">{{ section.settings.button_label | escape }} <span aria-hidden="true">→</span></a>
-      {% else %}
-        <a class="ds-button" href="#ds-catalogo">Descubre la primera hornada <span aria-hidden="true">→</span></a>
-      {% endif %}
-      <a class="ds-text-link" href="#ds-universo">Cómo funciona <span aria-hidden="true">↗</span></a>
+    <div class="ds-hero__slides">
+      {%- for block in section.blocks -%}
+        {%- assign parts = block.settings.title | escape | split: '*' -%}
+        <div class="ds-hero__slide{% if forloop.first %} is-on{% endif %}" data-ds-slide {{ block.shopify_attributes }} aria-roledescription="diapositiva" aria-label="{{ forloop.index }} de {{ slide_count }}">
+          {%- capture heading -%}
+            {%- for part in parts -%}{%- assign mod = forloop.index0 | modulo: 2 -%}{%- if mod == 1 -%}<em>{{ part }}</em>{%- else -%}{{ part }}{%- endif -%}{%- endfor -%}
+          {%- endcapture -%}
+          {%- if forloop.first -%}
+            <h1 class="ds-display ds-hero__title">{{ heading }}</h1>
+          {%- else -%}
+            <p class="ds-display ds-hero__title" role="heading" aria-level="2">{{ heading }}</p>
+          {%- endif -%}
+          {%- if block.settings.text != blank -%}<p class="ds-hero__text">{% render 'ds-batch-text', text: block.settings.text, escape: true %}</p>{%- endif -%}
+          <div class="ds-ctas">
+            {%- if block.settings.button_label != blank -%}
+              <a class="ds-btn" href="{{ block.settings.button_link | default: routes.all_products_collection_url }}">{{ block.settings.button_label | escape }}{% render 'ds-icon', name: 'arrow' %}</a>
+            {%- endif -%}
+            {%- if block.settings.button2_label != blank -%}
+              <a class="ds-btn ds-btn--ghost" href="{{ block.settings.button2_link | default: routes.all_products_collection_url }}">{{ block.settings.button2_label | escape }}</a>
+            {%- endif -%}
+          </div>
+        </div>
+      {%- endfor -%}
     </div>
-    <div class="ds-hero__foot"><span aria-hidden="true">✳</span><span>{{ section.settings.footnote | escape }}</span></div>
+    {%- if slide_count > 1 -%}
+      <div class="ds-hero__dots" role="group" aria-label="Elegir destacado">
+        {%- for block in section.blocks -%}
+          <button type="button" class="{% if forloop.first %}is-on{% endif %}" data-ds-dot="{{ forloop.index0 }}" aria-label="Ver destacado {{ forloop.index }}"><i></i></button>
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
   </div>
-  <div class="ds-hero__visual">
-    {% if section.settings.image != blank %}
-      {{ section.settings.image | image_url: width: 1800 | image_tag: widths: '480, 750, 1100, 1500, 1800', sizes: '(min-width: 990px) 53vw, 100vw', class: 'ds-hero__photo', fetchpriority: 'high', loading: 'eager' }}
-    {% else %}
-      <img class="ds-hero__photo" src="{{ 'ds-editorial-cookies.png' | asset_url }}" alt="Composición editorial de galletas con chocolate" width="1536" height="1024" fetchpriority="high">
-    {% endif %}
-    <div class="ds-seal"><span>UN POQUITO DE</span><strong>dulce<br>felicidad</strong><span>DAYANA’S SWEET</span></div>
-    <div class="ds-photo-caption"><span>{{ section.settings.caption | escape }}</span><span aria-hidden="true">01 / DS</span></div>
+  <div class="ds-hero__art">
+    <div class="ds-hero__arch">
+      {%- for block in section.blocks -%}
+        {%- liquid
+          assign img_class = 'ds-hero__img'
+          if forloop.first
+            assign img_class = 'ds-hero__img is-on'
+            assign load = 'eager'
+            assign priority = 'high'
+          else
+            assign load = 'lazy'
+            assign priority = 'auto'
+          endif
+          assign fb_index = forloop.index0 | modulo: 3
+        -%}
+        {%- if block.settings.image != blank -%}
+          {{ block.settings.image | image_url: width: 1400 | image_tag: widths: '480, 750, 1000, 1400', sizes: '(min-width: 990px) 45vw, 100vw', class: img_class, loading: load, fetchpriority: priority }}
+        {%- else -%}
+          <img class="{{ img_class }}" src="{{ fallbacks[fb_index] | asset_url }}" alt="" width="1254" height="1254" loading="{{ load }}" fetchpriority="{{ priority }}">
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+    {%- if section.settings.tag_label != blank or section.settings.tag_value != blank -%}
+      <p class="ds-hero__tag">{{ section.settings.tag_label | escape }}<strong>{{ section.settings.tag_value | escape }}</strong></p>
+    {%- endif -%}
   </div>
 </section>
-<div class="ds-ribbon" aria-label="Horneado en Texas, hecho por encargo, enviado a tu puerta"><span>HORNEADO EN TEXAS</span><b aria-hidden="true">✳</b><span>HECHO POR ENCARGO</span><b aria-hidden="true">✳</b><span>ENVIADO A TU PUERTA</span></div>
 
 {% schema %}
 {
-  "name": "DS · Portada editorial",
+  "name": "DS · Portada",
+  "class": "ds-hero-section",
   "settings": [
     {
-      "type": "text",
-      "id": "eyebrow",
-      "label": "Texto superior",
-      "default": "PASTELERÍA ARTESANAL"
+      "type": "range",
+      "id": "interval",
+      "label": "Segundos por diapositiva",
+      "min": 4,
+      "max": 12,
+      "step": 1,
+      "default": 6
     },
     {
       "type": "text",
-      "id": "title",
-      "label": "Título",
-      "default": "La vida sabe"
+      "id": "tag_label",
+      "label": "Etiqueta naranja: texto",
+      "info": "Déjala vacía para ocultarla."
     },
     {
       "type": "text",
-      "id": "accent",
-      "label": "Título destacado",
-      "default": "mejor con algo dulce."
-    },
+      "id": "tag_value",
+      "label": "Etiqueta naranja: valor",
+      "info": "Por ejemplo un precio: $24.00"
+    }
+  ],
+  "blocks": [
     {
-      "type": "textarea",
-      "id": "text",
-      "label": "Descripción",
-      "default": "Galletas y postres para convertir un antojo en tu momento favorito del día."
-    },
-    {
-      "type": "text",
-      "id": "button_label",
-      "label": "Botón",
-      "default": "Descubre los sabores"
-    },
-    {
-      "type": "url",
-      "id": "button_link",
-      "label": "Enlace del botón"
-    },
-    {
-      "type": "image_picker",
-      "id": "image",
-      "label": "Fotografía principal"
-    },
-    {
-      "type": "text",
-      "id": "footnote",
-      "label": "Detalle inferior",
-      "default": "Para regalar, compartir… o quedártelo todo."
-    },
-    {
-      "type": "text",
-      "id": "caption",
-      "label": "Pie de fotografía",
-      "default": "El lado dulce de la vida"
+      "type": "slide",
+      "name": "Diapositiva",
+      "limit": 4,
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Foto",
+          "info": "Formato vertical o cuadrado. Sin foto se usa una imagen de marca."
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Título",
+          "info": "Encierra entre asteriscos la palabra a destacar: Galletas gruesas, *recién* horneadas.",
+          "default": "Galletas gruesas, *recién* horneadas."
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "Texto",
+          "default": "Borde tostado, centro que todavía se dobla y trozos de chocolate que se derriten al abrir la caja."
+        },
+        {
+          "type": "text",
+          "id": "button_label",
+          "label": "Botón principal",
+          "default": "Ver el menú"
+        },
+        {
+          "type": "url",
+          "id": "button_link",
+          "label": "Enlace del botón principal"
+        },
+        {
+          "type": "text",
+          "id": "button2_label",
+          "label": "Botón secundario"
+        },
+        {
+          "type": "url",
+          "id": "button2_link",
+          "label": "Enlace del botón secundario"
+        }
+      ]
     }
   ],
   "presets": [
     {
-      "name": "DS · Portada editorial"
+      "name": "DS · Portada",
+      "blocks": [
+        {
+          "type": "slide"
+        }
+      ]
     }
   ]
 }

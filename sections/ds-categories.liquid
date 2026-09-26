@@ -1,0 +1,113 @@
+<section class="ds-cats ds-wrap" aria-labelledby="DSCats-{{ section.id }}">
+  <h2 class="ds-display ds-h2 ds-cats__title" id="DSCats-{{ section.id }}">{{ section.settings.title | escape }}</h2>
+  <div class="ds-bento ds-bento--{{ section.blocks.size }}">
+    {%- for block in section.blocks -%}
+      {%- liquid
+        assign c = block.settings.collection
+        assign url = routes.all_products_collection_url
+        if c != blank
+          assign url = c.url
+        endif
+        assign title = block.settings.title
+        if title == blank and c != blank
+          assign title = c.title
+        endif
+        assign img = block.settings.image
+        if img == blank and c != blank and block.settings.style == 'photo'
+          assign img = c.featured_image
+        endif
+      -%}
+      <a class="ds-tile ds-tile--{{ block.settings.style }}{% if img != blank %} has-img{% endif %}" href="{{ url }}" {{ block.shopify_attributes }}>
+        {%- if img != blank -%}
+          {{ img | image_url: width: 1200 | image_tag: widths: '400, 600, 900, 1200', sizes: '(min-width: 990px) 40vw, 100vw', loading: 'lazy', alt: '' }}
+        {%- elsif block.settings.style == 'photo' and block.settings.fallback != 'none' -%}
+          <img src="{{ block.settings.fallback | asset_url }}" alt="" width="1254" height="1254" loading="lazy">
+        {%- endif -%}
+        <span class="ds-tile__row">
+          <span class="ds-tile__stack">
+            <span class="ds-tile__name">{{ title | escape }}</span>
+            {%- if block.settings.text != blank -%}<span class="ds-tile__text">{{ block.settings.text | escape }}</span>{%- endif -%}
+          </span>
+          <span class="ds-tile__go">{% render 'ds-icon', name: 'arrow' %}</span>
+        </span>
+      </a>
+    {%- endfor -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "DS · Categorías",
+  "class": "ds-cats-wrap",
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Título",
+      "default": "¿Qué se te antoja hoy?"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "tile",
+      "name": "Categoría",
+      "limit": 5,
+      "settings": [
+        {
+          "type": "collection",
+          "id": "collection",
+          "label": "Colección"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Nombre (vacío = nombre de la colección)"
+        },
+        {
+          "type": "text",
+          "id": "text",
+          "label": "Texto corto"
+        },
+        {
+          "type": "select",
+          "id": "style",
+          "label": "Estilo",
+          "options": [
+            { "value": "photo", "label": "Foto" },
+            { "value": "pink", "label": "Rosa" },
+            { "value": "orange", "label": "Naranja" }
+          ],
+          "default": "photo"
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Foto (vacía = imagen de la colección)"
+        },
+        {
+          "type": "select",
+          "id": "fallback",
+          "label": "Foto de respaldo",
+          "options": [
+            { "value": "none", "label": "Ninguna" },
+            { "value": "ds-editorial-cookies.png", "label": "Galletas apiladas" },
+            { "value": "ds-brownie.png", "label": "Brownie" },
+            { "value": "ds-cookie-box-concept.png", "label": "Caja de galletas" }
+          ],
+          "default": "none"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "DS · Categorías",
+      "blocks": [
+        { "type": "tile" },
+        { "type": "tile" },
+        { "type": "tile" }
+      ]
+    }
+  ]
+}
+{% endschema %}

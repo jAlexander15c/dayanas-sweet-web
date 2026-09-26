@@ -1,0 +1,19 @@
+{% comment %}
+  Reemplaza [tanda], [cierre], [horneado] y [despacho] por los valores de
+  Ajustes del tema > DS · Tanda de pedidos.
+  Acepta:
+    - text: {string}
+    - escape: {boolean} escapa el resultado (para campos de texto plano)
+{% endcomment %}
+{%- liquid
+  assign ds_name = settings.ds_batch_name | default: ''
+  assign ds_close = settings.ds_batch_close | default: ''
+  assign ds_bake = settings.ds_batch_bake | default: ''
+  assign ds_ship = settings.ds_batch_ship | default: ''
+  assign out = text | default: ''
+  if escape
+    assign out = out | escape
+  endif
+  assign out = out | replace: '[tanda]', ds_name | replace: '[cierre]', ds_close | replace: '[horneado]', ds_bake | replace: '[despacho]', ds_ship
+  echo out
+-%}
