@@ -3,7 +3,7 @@
     {%- if section.settings.image != blank -%}
       {{ section.settings.image | image_url: width: 1200 | image_tag: widths: '480, 750, 1000, 1200', sizes: '(min-width: 990px) 40vw, 100vw', loading: 'lazy' }}
     {%- else -%}
-      <img src="{{ 'ds-cookie-box-concept.png' | asset_url }}" alt="Caja rosa abierta con seis galletas sobre papel encerado" width="1254" height="1254" loading="lazy">
+      {% render 'ds-fallback-image', name: 'ds-cookie-box-concept.png', sizes: '(min-width: 990px) 40vw, 100vw', alt: 'Caja rosa abierta con seis galletas sobre papel encerado' %}
     {%- endif -%}
   </div>
   <div class="ds-story__copy">

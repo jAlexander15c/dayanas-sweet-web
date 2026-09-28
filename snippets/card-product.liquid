@@ -291,7 +291,9 @@
             </div>
           </div>
           {% assign product_form_id = 'quick-add-' | append: section_id | append: card_product.id %}
-          {% if quick_add == 'standard' %}
+          {% if settings.ds_batch_open == false %}
+            <p class="ds-pbatch__stock is-out" role="status">La tanda ya cerró.</p>
+          {% elsif quick_add == 'standard' %}
             <div class="quick-add no-js-hidden">
               {%- liquid
                 assign qty_rules = false

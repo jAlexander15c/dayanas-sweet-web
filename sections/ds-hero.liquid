@@ -33,10 +33,13 @@
       {%- endfor -%}
     </div>
     {%- if slide_count > 1 -%}
+      <div class="ds-hero__controls">
       <div class="ds-hero__dots" role="group" aria-label="Elegir destacado">
         {%- for block in section.blocks -%}
-          <button type="button" class="{% if forloop.first %}is-on{% endif %}" data-ds-dot="{{ forloop.index0 }}" aria-label="Ver destacado {{ forloop.index }}"><i></i></button>
+          <button type="button" class="{% if forloop.first %}is-on{% endif %}" data-ds-dot="{{ forloop.index0 }}" aria-label="Ver destacado {{ forloop.index }}"{% if forloop.first %} aria-current="true"{% endif %}><i></i></button>
         {%- endfor -%}
+      </div>
+      <button type="button" class="ds-motion-control" data-ds-pause aria-pressed="false">Pausar</button>
       </div>
     {%- endif -%}
   </div>
@@ -56,9 +59,9 @@
           assign fb_index = forloop.index0 | modulo: 3
         -%}
         {%- if block.settings.image != blank -%}
-          {{ block.settings.image | image_url: width: 1400 | image_tag: widths: '480, 750, 1000, 1400', sizes: '(min-width: 990px) 45vw, 100vw', class: img_class, loading: load, fetchpriority: priority }}
+          {{ block.settings.image | image_url: width: 1400 | image_tag: widths: '480, 750, 1000, 1400', sizes: '(min-width: 990px) 45vw, 100vw', class: img_class, loading: load, fetchpriority: priority, preload: forloop.first }}
         {%- else -%}
-          <img class="{{ img_class }}" src="{{ fallbacks[fb_index] | asset_url }}" alt="" width="1254" height="1254" loading="{{ load }}" fetchpriority="{{ priority }}">
+          {% render 'ds-fallback-image', name: fallbacks[fb_index], class: img_class, sizes: '(min-width: 990px) 45vw, 100vw', loading: load, fetchpriority: priority, alt: '' %}
         {%- endif -%}
       {%- endfor -%}
     </div>

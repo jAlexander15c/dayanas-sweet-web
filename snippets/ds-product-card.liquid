@@ -26,22 +26,24 @@
     assign badge = rank_badge
   endif
   assign low = false
-  if variant.inventory_management == 'shopify' and variant.inventory_policy == 'deny' and variant.inventory_quantity > 0 and variant.inventory_quantity <= settings.ds_low_stock
+  if settings.ds_batch_open and variant.inventory_management == 'shopify' and variant.inventory_policy == 'deny' and variant.inventory_quantity > 0 and variant.inventory_quantity <= settings.ds_low_stock
     assign low = true
   endif
   assign form_id = 'DSCard-' | append: section_id | append: '-' | append: product.id
   assign img_alt = product.featured_media.alt | default: product.title | escape
+  assign card_heading = heading_level | default: 'h3'
   assign loading = 'lazy'
   if lazy == false
     assign loading = 'eager'
   endif
+  assign card_sizes = image_sizes | default: '(min-width: 990px) 300px, 70vw'
 -%}
 <article class="ds-card{% if sold_out %} is-out{% endif %}">
   <a class="ds-card__media" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
     {%- if product.featured_media -%}
-      {{ product.featured_media | image_url: width: 720 | image_tag: widths: '300, 450, 600, 720', sizes: '(min-width: 990px) 300px, 70vw', loading: loading, class: 'ds-card__img', alt: img_alt }}
+      {{ product.featured_media | image_url: width: 720 | image_tag: widths: '300, 450, 600, 720', sizes: card_sizes, loading: loading, class: 'ds-card__img', alt: img_alt }}
       {%- if product.media[1] -%}
-        {{ product.media[1] | image_url: width: 720 | image_tag: widths: '300, 450, 600, 720', sizes: '(min-width: 990px) 300px, 70vw', loading: 'lazy', class: 'ds-card__img ds-card__img--alt', alt: '' }}
+        {{ product.media[1] | image_url: width: 720 | image_tag: widths: '300, 450, 600, 720', sizes: card_sizes, loading: 'lazy', class: 'ds-card__img ds-card__img--alt', alt: '' }}
       {%- endif -%}
     {%- else -%}
       <span class="ds-card__ph">Foto próximamente</span>
@@ -53,7 +55,7 @@
     {%- endif -%}
   </a>
   <div class="ds-card__body">
-    <h3 class="ds-card__title"><a href="{{ product.url }}">{{ product.title | escape }}</a></h3>
+    <{{ card_heading }} class="ds-card__title"><a href="{{ product.url }}">{{ product.title | escape }}</a></{{ card_heading }}>
     {%- assign excerpt = product.description | replace: '</p>', ' </p>' | replace: '<br', ' <br' | strip_html | strip_newlines | truncatewords: 10, '…' -%}
     {%- if excerpt != blank -%}<p class="ds-card__desc">{{ excerpt }}</p>{%- endif -%}
     {%- if low -%}<p class="ds-card__stock">Quedan {{ variant.inventory_quantity }} en esta tanda</p>{%- endif -%}

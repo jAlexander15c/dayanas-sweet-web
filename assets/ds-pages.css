@@ -174,43 +174,6 @@ cart-items .cart-item cart-remove-button a:hover{background:var(--ds-blush);colo
   .ds-contact__links a,.collection-list__item .card__heading a,.main-blog .article-card .card__heading a{transition:none!important}
 }
 
-/* Menú del celular: cajón y submenús Dawn */
-body .menu-drawer,body .menu-drawer .menu-drawer__submenu{background:var(--ds-paper);color:var(--ds-ink)}
-body .menu-drawer{border-right:1px solid var(--ds-line);filter:none}
-body .menu-drawer__navigation{padding:24px 16px 32px}
-body .menu-drawer__menu>li{border-bottom:1px solid var(--ds-line);margin:0}
-body .menu-drawer__menu-item{min-height:58px;padding:16px 18px;border-radius:12px;color:var(--ds-ink);font:700 clamp(21px,5vw,27px)/1.15 var(--ds-display);letter-spacing:-.015em;text-decoration:none;transition:background-color .2s,color .2s}
-body .menu-drawer summary.menu-drawer__menu-item{padding-right:52px}
-body .menu-drawer__menu-item .svg-wrapper{color:var(--ds-pink-deep)}
-body .menu-drawer__menu-item--active,body .menu-drawer__menu-item:hover,body .menu-drawer__menu-item:focus-visible,body .menu-drawer__close-button:hover,body .menu-drawer__close-button:focus-visible{background:var(--ds-blush);color:var(--ds-ink)}
-body .menu-drawer__menu-item:focus-visible,body .menu-drawer__close-button:focus-visible,body .menu-drawer__utility-links a:focus-visible{outline:3px solid var(--ds-red);outline-offset:2px}
-body .menu-drawer__inner-submenu{padding:16px}
-body .menu-drawer__submenu .menu-drawer__menu-item{font-size:21px}
-body .menu-drawer__submenu .menu-drawer__submenu .menu-drawer__menu-item{font-size:18px}
-body .menu-drawer__close-button{min-height:52px;margin:0 0 14px;padding:12px 18px;border-radius:12px;border-bottom:1px solid var(--ds-line);color:var(--ds-pink-deep);font:600 15px/1.3 var(--ds-body);transition:background-color .2s}
-body .menu-drawer__utility-links,body .header--has-localizations .menu-drawer__utility-links,body .header--has-social .menu-drawer__utility-links{padding:18px 22px;background:var(--ds-peach);border-top:1px solid var(--ds-line)}
-body .menu-drawer__utility-links a{border-radius:var(--ds-r-pill);color:var(--ds-ink)}
-body .menu-drawer__utility-links a:hover{background:var(--ds-blush);color:var(--ds-pink-deep)}
-
-/* Búsqueda predictiva del encabezado */
-body .predictive-search{background:var(--ds-paper);border:1px solid var(--ds-line);border-radius:var(--ds-r-card);box-shadow:0 16px 32px -24px rgba(58,36,48,.45);color:var(--ds-ink)}
-body .predictive-search__results-groups-wrapper{border-color:var(--ds-line);padding:12px;gap:12px}
-body .predictive-search__result-group{gap:12px;min-width:0}
-body .predictive-search__heading{margin:0 8px;padding:12px 0 9px;border-color:var(--ds-line);color:var(--ds-ink);font:700 20px/1.2 var(--ds-display);letter-spacing:0;text-transform:none}
-body .predictive-search__results-list{padding:6px 0;margin:0}
-body .predictive-search__list-item{margin:4px 0;border-radius:var(--ds-r-card)}
-body .predictive-search__item{align-items:center;min-height:58px;padding:12px;border:1px solid transparent;border-radius:var(--ds-r-card);color:var(--ds-ink);font:500 15px/1.4 var(--ds-body);transition:background-color .2s,border-color .2s}
-body .predictive-search__item--link-with-thumbnail{grid-template-columns:64px minmax(0,1fr);gap:14px}
-body .predictive-search__image{display:block;width:64px;height:64px;object-fit:cover;border-radius:12px;background:var(--ds-peach)}
-body .predictive-search__item-heading{color:var(--ds-ink);font:700 17px/1.3 var(--ds-display)}
-body .predictive-search__item-vendor{color:var(--ds-ink-soft);font-size:13px;letter-spacing:0;text-transform:none}
-body .predictive-search__item .price,body .predictive-search__item .price-item{color:var(--ds-ink);font:700 15px/1.3 var(--ds-body)}
-body .predictive-search__list-item[aria-selected='true']>.predictive-search__item,body .predictive-search__list-item[aria-selected='true'] .predictive-search__item,body .predictive-search__item:hover,body .predictive-search__item:focus-visible{background:var(--ds-blush);border-color:var(--ds-rose);color:var(--ds-ink)}
-body .predictive-search__item:focus-visible{outline:3px solid var(--ds-red);outline-offset:2px}
-body .predictive-search__item--term{margin:10px 12px 14px;width:calc(100% - 24px);background:var(--ds-ink);color:#fff;border-radius:var(--ds-r-pill)}
-body .predictive-search__item--term:hover,body .predictive-search__item--term:focus-visible{background:var(--ds-pink-deep);color:#fff}
-body .predictive-search__item--term .icon-arrow{color:currentColor}
-
 /* Página de contraseña */
 body.password.gradient{background:var(--ds-blush);color:var(--ds-ink);font:400 16px/1.6 var(--ds-body);letter-spacing:0}
 .ds-password-header{background:var(--ds-paper);border-bottom:1px solid var(--ds-line)}

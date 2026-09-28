@@ -283,10 +283,12 @@
     {% endstyle %}
 
     {{ 'base.css' | asset_url | stylesheet_tag }}
-    {{ 'dayanas-theme.css' | asset_url | stylesheet_tag }}
     {{ 'ds-premium.css' | asset_url | stylesheet_tag }}
     {{ 'ds-conversion.css' | asset_url | stylesheet_tag }}
-    {{ 'ds-pages.css' | asset_url | stylesheet_tag }}
+    {{ 'ds-header-ui.css' | asset_url | stylesheet_tag }}
+    {%- if template.name == 'page' or template.name == 'search' or template.name == 'cart' or template.name == '404' or template.name == 'list-collections' or template.name == 'blog' or template.name == 'article' or template.name == 'collection' or template.name == 'password' or template.name == 'gift_card' -%}
+      {{ 'ds-pages.css' | asset_url | stylesheet_tag }}
+    {%- endif -%}
     <link rel="stylesheet" href="{{ 'component-cart-items.css' | asset_url }}" media="print" onload="this.media='all'">
 
     {%- if settings.cart_type == 'drawer' -%}
@@ -295,6 +297,16 @@
       {{ 'component-totals.css' | asset_url | stylesheet_tag }}
       {{ 'component-price.css' | asset_url | stylesheet_tag }}
       {{ 'component-discounts.css' | asset_url | stylesheet_tag }}
+    {%- endif -%}
+
+    {%- if template.name == 'index' -%}
+      {% comment %}
+        Foto LCP de la portada mientras la primera diapositiva usa la imagen de marca.
+        Si se sube una foto propia a esa diapositiva, Shopify la precarga solo: quitar este bloque.
+      {% endcomment %}
+      {% comment %}theme-check-disable AssetPreload{% endcomment %}
+      <link rel="preload" as="image" href="{{ 'ds-editorial-cookies-800.webp' | asset_url }}" imagesrcset="{{ 'ds-editorial-cookies-480.webp' | asset_url }} 480w, {{ 'ds-editorial-cookies-800.webp' | asset_url }} 800w, {{ 'ds-editorial-cookies-1200.webp' | asset_url }} 1200w" imagesizes="(min-width: 990px) 45vw, 100vw" fetchpriority="high">
+      {% comment %}theme-check-enable AssetPreload{% endcomment %}
     {%- endif -%}
 
     {%- unless settings.type_body_font.system? -%}

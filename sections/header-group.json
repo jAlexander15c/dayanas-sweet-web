@@ -30,14 +30,16 @@
           "type": "message",
           "settings": {
             "text": "[tanda]: pedidos hasta el [cierre]",
-            "link": ""
+            "link": "",
+            "show_when": "open"
           }
         },
         "msg-bake": {
           "type": "message",
           "settings": {
             "text": "Horneamos el [horneado] y despachamos [despacho]",
-            "link": ""
+            "link": "",
+            "show_when": "open"
           }
         },
         "msg-ship": {
@@ -46,12 +48,21 @@
             "text": "Solo envíos: eliges el servicio y ves el costo antes de pagar",
             "link": ""
           }
+        },
+        "msg-closed": {
+          "type": "message",
+          "settings": {
+            "text": "La tanda [tanda] ya cerró. La próxima abre pronto: síguenos para enterarte primero.",
+            "link": "",
+            "show_when": "closed"
+          }
         }
       },
       "block_order": [
         "msg-close",
         "msg-bake",
-        "msg-ship"
+        "msg-ship",
+        "msg-closed"
       ]
     }
   },

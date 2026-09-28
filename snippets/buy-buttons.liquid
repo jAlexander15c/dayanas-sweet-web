@@ -12,6 +12,9 @@
 {% endcomment %}
 <div {{ block.shopify_attributes }}>
   {%- if product != blank -%}
+    {%- if settings.ds_batch_open == false -%}
+      <div class="product-form"><p class="ds-pbatch__stock is-out" role="status">{{ settings.ds_batch_closed_text | default: 'La tanda ya cerró. El próximo menú abre pronto.' | escape }}</p></div>
+    {%- else -%}
     {%- liquid
       assign gift_card_recipient_feature_active = false
       if block.settings.show_gift_card_recipient and product.gift_card?
@@ -99,6 +102,7 @@
         </div>
       {%- endform -%}
     </product-form>
+    {%- endif -%}
   {%- else -%}
     <div class="product-form">
       <div class="product-form__buttons form">
@@ -114,7 +118,7 @@
     </div>
   {%- endif -%}
 
-  {%- if show_pickup_availability -%}
+  {%- if show_pickup_availability and settings.ds_batch_open -%}
     {{ 'component-pickup-availability.css' | asset_url | stylesheet_tag }}
 
     {%- assign pick_up_availabilities = product.selected_or_first_available_variant.store_availabilities

@@ -7,7 +7,7 @@
     {%- for block in section.blocks -%}
       <details class="ds-qa"{% if forloop.first %} open{% endif %} {{ block.shopify_attributes }}>
         <summary>{{ block.settings.question | escape }}{% render 'ds-icon', name: 'plus' %}</summary>
-        <div class="ds-qa__a rte">{% render 'ds-batch-text', text: block.settings.answer %}</div>
+        <div class="ds-qa__a rte">{%- if settings.ds_batch_open == false and block.settings.closed_answer != blank -%}{% render 'ds-batch-text', text: block.settings.closed_answer %}{%- else -%}{% render 'ds-batch-text', text: block.settings.answer %}{%- endif -%}</div>
       </details>
     {%- endfor -%}
   </div>
@@ -48,6 +48,12 @@
           "label": "Respuesta",
           "info": "Puedes usar [tanda], [cierre], [horneado] y [despacho].",
           "default": "<p>Elige tus productos y agrégalos al carrito mientras el menú esté abierto.</p>"
+        },
+        {
+          "type": "richtext",
+          "id": "closed_answer",
+          "label": "Respuesta cuando la tanda está cerrada",
+          "info": "Opcional. Si está vacía, se usa la respuesta habitual."
         }
       ]
     }

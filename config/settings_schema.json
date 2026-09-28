@@ -1494,6 +1494,12 @@
       },
       {
         "type": "text",
+        "id": "ds_batch_close_at",
+        "label": "Cuenta regresiva: fecha y hora exacta del cierre",
+        "info": "Formato 2026-10-17T23:59-05:00 (-05:00 es hora central en verano, -06:00 en invierno). Vacío oculta la cuenta regresiva. Solo informa: no bloquea el checkout."
+      },
+      {
+        "type": "text",
         "id": "ds_batch_bake",
         "label": "Día de horneado",
         "default": "domingo 18 de octubre"

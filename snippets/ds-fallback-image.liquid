@@ -1,0 +1,15 @@
+{% comment %}Imagen WebP de respaldo; los ajustes conservan el nombre PNG.{% endcomment %}
+{%- liquid
+  assign base = name | remove: '.png'
+  assign src_480 = base | append: '-480.webp' | asset_url
+  assign src_800 = base | append: '-800.webp' | asset_url
+  assign src_1200 = base | append: '-1200.webp' | asset_url
+  assign img_width = 800
+  assign img_height = 800
+  if base == 'ds-editorial-cookies'
+    assign img_height = 533
+  endif
+  assign img_loading = loading | default: 'lazy'
+  assign img_priority = fetchpriority | default: 'auto'
+-%}
+<img{% if class != blank %} class="{{ class }}"{% endif %} src="{{ src_800 }}" srcset="{{ src_480 }} 480w, {{ src_800 }} 800w, {{ src_1200 }} 1200w" sizes="{{ sizes }}" width="{{ img_width }}" height="{{ img_height }}" alt="{{ alt | default: '' | escape }}" loading="{{ img_loading }}" fetchpriority="{{ img_priority }}">

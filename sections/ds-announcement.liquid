@@ -1,11 +1,44 @@
+{%- liquid
+  assign visible_count = 0
+  for block in section.blocks
+    assign show_when = block.settings.show_when | default: 'always'
+    assign show_message = false
+    if show_when == 'always'
+      assign show_message = true
+    elsif show_when == 'open' and settings.ds_batch_open
+      assign show_message = true
+    elsif show_when == 'closed' and settings.ds_batch_open == false
+      assign show_message = true
+    endif
+    if show_message
+      assign visible_count = visible_count | plus: 1
+    endif
+  endfor
+  assign visible_index = 0
+-%}
 <div class="ds-announce" data-ds-rotate="{{ section.settings.speed }}" role="region" aria-label="Anuncios">
   {%- for block in section.blocks -%}
-    <p class="ds-announce__msg{% if forloop.first %} is-on{% endif %}" {{ block.shopify_attributes }}>
+    {%- liquid
+      assign show_when = block.settings.show_when | default: 'always'
+      assign show_message = false
+      if show_when == 'always'
+        assign show_message = true
+      elsif show_when == 'open' and settings.ds_batch_open
+        assign show_message = true
+      elsif show_when == 'closed' and settings.ds_batch_open == false
+        assign show_message = true
+      endif
+    -%}
+    {%- if show_message -%}
+    <p class="ds-announce__msg{% if visible_index == 0 %} is-on{% endif %}"{% if visible_index > 0 %} hidden inert aria-hidden="true"{% else %} aria-hidden="false"{% endif %} {{ block.shopify_attributes }}>
       {%- if block.settings.link != blank -%}<a href="{{ block.settings.link }}">{%- endif -%}
       {%- render 'ds-batch-text', text: block.settings.text, escape: true -%}
       {%- if block.settings.link != blank -%}</a>{%- endif -%}
     </p>
+    {%- assign visible_index = visible_index | plus: 1 -%}
+    {%- endif -%}
   {%- endfor -%}
+  {%- if visible_count > 1 -%}<button type="button" class="ds-motion-control ds-announce__pause" data-ds-pause aria-pressed="false">Pausar</button>{%- endif -%}
 </div>
 
 {% schema %}
@@ -42,6 +75,17 @@
           "type": "url",
           "id": "link",
           "label": "Enlace (opcional)"
+        },
+        {
+          "type": "select",
+          "id": "show_when",
+          "label": "Mostrar cuando",
+          "options": [
+            { "value": "always", "label": "Siempre" },
+            { "value": "open", "label": "Menú abierto" },
+            { "value": "closed", "label": "Menú cerrado" }
+          ],
+          "default": "always"
         }
       ]
     }

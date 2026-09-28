@@ -13,6 +13,10 @@
   assign out = text | default: ''
   if escape
     assign out = out | escape
+    assign ds_name = ds_name | escape
+    assign ds_close = ds_close | escape
+    assign ds_bake = ds_bake | escape
+    assign ds_ship = ds_ship | escape
   endif
   assign out = out | replace: '[tanda]', ds_name | replace: '[cierre]', ds_close | replace: '[horneado]', ds_bake | replace: '[despacho]', ds_ship
   echo out

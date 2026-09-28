@@ -271,7 +271,7 @@
                   >
                     {%- case item.object_type -%}
                       {%- when 'product' -%}
-                        {% render 'ds-product-card', product: item, section_id: section.id, lazy: lazy_load %}
+                        {% render 'ds-product-card', product: item, section_id: section.id, lazy: lazy_load, image_sizes: '(min-width: 990px) 23vw, (min-width: 750px) 45vw, 48vw', heading_level: 'h2' %}
                       {%- when 'article' -%}
                         {% render 'article-card',
                           article: item,

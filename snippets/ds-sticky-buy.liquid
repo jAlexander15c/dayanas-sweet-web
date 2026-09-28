@@ -8,8 +8,8 @@
   <div class="ds-sticky-buy" data-ds-sticky hidden>
     <div class="ds-sticky-buy__info">
       <strong>{{ product.title | escape }}</strong>
-      <span>{{ product.selected_or_first_available_variant.price | money }}</span>
+      <span id="DSStickyPrice-{{ section.id }}">{{ product.selected_or_first_available_variant.price | money }}</span>
     </div>
-    <button type="button" class="ds-btn" data-ds-sticky-submit>Agregar al carrito</button>
+    <button type="button" class="ds-btn" data-ds-sticky-submit{% unless product.selected_or_first_available_variant.available %} disabled{% endunless %}>Agregar al carrito</button>
   </div>
 {%- endif -%}

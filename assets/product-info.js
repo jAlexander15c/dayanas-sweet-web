@@ -203,6 +203,15 @@ if (!customElements.get('product-info')) {
           };
 
           updateSourceFromDestination('price');
+          updateSourceFromDestination('DSBatchStock');
+          updateSourceFromDestination('DSStickyPrice');
+          const stickySubmit = this.querySelector('[data-ds-sticky-submit]');
+          if (stickySubmit) {
+            stickySubmit.disabled = !variant.available;
+            const stickyBar = stickySubmit.closest('[data-ds-sticky]');
+            const mainSubmit = this.querySelector('[name="add"][type="submit"]');
+            if (stickyBar) stickyBar.hidden = !variant.available || !mainSubmit || mainSubmit.getBoundingClientRect().bottom >= 0;
+          }
           updateSourceFromDestination('Sku', ({ classList }) => classList.contains('hidden'));
           updateSourceFromDestination('Inventory', ({ innerText }) => innerText === '');
           updateSourceFromDestination('Volume');
@@ -248,6 +257,13 @@ if (!customElements.get('product-info')) {
 
       setUnavailable() {
         this.productForm?.toggleSubmitButton(true, window.variantStrings.unavailable);
+        const batchStock = this.querySelector(`#DSBatchStock-${this.dataset.section}`);
+        if (batchStock) batchStock.innerHTML = '<p class="ds-pbatch__stock is-out"><strong>Agotado en esta tanda.</strong></p>';
+        const stickySubmit = this.querySelector('[data-ds-sticky-submit]');
+        if (stickySubmit) {
+          stickySubmit.disabled = true;
+          stickySubmit.closest('[data-ds-sticky]').hidden = true;
+        }
 
         const selectors = ['price', 'Inventory', 'Sku', 'Price-Per-Item', 'Volume-Note', 'Volume', 'Quantity-Rules']
           .map((id) => `#${id}-${this.dataset.section}`)

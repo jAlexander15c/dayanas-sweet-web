@@ -1,5 +1,6 @@
 {
   "current": {
+    "ds_batch_close_at": "2026-10-17T23:59-05:00",
     "logo_width": 190,
     "customer_account_menu": "customer-account-main-menu",
     "color_schemes": {
@@ -189,9 +190,7 @@
     "sections": {
       "main-password-header": {
         "type": "main-password-header",
-        "settings": {
-          "color_scheme": "scheme-1"
-        }
+        "settings": {}
       },
       "main-password-footer": {
         "type": "main-password-footer",
@@ -382,9 +381,7 @@
       "sections": {
         "main-password-header": {
           "type": "main-password-header",
-          "settings": {
-            "color_scheme": "scheme-1"
-          }
+          "settings": {}
         },
         "main-password-footer": {
           "type": "main-password-footer",

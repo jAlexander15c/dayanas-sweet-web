@@ -216,7 +216,8 @@
           "type": "question",
           "settings": {
             "question": "¿Cuándo puedo hacer mi pedido?",
-            "answer": "<p>Mientras el menú esté abierto. Para la [tanda], recibimos pedidos hasta el [cierre]. Horneamos el [horneado] y despachamos [despacho]. Las fechas de la tanda actual siempre están en la barra superior.</p>"
+            "answer": "<p>Mientras el menú esté abierto. Para la [tanda], recibimos pedidos hasta el [cierre]. Horneamos el [horneado] y despachamos [despacho]. Las fechas de la tanda actual siempre están en la barra superior.</p>",
+            "closed_answer": "<p>La tanda ya cerró. El próximo menú abre pronto; suscríbete para enterarte primero.</p>"
           }
         },
         "q-soldout": {

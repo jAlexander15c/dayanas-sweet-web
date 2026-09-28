@@ -582,7 +582,7 @@
             class="cart__checkout-button button"
             name="checkout"
             form="CartDrawer-Form"
-            {% if cart == empty %}
+            {% if cart == empty or settings.ds_batch_open == false %}
               disabled
             {% endif %}
           >

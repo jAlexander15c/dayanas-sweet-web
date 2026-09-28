@@ -4,6 +4,19 @@
     {%- if section.settings.text != blank -%}
       <div class="ds-batch__intro">{% render 'ds-batch-text', text: section.settings.text %}</div>
     {%- endif -%}
+    {%- if settings.ds_batch_open == false -%}
+      <p class="ds-batch__closed" role="status">La tanda ya cerró. El próximo menú abre pronto; síguenos para enterarte primero.</p>
+    {%- else -%}
+    {%- if settings.ds_batch_close_at != blank -%}
+      <div class="ds-countdown" data-ds-countdown="{{ settings.ds_batch_close_at | escape }}" hidden>
+        <p class="ds-countdown__label">Faltan para el cierre de pedidos</p>
+        <p class="ds-countdown__units" role="timer" aria-live="off">
+          <span><b data-unit="d">0</b> días</span>
+          <span><b data-unit="h">00</b> horas</span>
+          <span><b data-unit="m">00</b> min</span>
+        </p>
+      </div>
+    {%- endif -%}
     <ol class="ds-steps" role="list">
       {%- for block in section.blocks -%}
         <li class="ds-step{% if block.settings.current %} is-now{% endif %}" {{ block.shopify_attributes }}>
@@ -13,6 +26,7 @@
         </li>
       {%- endfor -%}
     </ol>
+    {%- endif -%}
   </div>
 </section>
 

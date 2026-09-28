@@ -1,21 +1,66 @@
 /* Dayana's Sweet: movimiento e interacción de la capa DS. Sin dependencias. */
 (function () {
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var resources = new Map();
+  var feedbackTimers = new Set();
+  function keep(el, dispose) {
+    var section = el.closest('.shopify-section') || el;
+    if (!resources.has(section)) resources.set(section, []);
+    resources.get(section).push(dispose);
+  }
+  function listen(el, target, name, handler) {
+    target.addEventListener(name, handler);
+    keep(el, function () { target.removeEventListener(name, handler); });
+  }
+  function cleanup(root) {
+    feedbackTimers.forEach(function (timer) { clearTimeout(timer); });
+    feedbackTimers.clear();
+    resources.forEach(function (disposers, section) {
+      if (section !== root && !root.contains(section)) return;
+      disposers.forEach(function (dispose) { dispose(); });
+      resources.delete(section);
+    });
+  }
 
   function initAnnouncement(root) {
     root.querySelectorAll('[data-ds-rotate]').forEach(function (bar) {
       if (bar.dsInit) return;
       bar.dsInit = true;
+      keep(bar, function () { bar.dsInit = false; });
       var msgs = bar.querySelectorAll('.ds-announce__msg');
-      if (msgs.length < 2 || reduce.matches) return;
+      if (!msgs.length) return;
+      var control = bar.querySelector('[data-ds-pause]');
+      var paused = reduce.matches;
       var i = 0;
       var ms = (parseInt(bar.dataset.dsRotate, 10) || 5) * 1000;
-      bar.dsTimer = setInterval(function () {
-        if (document.hidden) return;
-        msgs[i].classList.remove('is-on');
-        i = (i + 1) % msgs.length;
-        msgs[i].classList.add('is-on');
-      }, ms);
+      var timer;
+      function show(n) {
+        i = (n + msgs.length) % msgs.length;
+        msgs.forEach(function (msg, index) {
+          var active = index === i;
+          msg.classList.toggle('is-on', active);
+          msg.hidden = !active;
+          msg.inert = !active;
+          msg.setAttribute('aria-hidden', String(!active));
+        });
+      }
+      function start() {
+        clearInterval(timer);
+        if (paused || reduce.matches || msgs.length < 2) return;
+        timer = setInterval(function () { if (!document.hidden) show(i + 1); }, ms);
+      }
+      function updateControl() {
+        if (!control) return;
+        control.disabled = reduce.matches;
+        control.setAttribute('aria-pressed', String(paused));
+        control.textContent = reduce.matches ? 'Movimiento pausado' : paused ? 'Reanudar' : 'Pausar';
+      }
+      show(0);
+      updateControl();
+      start();
+      keep(bar, function () { clearInterval(timer); });
+      if (control) listen(bar, control, 'click', function () { paused = !paused; updateControl(); start(); });
+      listen(bar, reduce, 'change', function () { if (reduce.matches) paused = true; updateControl(); start(); });
     });
   }
 
@@ -23,49 +68,103 @@
     root.querySelectorAll('[data-ds-hero]').forEach(function (hero) {
       if (hero.dsInit) return;
       hero.dsInit = true;
+      keep(hero, function () { hero.dsInit = false; });
       var slides = hero.querySelectorAll('[data-ds-slide]');
       var imgs = hero.querySelectorAll('.ds-hero__img');
       var dots = hero.querySelectorAll('[data-ds-dot]');
-      if (slides.length < 2) return;
+      var control = hero.querySelector('[data-ds-pause]');
+      if (!slides.length) return;
       var i = 0;
       var timer;
+      var focusTimer;
+      var warmTimers = new Set();
+      var warmQueued = new Set();
+      var paused = reduce.matches;
+      var suspended = false;
       var ms = (parseInt(hero.dataset.interval, 10) || 6) * 1000;
       hero.style.setProperty('--ds-interval', ms + 'ms');
 
+      // Warm the next slide after the current image loads, without competing with LCP.
+      function warmNext() {
+        if (imgs.length < 2) return;
+        var current = imgs[i];
+        var next = imgs[(i + 1) % imgs.length];
+        if (!next || next.loading !== 'lazy' || warmQueued.has(next)) return;
+        warmQueued.add(next);
+        function queue() {
+          var warmTimer = setTimeout(function () {
+            warmTimers.delete(warmTimer);
+            if (!hero.isConnected) return;
+            next.fetchPriority = 'low';
+            next.loading = 'eager';
+          }, 200);
+          warmTimers.add(warmTimer);
+        }
+        if (current && !current.complete) {
+          listen(hero, current, 'load', queue);
+          listen(hero, current, 'error', queue);
+        } else {
+          queue();
+        }
+      }
+
       function show(n) {
         i = (n + slides.length) % slides.length;
-        slides.forEach(function (s, k) { s.classList.toggle('is-on', k === i); });
+        if (imgs[i]) imgs[i].loading = 'eager';
+        slides.forEach(function (s, k) {
+          s.classList.toggle('is-on', k === i);
+          s.setAttribute('aria-hidden', String(k !== i));
+          s.inert = k !== i;
+        });
         imgs.forEach(function (s, k) { s.classList.toggle('is-on', k === i); });
         dots.forEach(function (d, k) {
           d.classList.remove('is-on', 'is-done');
           void d.offsetWidth;
           if (k < i) d.classList.add('is-done');
           if (k === i) d.classList.add('is-on');
+          if (k === i) d.setAttribute('aria-current', 'true');
+          else d.removeAttribute('aria-current');
         });
         schedule();
+        warmNext();
       }
       function schedule() {
         clearTimeout(timer);
-        if (reduce.matches || hero.dsPaused) return;
+        if (reduce.matches || paused || suspended || document.hidden || slides.length < 2) return;
         timer = setTimeout(function () { show(i + 1); }, ms);
       }
-      function pause(p) {
-        hero.dsPaused = p;
-        hero.classList.toggle('is-paused', p);
-        if (p) clearTimeout(timer); else schedule();
+      function updateControl() {
+        hero.classList.toggle('is-paused', paused || suspended || reduce.matches);
+        if (!control) return;
+        control.disabled = reduce.matches;
+        control.setAttribute('aria-pressed', String(paused));
+        control.textContent = reduce.matches ? 'Movimiento pausado' : paused ? 'Reanudar' : 'Pausar';
       }
+      function suspend(value) { suspended = value; updateControl(); schedule(); }
       dots.forEach(function (d) {
-        d.addEventListener('click', function () { show(parseInt(d.dataset.dsDot, 10)); });
+        listen(hero, d, 'click', function () { show(parseInt(d.dataset.dsDot, 10)); });
       });
-      hero.addEventListener('mouseenter', function () { pause(true); });
-      hero.addEventListener('mouseleave', function () { pause(false); });
-      hero.addEventListener('focusin', function () { pause(true); });
-      hero.addEventListener('focusout', function () { pause(false); });
-      document.addEventListener('visibilitychange', function () { pause(document.hidden); });
-      hero.addEventListener('shopify:block:select', function (e) {
+      if (control) listen(hero, control, 'click', function () { paused = !paused; updateControl(); schedule(); });
+      listen(hero, hero, 'mouseenter', function () { suspend(true); });
+      listen(hero, hero, 'mouseleave', function () { suspend(hero.matches(':focus-within')); });
+      listen(hero, hero, 'focusin', function () { suspend(true); });
+      listen(hero, hero, 'focusout', function () {
+        clearTimeout(focusTimer);
+        focusTimer = setTimeout(function () { if (hero.isConnected) suspend(hero.matches(':hover, :focus-within')); }, 0);
+      });
+      listen(hero, document, 'visibilitychange', schedule);
+      listen(hero, reduce, 'change', function () { if (reduce.matches) paused = true; updateControl(); schedule(); });
+      listen(hero, hero, 'shopify:block:select', function (e) {
         var idx = Array.prototype.indexOf.call(slides, e.target);
-        if (idx > -1) { pause(true); show(idx); }
+        if (idx > -1) { paused = true; updateControl(); show(idx); }
       });
+      keep(hero, function () {
+        clearTimeout(timer);
+        clearTimeout(focusTimer);
+        warmTimers.forEach(function (warmTimer) { clearTimeout(warmTimer); });
+        warmTimers.clear();
+      });
+      updateControl();
       show(0);
     });
   }
@@ -74,7 +173,8 @@
     root.querySelectorAll('[data-ds-rail]').forEach(function (btn) {
       if (btn.dsInit) return;
       btn.dsInit = true;
-      btn.addEventListener('click', function () {
+      keep(btn, function () { btn.dsInit = false; });
+      listen(btn, btn, 'click', function () {
         var rail = document.getElementById(btn.dataset.dsRail);
         if (!rail) return;
         rail.scrollBy({ left: parseInt(btn.dataset.dir, 10) * rail.clientWidth * 0.8, behavior: reduce.matches ? 'auto' : 'smooth' });
@@ -86,20 +186,22 @@
     root.querySelectorAll('[data-ds-sticky]').forEach(function (bar) {
       if (bar.dsInit) return;
       bar.dsInit = true;
+      keep(bar, function () { bar.dsInit = false; });
       var info = bar.closest('.product__info-container') || document;
       var form = info.querySelector('form[data-type="add-to-cart-form"]');
       var submit = form && form.querySelector('[type="submit"][name="add"]');
       if (!submit) return;
-      bar.querySelector('[data-ds-sticky-submit]').addEventListener('click', function () {
-        submit.click();
-      });
+      var stickySubmit = bar.querySelector('[data-ds-sticky-submit]');
+      if (stickySubmit) listen(bar, stickySubmit, 'click', function () { if (!stickySubmit.disabled) submit.click(); });
       if (!('IntersectionObserver' in window)) return;
-      new IntersectionObserver(function (entries) {
+      var observer = new IntersectionObserver(function (entries) {
         entries.forEach(function (en) {
           var below = en.boundingClientRect.top < 0;
-          bar.hidden = en.isIntersecting || !below;
+          bar.hidden = en.isIntersecting || !below || stickySubmit.disabled;
         });
-      }).observe(submit);
+      });
+      observer.observe(submit);
+      keep(bar, function () { observer.disconnect(); });
     });
   }
 
@@ -108,21 +210,65 @@
   function initReveal(root) {
     if (reduce.matches || !('IntersectionObserver' in window)) return;
     document.documentElement.classList.add('ds-js');
-    if (!window.dsRevealIO) {
-      window.dsRevealIO = new IntersectionObserver(function (entries) {
-        entries.forEach(function (en) {
-          if (!en.isIntersecting) return;
-          en.target.classList.add('is-in');
-          window.dsRevealIO.unobserve(en.target);
-        });
-      }, { rootMargin: '0px 0px -6% 0px' });
-    }
-    root.querySelectorAll(REVEAL).forEach(function (el) {
-      if (el.classList.contains('ds-reveal')) return;
+    var elements = root.querySelectorAll(REVEAL);
+    if (!elements.length) return;
+    var observers = new Map();
+    elements.forEach(function (el) {
+      // The first product row can be visible at load; keep it paintable for LCP.
+      if (el.matches('.product-grid .grid__item:nth-child(-n+2)')) return;
+      if (el.classList.contains('is-in')) return;
       var i = Array.prototype.indexOf.call(el.parentElement.children, el);
-      el.style.setProperty('--ds-delay', Math.min(i, 6) * 60 + 'ms');
+      el.style.setProperty('--ds-delay', Math.min(i, 4) * 50 + 'ms');
       el.classList.add('ds-reveal');
-      window.dsRevealIO.observe(el);
+      var section = el.closest('.shopify-section') || el;
+      if (!observers.has(section)) {
+        var observer = new IntersectionObserver(function (entries, currentObserver) {
+          entries.forEach(function (en) {
+            if (!en.isIntersecting) return;
+            en.target.classList.add('is-in');
+            currentObserver.unobserve(en.target);
+          });
+        }, { rootMargin: '0px 0px -6% 0px' });
+        observers.set(section, observer);
+        keep(el, observer.disconnect.bind(observer));
+      }
+      var observer = observers.get(section);
+      observer.observe(el);
+    });
+  }
+
+  // Cuenta regresiva al cierre de la tanda. Solo informa; el checkout lo controla Shopify.
+  function initCountdown(root) {
+    root.querySelectorAll('[data-ds-countdown]').forEach(function (box) {
+      if (box.dsInit) return;
+      box.dsInit = true;
+      keep(box, function () { box.dsInit = false; });
+      var end = Date.parse(box.dataset.dsCountdown);
+      if (isNaN(end)) return;
+      var units = {};
+      box.querySelectorAll('[data-unit]').forEach(function (el) { units[el.dataset.unit] = el; });
+      var timer;
+      function set(el, value) {
+        if (!el || el.textContent === value) return;
+        el.textContent = value;
+        if (reduce.matches) return;
+        el.classList.remove('is-tick');
+        void el.offsetWidth;
+        el.classList.add('is-tick');
+      }
+      function tick() {
+        var left = end - Date.now();
+        if (left <= 0) { box.hidden = true; return; }
+        box.hidden = false;
+        var mins = Math.floor(left / 60000);
+        set(units.d, String(Math.floor(mins / 1440)));
+        set(units.h, String(Math.floor(mins / 60) % 24).padStart(2, '0'));
+        set(units.m, String(mins % 60).padStart(2, '0'));
+        box.setAttribute('aria-label', 'Faltan ' + units.d.textContent + ' días, ' + units.h.textContent + ' horas y ' + units.m.textContent + ' minutos para el cierre de pedidos');
+        timer = setTimeout(tick, (left % 60000) + 50);
+      }
+      tick();
+      keep(box, function () { clearTimeout(timer); });
     });
   }
 
@@ -135,21 +281,30 @@
       var btn = input && input.form.querySelector('.ds-add');
       if (btn && !btn.classList.contains('is-added')) {
         var label = btn.querySelector('span');
+        var path = btn.querySelector('.ds-ico path');
         var prev = label ? label.textContent : '';
+        var prevPath = path ? path.getAttribute('d') : '';
         btn.classList.add('is-added');
         if (label) label.textContent = 'Agregado';
-        setTimeout(function () {
+        if (path) path.setAttribute('d', 'M5 12l5 5L20 7');
+        var addedTimer = setTimeout(function () {
           btn.classList.remove('is-added');
           if (label) label.textContent = prev;
+          if (path) path.setAttribute('d', prevPath);
+          feedbackTimers.delete(addedTimer);
         }, 1600);
+        feedbackTimers.add(addedTimer);
+        keep(btn, function () { clearTimeout(addedTimer); feedbackTimers.delete(addedTimer); });
       }
-      setTimeout(function () {
+      var bumpTimer = setTimeout(function () {
         document.querySelectorAll('.cart-count-bubble').forEach(function (b) {
           b.classList.remove('ds-bump');
           void b.offsetWidth;
           if (!reduce.matches) b.classList.add('ds-bump');
         });
+        feedbackTimers.delete(bumpTimer);
       }, 350);
+      feedbackTimers.add(bumpTimer);
     });
   }
 
@@ -160,10 +315,12 @@
     initRails(root);
     initSticky(root);
     initReveal(root);
+    initCountdown(root);
     initCartFeedback();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { init(); });
   else init();
-  document.addEventListener('shopify:section:load', function (e) { init(e.target); });
+  document.addEventListener('shopify:section:load', function (e) { cleanup(e.target); init(e.target); });
+  document.addEventListener('shopify:section:unload', function (e) { cleanup(e.target); });
 })();

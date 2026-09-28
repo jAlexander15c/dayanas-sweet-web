@@ -277,6 +277,7 @@
                           type="number"
                           name="quantity"
                           id="Quantity-{{ section.id }}"
+                          aria-labelledby="quantity-label-{{ section.id }}"
                           data-cart-quantity="{{ cart_qty }}"
                           data-min="{{ product.selected_or_first_available_variant.quantity_rule.min }}"
                           min="{{ product.selected_or_first_available_variant.quantity_rule.min }}"

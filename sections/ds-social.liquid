@@ -8,7 +8,7 @@
         <input type="hidden" name="contact[tags]" value="newsletter">
         <label for="DSNewsEmail-{{ section.id }}">Tu correo electrónico</label>
         <div class="ds-news__row">
-          <input id="DSNewsEmail-{{ section.id }}" type="email" name="contact[email]" required autocomplete="email" autocapitalize="off" autocorrect="off" placeholder="nombre@correo.com" value="{{ form.email }}"{% if form.errors %} aria-invalid="true" aria-describedby="DSNewsMsg-{{ section.id }}"{% endif %}>
+          <input id="DSNewsEmail-{{ section.id }}" type="email" name="contact[email]" required autocomplete="email" autocapitalize="off" autocorrect="off" placeholder="nombre@correo.com" value="{{ form.email | escape }}"{% if form.errors %} aria-invalid="true" aria-describedby="DSNewsMsg-{{ section.id }}"{% endif %}>
           <button type="submit" class="ds-btn ds-btn--ink">Suscribirme</button>
         </div>
         <p class="ds-news__msg" id="DSNewsMsg-{{ section.id }}" role="status">
@@ -23,15 +23,17 @@
         {%- for block in section.blocks -%}
           {%- assign link = block.settings.link | default: section.settings.profile_link -%}
           {%- if block.type == 'handle' -%}
-            <a class="ds-insta__handle" href="{{ link | default: '#' }}" target="_blank" rel="noopener" {{ block.shopify_attributes }}>{{ block.settings.label | escape | newline_to_br }}</a>
+            {%- if link != blank -%}<a class="ds-insta__handle" href="{{ link }}" target="_blank" rel="noopener noreferrer" {{ block.shopify_attributes }}>{{ block.settings.label | escape | newline_to_br }}</a>
+            {%- else -%}<span class="ds-insta__handle" {{ block.shopify_attributes }}>{{ block.settings.label | escape | newline_to_br }}</span>{%- endif -%}
           {%- else -%}
-            <a class="ds-insta__img" href="{{ link | default: '#' }}" target="_blank" rel="noopener" {{ block.shopify_attributes }}>
+            {%- if link != blank -%}<a class="ds-insta__img" href="{{ link }}" target="_blank" rel="noopener noreferrer" aria-label="Ver Dayana's Sweet en Instagram" {{ block.shopify_attributes }}>
+            {%- else -%}<div class="ds-insta__img" {{ block.shopify_attributes }}>{%- endif -%}
               {%- if block.settings.image != blank -%}
                 {{ block.settings.image | image_url: width: 800 | image_tag: widths: '300, 500, 800', sizes: '(min-width: 990px) 20vw, 33vw', loading: 'lazy' }}
               {%- else -%}
-                <img src="{{ block.settings.fallback | asset_url }}" alt="" width="1254" height="1254" loading="lazy">
+                {% render 'ds-fallback-image', name: block.settings.fallback, sizes: '(min-width: 990px) 20vw, 33vw', alt: '' %}
               {%- endif -%}
-            </a>
+            {%- if link != blank -%}</a>{%- else -%}</div>{%- endif -%}
           {%- endif -%}
         {%- endfor -%}
       </div>

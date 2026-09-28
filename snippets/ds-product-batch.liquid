@@ -23,18 +23,22 @@
   endfor
 -%}
 <div class="ds-pbatch">
-  {%- if product.available == false -%}
-    <p class="ds-pbatch__stock is-out"><strong>Agotado en esta tanda.</strong> Vuelve a abrir con el próximo menú.</p>
-  {%- elsif settings.ds_batch_open == false -%}
-    <p class="ds-pbatch__stock is-out">{{ settings.ds_batch_closed_text | escape }}</p>
-  {%- elsif tracked and variant.inventory_quantity <= settings.ds_low_stock -%}
-    <p class="ds-pbatch__stock"><strong>Quedan {{ variant.inventory_quantity }}</strong> en esta tanda.</p>
-  {%- endif -%}
+  <div id="DSBatchStock-{{ section.id }}">
+    {%- if settings.ds_batch_open == false -%}
+      <p class="ds-pbatch__stock is-out">{{ settings.ds_batch_closed_text | default: 'La tanda ya cerró. El próximo menú abre pronto.' | escape }}</p>
+    {%- elsif variant.available == false -%}
+      <p class="ds-pbatch__stock is-out"><strong>Agotado en esta tanda.</strong> Vuelve a abrir con el próximo menú.</p>
+    {%- elsif tracked and variant.inventory_quantity > 0 and variant.inventory_quantity <= settings.ds_low_stock -%}
+      <p class="ds-pbatch__stock"><strong>Quedan {{ variant.inventory_quantity }}</strong> en esta tanda.</p>
+    {%- endif -%}
+  </div>
+  {%- if settings.ds_batch_open -%}
   <ul class="ds-pbatch__dates" role="list">
     <li>{% render 'ds-icon', name: 'clock' %}<span>Pedidos hasta el {{ settings.ds_batch_close | escape }}</span></li>
     <li>{% render 'ds-icon', name: 'box' %}<span>Horneamos el {{ settings.ds_batch_bake | escape }}</span></li>
     <li>{% render 'ds-icon', name: 'truck' %}<span>Despacho {{ settings.ds_batch_ship | escape }}</span></li>
   </ul>
+  {%- endif -%}
   {%- if show_storage and settings.ds_cookie_storage != blank -%}
     <details class="ds-pbatch__storage" open>
       <summary>Conservación{% render 'ds-icon', name: 'plus' %}</summary>
