@@ -13,7 +13,7 @@
 <div {{ block.shopify_attributes }}>
   {%- if product != blank -%}
     {%- if settings.ds_batch_open == false -%}
-      <div class="product-form"><p class="ds-pbatch__stock is-out" role="status">{{ settings.ds_batch_closed_text | default: 'La tanda ya cerró. El próximo menú abre pronto.' | escape }}</p></div>
+      <div class="product-form ds-batch-closed"><p class="ds-pbatch__stock is-out" role="status">{{ settings.ds_batch_closed_text | default: 'La tanda ya cerró. El próximo menú abre pronto.' | escape }}</p></div>
     {%- else -%}
     {%- liquid
       assign gift_card_recipient_feature_active = false

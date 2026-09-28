@@ -23,9 +23,9 @@
   endfor
 -%}
 <div class="ds-pbatch">
-  <div id="DSBatchStock-{{ section.id }}">
+  <div id="DSBatchStock-{{ section.id }}" aria-live="polite">
+    {%- comment -%}Con la tanda cerrada, el aviso lo muestra buy-buttons en lugar del botón.{%- endcomment -%}
     {%- if settings.ds_batch_open == false -%}
-      <p class="ds-pbatch__stock is-out">{{ settings.ds_batch_closed_text | default: 'La tanda ya cerró. El próximo menú abre pronto.' | escape }}</p>
     {%- elsif variant.available == false -%}
       <p class="ds-pbatch__stock is-out"><strong>Agotado en esta tanda.</strong> Vuelve a abrir con el próximo menú.</p>
     {%- elsif tracked and variant.inventory_quantity > 0 and variant.inventory_quantity <= settings.ds_low_stock -%}

@@ -47,8 +47,10 @@ body{background:var(--ds-blush);color:var(--ds-ink);-webkit-font-smoothing:antia
 .ds-announce__msg[hidden]{display:none}
 .ds-announce__msg.is-on{opacity:1;transform:none}
 .ds-announce__msg[hidden]{display:none}
-.ds-motion-control{border:1px solid currentColor;border-radius:var(--ds-r-pill);background:transparent;color:var(--ds-ink);padding:6px 12px;font:600 12px/1.2 var(--ds-body);cursor:pointer}
+.ds-motion-control{position:relative;border:1px solid currentColor;border-radius:var(--ds-r-pill);background:transparent;color:var(--ds-ink);padding:6px 12px;font:600 12px/1.2 var(--ds-body);cursor:pointer}
 .ds-motion-control:disabled{cursor:default;opacity:.75}
+/* Área táctil de 44 px sin agrandar el botón */
+.ds-motion-control::after{content:"";position:absolute;inset:50% -4px auto;height:44px;transform:translateY(-50%)}
 .ds-announce__msg{padding-right:100px}
 .ds-announce__pause{position:absolute;right:var(--ds-gutter);top:50%;z-index:2;transform:translateY(-50%);color:var(--ds-blush);padding:3px 8px}
 .ds-announce__msg a{color:inherit;text-underline-offset:3px}
@@ -72,7 +74,7 @@ body{background:var(--ds-blush);color:var(--ds-ink);-webkit-font-smoothing:antia
 .footer::before{content:"";position:absolute;left:0;right:0;top:-13px;height:14px;background:radial-gradient(circle at 16px 14px,var(--ds-ink) 13.5px,transparent 14px) 0 0/32px 14px repeat-x}
 .footer .ds-footer-logo{display:block;height:64px!important;width:auto!important;max-width:min(240px,100%)!important;object-fit:contain;margin-bottom:16px}
 .footer-block__heading{font:600 13px/1.4 var(--ds-body);letter-spacing:.08em;text-transform:uppercase;color:var(--ds-rose)}
-.footer .list-menu__item--link{font-size:15px;color:var(--ds-blush);opacity:.9;text-underline-offset:4px}
+.footer .list-menu__item--link{display:inline-flex;align-items:center;min-height:44px;padding-block:0;font-size:15px;color:var(--ds-blush);opacity:.9;text-underline-offset:4px}
 .footer .list-menu__item--link:hover{opacity:1;text-decoration:underline}
 .footer__content-bottom{border-top:1px solid rgba(248,203,224,.2)}
 .footer .copyright__content,.footer .policies li a{color:rgba(248,203,224,.8)}
@@ -84,12 +86,14 @@ body{background:var(--ds-blush);color:var(--ds-ink);-webkit-font-smoothing:antia
 .ds-hero__slide.is-on{opacity:1;visibility:visible;transform:none;transition:opacity .6s var(--ds-ease),transform .6s var(--ds-ease)}
 .ds-hero__title{font-size:clamp(44px,6.2vw,86px)}
 .ds-hero__text{font-size:18px;line-height:1.6;max-width:36ch;color:var(--ds-ink-soft);margin:0}
-.ds-hero__dots{display:flex;gap:10px;margin-top:30px}
+.ds-hero__dots{display:flex;gap:10px;margin-top:24px}
 .ds-hero__controls{display:flex;align-items:center;gap:16px;margin-top:30px}
 .ds-hero__controls .ds-hero__dots{margin-top:0}
-.ds-hero__dots button{position:relative;width:44px;height:6px;padding:0;border:0;border-radius:3px;background:rgba(58,36,48,.18);overflow:hidden;cursor:pointer}
-.ds-hero__dots button::after{content:"";position:absolute;inset:-12px 0}
-.ds-hero__dots i{position:absolute;inset:0;background:var(--ds-pink);transform:scaleX(0);transform-origin:left}
+/* El botón mide 44×30 para el dedo; la barra visible sigue siendo de 6 px */
+.ds-hero__dots{gap:6px}
+.ds-hero__dots button{position:relative;width:44px;height:30px;padding:0;border:0;border-radius:6px;background:transparent;cursor:pointer}
+.ds-hero__dots button::before{content:"";position:absolute;left:0;right:0;top:12px;height:6px;border-radius:3px;background:rgba(58,36,48,.18)}
+.ds-hero__dots i{position:absolute;left:0;right:0;top:12px;height:6px;border-radius:3px;background:var(--ds-pink);transform:scaleX(0);transform-origin:left}
 .ds-hero__dots .is-on i{animation:ds-fill var(--ds-interval,6s) linear forwards}
 .ds-hero.is-paused .ds-hero__dots .is-on i{animation-play-state:paused}
 .ds-hero__dots .is-done i{transform:scaleX(1)}

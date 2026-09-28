@@ -15,7 +15,7 @@
   <div class="ds-chero__grid">
     <div>
       <h1 class="ds-display ds-chero__title" id="DSCollection-{{ section.id }}">{{ title | escape }}</h1>
-      {%- if intro != blank -%}
+      {%- if intro != blank and settings.ds_batch_open -%}
         <div class="ds-chero__text rte">{% render 'ds-batch-text', text: intro %}</div>
       {%- endif -%}
     </div>
@@ -26,8 +26,10 @@
         {%- else -%}
           <li>{% render 'ds-icon', name: 'clock' %}<span>{{ settings.ds_batch_closed_text | escape }}</span></li>
         {%- endif -%}
+        {%- if settings.ds_batch_open -%}
         <li>{% render 'ds-icon', name: 'box' %}<span>Horneamos el <strong>{{ settings.ds_batch_bake | escape }}</strong></span></li>
         <li>{% render 'ds-icon', name: 'truck' %}<span>Despacho <strong>{{ settings.ds_batch_ship | escape }}</strong></span></li>
+        {%- endif -%}
       </ul>
     {%- endif -%}
   </div>

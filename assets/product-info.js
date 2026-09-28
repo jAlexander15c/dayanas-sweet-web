@@ -203,7 +203,12 @@ if (!customElements.get('product-info')) {
           };
 
           updateSourceFromDestination('price');
+          const batchStock = this.querySelector(`#DSBatchStock-${this.dataset.section}`);
+          const prevStock = batchStock?.textContent.trim();
           updateSourceFromDestination('DSBatchStock');
+          if (batchStock && batchStock.textContent.trim() !== prevStock && batchStock.firstElementChild) {
+            batchStock.firstElementChild.classList.add('is-updated');
+          }
           updateSourceFromDestination('DSStickyPrice');
           const stickySubmit = this.querySelector('[data-ds-sticky-submit]');
           if (stickySubmit) {

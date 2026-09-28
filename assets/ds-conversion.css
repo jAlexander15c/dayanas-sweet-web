@@ -15,17 +15,23 @@
 .ds-badge{position:absolute;top:12px;left:12px;z-index:1;background:var(--ds-red);color:#fff;font-size:12px;font-weight:700;letter-spacing:.03em;padding:6px 12px;border-radius:var(--ds-r-pill)}
 .ds-badge--ink{background:var(--ds-ink)}
 .ds-card.is-out .ds-card__img{filter:grayscale(.55) opacity(.75)}
-.ds-card__body{display:flex;flex-direction:column;gap:6px;flex:1;padding:16px 16px 18px}
+.ds-card__body{display:flex;flex-direction:column;gap:6px;flex:1;padding:16px 16px 18px;container-type:inline-size}
 .ds-card__title{margin:0;font-family:var(--ds-display);font-weight:700;font-size:19px;line-height:1.2;letter-spacing:-.01em}
 .ds-card__title a{color:inherit;text-decoration:none}
 .ds-card__title a::after{content:"";position:absolute;inset:0}
 .ds-card__desc{margin:0;font-size:14px;line-height:1.45;color:var(--ds-ink-soft)}
 .ds-card__stock{margin:0;font-size:13px;font-weight:600;color:var(--ds-red-text)}
 .ds-card__foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:10px}
+/* Tarjetas angostas (grilla de 2 columnas en móvil): precio arriba, botón a todo el ancho */
+@container (max-width:200px){
+  .ds-card__foot{flex-direction:column;align-items:stretch;gap:8px}
+  .ds-card__form,.ds-card__foot>.ds-add{width:100%}
+  .ds-add{width:100%;justify-content:center}
+}
 .ds-card__price{font-weight:700;font-size:16px;font-variant-numeric:tabular-nums}
 .ds-card__form{position:relative;z-index:2}
 .ds-card__form form{margin:0}
-.ds-add{position:relative;z-index:2;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 16px;border:0;border-radius:var(--ds-r-pill);background:var(--ds-ink);color:var(--ds-peach);font:600 14px/1 var(--ds-body);text-decoration:none;cursor:pointer;transition:background-color .2s,color .2s,transform .18s var(--ds-ease)}
+.ds-add{position:relative;z-index:2;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 16px;border:0;border-radius:var(--ds-r-pill);background:var(--ds-ink);color:var(--ds-peach);font:600 14px/1 var(--ds-body);text-decoration:none;cursor:pointer;transition:background-color .2s,color .2s,transform .18s var(--ds-ease)}
 .ds-add:hover{background:var(--ds-pink);color:#fff}
 .ds-add:active{transform:scale(.95)}
 .ds-add .ds-ico{width:17px;height:17px}
@@ -44,7 +50,7 @@
 /* Colección: encabezado de marca */
 .ds-chero{padding-block:clamp(28px,4vw,56px) 12px}
 .ds-chero__crumbs{display:flex;gap:8px;font-size:14px;color:var(--ds-ink-soft);margin-bottom:14px}
-.ds-chero__crumbs a{color:inherit;text-underline-offset:3px}
+.ds-chero__crumbs a{color:inherit;text-underline-offset:3px;padding-block:10px;margin-block:-10px}
 .ds-chero__grid{display:grid;grid-template-columns:1.3fr 1fr;gap:clamp(20px,4vw,56px);align-items:end}
 .ds-chero__grid>*{min-width:0}
 .ds-chero__title{font-size:clamp(44px,6.4vw,84px)}
@@ -91,10 +97,14 @@
 .product-form__submit.button:hover{background:var(--ds-pink-deep)}
 .product-form__submit.button:after,.product-form__submit.button:before{display:none}
 .shopify-payment-button__button--unbranded{border-radius:var(--ds-r-pill)!important}
+/* Tanda cerrada: sin cantidad ni cuotas, porque no se puede comprar */
+.product__info-container:has(.ds-batch-closed) :is(.product-form__quantity,.installment){display:none}
 .ds-pbatch{display:flex;flex-direction:column;gap:12px;margin:6px 0 4px}
 .ds-pbatch__stock{margin:0;background:var(--ds-paper);border-radius:14px;padding:12px 16px;font-size:15px;color:var(--ds-ink)}
 .ds-pbatch__stock strong{color:var(--ds-red-text)}
 .ds-pbatch__stock.is-out strong{color:var(--ds-ink)}
+.ds-pbatch__stock.is-updated{animation:ds-stock .4s var(--ds-ease)}
+@keyframes ds-stock{from{opacity:0;transform:translateY(-4px)}}
 .ds-pbatch__dates{list-style:none;margin:0;padding:6px;display:flex;flex-wrap:wrap;gap:4px;background:var(--ds-paper);border-radius:14px}
 .ds-pbatch__dates li{display:flex;align-items:center;gap:8px;flex:1 1 180px;padding:8px 10px;font-size:13px;line-height:1.35}
 .ds-pbatch__dates .ds-ico{color:var(--ds-pink)}
@@ -106,11 +116,14 @@
 .ds-pbatch__storage .rte{padding-bottom:14px;font-size:15px;line-height:1.6;color:var(--ds-ink-soft)}
 .ds-pbatch__storage .rte p{margin:0}
 .ds-sticky-buy{display:none}
+.mobile-facets__open-wrapper,.mobile-facets__open{min-height:44px}
 @media (max-width:749px){
   .ds-sticky-buy:not([hidden]){position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;align-items:center;gap:12px;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:var(--ds-paper);box-shadow:0 -12px 30px -20px rgba(58,36,48,.6)}
   .ds-sticky-buy__info{display:flex;flex-direction:column;min-width:0;font-size:14px}
   .ds-sticky-buy__info strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ds-sticky-buy .ds-btn{flex:1;min-height:46px}
+  /* Reserva espacio para que la barra fija no tape el final de la ficha */
+  body:has(.ds-sticky-buy){padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
   .ds-sticky-buy:not([hidden]){transition:transform .3s cubic-bezier(.32,.72,0,1)}
   @starting-style{.ds-sticky-buy:not([hidden]){transform:translateY(100%)}}
 }
@@ -146,4 +159,5 @@
 @media (prefers-reduced-motion:reduce){
   .ds-card,.ds-card__img,.ds-add,.ds-sticky-buy,.drawer .drawer__inner{transition:none!important}
   .ds-add.is-added .ds-ico{animation:none}
+  .ds-pbatch__stock.is-updated{animation:none}
 }
