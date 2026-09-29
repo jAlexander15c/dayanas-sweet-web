@@ -3,11 +3,12 @@
     <h2 class="ds-display ds-h2" id="DSFaq-{{ section.id }}">{{ section.settings.title | escape }}</h2>
     {%- if section.settings.text != blank -%}<p>{{ section.settings.text | escape }}</p>{%- endif -%}
   </div>
+  {%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
   <div class="ds-faq__items">
     {%- for block in section.blocks -%}
       <details class="ds-qa"{% if forloop.first %} open{% endif %} {{ block.shopify_attributes }}>
         <summary>{{ block.settings.question | escape }}{% render 'ds-icon', name: 'plus' %}</summary>
-        <div class="ds-qa__a rte">{%- if settings.ds_batch_open == false and block.settings.closed_answer != blank -%}{% render 'ds-batch-text', text: block.settings.closed_answer %}{%- else -%}{% render 'ds-batch-text', text: block.settings.answer %}{%- endif -%}</div>
+        <div class="ds-qa__a rte">{%- if ds_closed == '1' and block.settings.closed_answer != blank -%}{% render 'ds-batch-text', text: block.settings.closed_answer %}{%- else -%}{% render 'ds-batch-text', text: block.settings.answer %}{%- endif -%}</div>
       </details>
     {%- endfor -%}
   </div>

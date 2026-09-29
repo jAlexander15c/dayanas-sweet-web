@@ -4,23 +4,31 @@
     {%- if section.settings.text != blank -%}
       <div class="ds-batch__intro">{% render 'ds-batch-text', text: section.settings.text %}</div>
     {%- endif -%}
-    {%- if settings.ds_batch_open == false -%}
-      <p class="ds-batch__closed" role="status">La tanda ya cerró. El próximo menú abre pronto; síguenos para enterarte primero.</p>
+    {%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
+    {%- if ds_closed == '1' -%}
+      <p class="ds-batch__closed" role="status">{{ settings.ds_batch_closed_text | escape }}</p>
     {%- else -%}
-    {%- if settings.ds_batch_close_at != blank -%}
-      <div class="ds-countdown" data-ds-countdown="{{ settings.ds_batch_close_at | escape }}" hidden>
+    {%- liquid
+      # La cuenta regresiva solo se muestra si la fecha exacta se puede leer (date devuelve dígitos).
+      assign close_s = settings.ds_batch_close_at | date: '%s'
+      assign close_check = close_s | plus: 0 | append: ''
+    -%}
+    {%- if settings.ds_batch_close_at != blank and close_check == close_s -%}
+      <div class="ds-countdown" data-ds-countdown="{{ close_s }}" hidden>
         <p class="ds-countdown__label">Faltan para el cierre de pedidos</p>
         <p class="ds-countdown__units" role="timer" aria-live="off">
-          <span><b data-unit="d">0</b> días</span>
-          <span><b data-unit="h">00</b> horas</span>
+          <span><b data-unit="d">0</b> <span data-unit-label="d" data-one="día" data-other="días">días</span></span>
+          <span><b data-unit="h">00</b> <span data-unit-label="h" data-one="hora" data-other="horas">horas</span></span>
           <span><b data-unit="m">00</b> min</span>
         </p>
+        <p class="ds-countdown__done" data-ds-countdown-done hidden>Pedidos cerrados para esta tanda.</p>
       </div>
     {%- endif -%}
     <ol class="ds-steps" role="list">
       {%- for block in section.blocks -%}
-        <li class="ds-step{% if block.settings.current %} is-now{% endif %}" {{ block.shopify_attributes }}>
+        <li class="ds-step{% if block.settings.current %} is-now{% endif %}"{% if block.settings.current %} aria-current="step"{% endif %} {{ block.shopify_attributes }}>
           <span class="ds-step__num" aria-hidden="true">{{ forloop.index }}</span>
+          {%- if block.settings.current -%}<span class="ds-step__now">Ahora</span>{%- endif -%}
           <span class="ds-step__when">{% render 'ds-batch-text', text: block.settings.when, escape: true %}</span>
           <p>{% render 'ds-batch-text', text: block.settings.text, escape: true %}</p>
         </li>

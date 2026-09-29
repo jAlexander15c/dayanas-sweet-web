@@ -47,8 +47,15 @@
         <h2 class="ds-display ds-contact__heading" id="DSContactAside-{{ section.id }}">{{ section.settings.aside_title | escape }}</h2>
         <div class="rte">{% render 'ds-batch-text', text: section.settings.aside_text %}</div>
         <nav class="ds-contact__links" aria-label="{{ section.settings.aside_title | escape }}">
-          <a href="/#ds-preguntas">{{ section.settings.faq_label | escape }}{% render 'ds-icon', name: 'arrow' %}</a>
-          <a href="/#ds-tandas">{{ section.settings.batch_label | escape }}{% render 'ds-icon', name: 'arrow' %}</a>
+          {%- liquid
+            assign home_url = routes.root_url
+            assign home_last = home_url | slice: -1
+            if home_last != '/'
+              assign home_url = home_url | append: '/'
+            endif
+          -%}
+          <a href="{{ home_url }}#ds-preguntas">{{ section.settings.faq_label | escape }}{% render 'ds-icon', name: 'arrow' %}</a>
+          <a href="{{ home_url }}#ds-tandas">{{ section.settings.batch_label | escape }}{% render 'ds-icon', name: 'arrow' %}</a>
         </nav>
       </div>
     </aside>

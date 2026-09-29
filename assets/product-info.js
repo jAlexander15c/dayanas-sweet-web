@@ -210,13 +210,6 @@ if (!customElements.get('product-info')) {
             batchStock.firstElementChild.classList.add('is-updated');
           }
           updateSourceFromDestination('DSStickyPrice');
-          const stickySubmit = this.querySelector('[data-ds-sticky-submit]');
-          if (stickySubmit) {
-            stickySubmit.disabled = !variant.available;
-            const stickyBar = stickySubmit.closest('[data-ds-sticky]');
-            const mainSubmit = this.querySelector('[name="add"][type="submit"]');
-            if (stickyBar) stickyBar.hidden = !variant.available || !mainSubmit || mainSubmit.getBoundingClientRect().bottom >= 0;
-          }
           updateSourceFromDestination('Sku', ({ classList }) => classList.contains('hidden'));
           updateSourceFromDestination('Inventory', ({ innerText }) => innerText === '');
           updateSourceFromDestination('Volume');
@@ -230,6 +223,7 @@ if (!customElements.get('product-info')) {
             html.getElementById(`ProductSubmitButton-${this.sectionId}`)?.hasAttribute('disabled') ?? true,
             window.variantStrings.soldOut
           );
+          this.syncStickyBar();
 
           publish(PUB_SUB_EVENTS.variantChange, {
             data: {
@@ -260,15 +254,29 @@ if (!customElements.get('product-info')) {
         window.history.replaceState({}, '', `${url}${variantId ? `?variant=${variantId}` : ''}`);
       }
 
+      // Barra fija DS: refleja el estado del botón principal tras toggleSubmitButton.
+      syncStickyBar() {
+        const stickySubmit = this.querySelector('[data-ds-sticky-submit]');
+        if (!stickySubmit) return;
+        const mainSubmit = this.querySelector('[name="add"][type="submit"]');
+        stickySubmit.disabled = !mainSubmit || mainSubmit.disabled;
+        const stickyBar = stickySubmit.closest('[data-ds-sticky]');
+        if (!stickyBar) return;
+        stickyBar.hidden =
+          !!this.closest('quick-add-modal') ||
+          stickySubmit.disabled ||
+          mainSubmit.getBoundingClientRect().bottom >= 0;
+      }
+
       setUnavailable() {
         this.productForm?.toggleSubmitButton(true, window.variantStrings.unavailable);
+        const batchClosed =
+          this.querySelector('.ds-batch-closed') || !this.querySelector('[name="add"][type="submit"]');
         const batchStock = this.querySelector(`#DSBatchStock-${this.dataset.section}`);
-        if (batchStock) batchStock.innerHTML = '<p class="ds-pbatch__stock is-out"><strong>Agotado en esta tanda.</strong></p>';
-        const stickySubmit = this.querySelector('[data-ds-sticky-submit]');
-        if (stickySubmit) {
-          stickySubmit.disabled = true;
-          stickySubmit.closest('[data-ds-sticky]').hidden = true;
+        if (batchStock && !batchClosed) {
+          batchStock.innerHTML = '<p class="ds-pbatch__stock is-out"><strong>Esta combinación no está disponible.</strong></p>';
         }
+        this.syncStickyBar();
 
         const selectors = ['price', 'Inventory', 'Sku', 'Price-Per-Item', 'Volume-Note', 'Volume', 'Quantity-Rules']
           .map((id) => `#${id}-${this.dataset.section}`)

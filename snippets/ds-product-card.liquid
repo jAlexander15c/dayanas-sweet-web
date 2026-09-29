@@ -25,10 +25,30 @@
   if rank_badge != blank
     assign badge = rank_badge
   endif
+  capture ds_closed
+    render 'ds-batch-state'
+  endcapture
+  # Tarjetas con opciones, suscripción o cantidad mínima van a la ficha en lugar de agregar rápido.
+  assign needs_choice = false
+  if product.requires_selling_plan or product.has_only_default_variant == false or variant.quantity_rule.min > 1
+    assign needs_choice = true
+  endif
+  # "Quedan N" solo en productos de una sola variante; con varias el número no sería del producto.
   assign low = false
-  if settings.ds_batch_open and variant.inventory_management == 'shopify' and variant.inventory_policy == 'deny' and variant.inventory_quantity > 0 and variant.inventory_quantity <= settings.ds_low_stock
+  if ds_closed != '1' and product.has_only_default_variant and variant.inventory_management == 'shopify' and variant.inventory_policy == 'deny' and variant.inventory_quantity > 0 and variant.inventory_quantity <= settings.ds_low_stock
     assign low = true
   endif
+  # Precio: el de la variante disponible más barata; si no hay disponibles, el mínimo del producto.
+  assign card_price = product.price_min
+  assign price_found = false
+  for v in product.variants
+    if v.available
+      if price_found == false or v.price < card_price
+        assign card_price = v.price
+        assign price_found = true
+      endif
+    endif
+  endfor
   assign form_id = 'DSCard-' | append: section_id | append: '-' | append: product.id
   assign img_alt = product.featured_media.alt | default: product.title | escape
   assign card_heading = heading_level | default: 'h3'
@@ -62,11 +82,11 @@
     <div class="ds-card__foot">
       <span class="ds-card__price">
         {%- if product.price_varies -%}Desde {% endif -%}
-        {{ product.price | money }}
+        {{ card_price | money }}
       </span>
-      {%- if sold_out or settings.ds_batch_open == false -%}
+      {%- if sold_out or ds_closed == '1' -%}
         <span class="ds-add is-disabled">{% if sold_out %}Agotado{% else %}Cerrado{% endif %}</span>
-      {%- elsif product.has_only_default_variant -%}
+      {%- elsif needs_choice == false -%}
         <product-form class="ds-card__form" data-section-id="{{ section_id }}" data-hide-errors="true">
           {%- form 'product', product, id: form_id, novalidate: 'novalidate', data-type: 'add-to-cart-form' -%}
             <input type="hidden" name="id" value="{{ variant.id }}" class="product-variant-id">
@@ -75,6 +95,7 @@
               {% render 'ds-icon', name: 'plus' %}<span>Agregar</span>
               {%- render 'loading-spinner' -%}
             </button>
+            <p class="ds-card__error" data-ds-card-error role="status" aria-live="polite" hidden></p>
           {%- endform -%}
         </product-form>
       {%- else -%}

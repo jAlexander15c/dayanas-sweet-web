@@ -1,0 +1,28 @@
+{%- comment -%}
+  Estado de la tanda. Imprime "1" si está cerrada y nada si está abierta.
+  Cerrada = "Menú abierto" desmarcado o ya pasó la fecha de cierre exacta
+  (Ajustes del tema > DS · Tanda de pedidos). Como un snippet no devuelve
+  valores, se captura:
+    {%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
+    {%- if ds_closed == '1' -%}…{%- endif -%}
+  Si la fecha no se puede leer, se ignora (date devuelve el texto tal cual).
+{%- endcomment -%}
+{%- liquid
+  assign closed = false
+  if settings.ds_batch_open == false
+    assign closed = true
+  elsif settings.ds_batch_close_at != blank
+    assign close_s = settings.ds_batch_close_at | date: '%s'
+    assign close_n = close_s | plus: 0
+    assign close_check = close_n | append: ''
+    if close_check == close_s
+      assign now_n = 'now' | date: '%s' | plus: 0
+      if now_n >= close_n
+        assign closed = true
+      endif
+    endif
+  endif
+  if closed
+    echo '1'
+  endif
+-%}

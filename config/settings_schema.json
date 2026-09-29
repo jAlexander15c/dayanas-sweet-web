@@ -1478,7 +1478,8 @@
         "type": "checkbox",
         "id": "ds_batch_open",
         "label": "Menú abierto para pedidos",
-        "default": true
+        "default": true,
+        "info": "Oculta botones y cierra el carrito en la tienda, pero no bloquea enlaces directos al checkout. Para cerrar de verdad, deja el stock de los productos en 0."
       },
       {
         "type": "text",
@@ -1495,8 +1496,8 @@
       {
         "type": "text",
         "id": "ds_batch_close_at",
-        "label": "Cuenta regresiva: fecha y hora exacta del cierre",
-        "info": "Formato 2026-10-17T23:59-05:00 (-05:00 es hora central en verano, -06:00 en invierno). Vacío oculta la cuenta regresiva. Solo informa: no bloquea el checkout."
+        "label": "Fecha y hora exacta del cierre",
+        "info": "Fecha y hora de cierre, p. ej. 2026-10-17T23:59-05:00 (usa -05:00 en horario de verano y -06:00 en invierno). Al pasar esa hora la tienda se muestra cerrada."
       },
       {
         "type": "text",
@@ -1514,7 +1515,7 @@
         "type": "text",
         "id": "ds_batch_closed_text",
         "label": "Mensaje con el menú cerrado",
-        "default": "El menú está cerrado. Suscríbete y te avisamos cuando abra la próxima tanda."
+        "default": "La tanda ya cerró. Suscríbete al boletín y te avisamos cuando abra el próximo menú."
       },
       {
         "type": "range",

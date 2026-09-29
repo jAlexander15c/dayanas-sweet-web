@@ -17,6 +17,7 @@
   }
 </style>
 
+{%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
 <cart-drawer class="drawer{% if cart == empty %} is-empty{% endif %}">
   <div id="CartDrawer" class="cart-drawer">
     <div id="CartDrawer-Overlay" class="cart-drawer__overlay"></div>
@@ -144,6 +145,9 @@
                               width="150"
                               height="{{ 150 | divided_by: item.image.aspect_ratio | ceil }}"
                             >
+                          {% else %}
+                            <a href="{{ item.url }}" class="cart-item__link" tabindex="-1" aria-hidden="true"> </a>
+                            <span class="cart-item__ph" aria-hidden="true"></span>
                           {% endif %}
                         </td>
 
@@ -582,7 +586,7 @@
             class="cart__checkout-button button"
             name="checkout"
             form="CartDrawer-Form"
-            {% if cart == empty or settings.ds_batch_open == false %}
+            {% if cart == empty or ds_closed == '1' %}
               disabled
             {% endif %}
           >

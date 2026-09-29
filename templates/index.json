@@ -27,7 +27,7 @@
           "type": "slide",
           "settings": {
             "title": "Una caja rosa *dice* más que una tarjeta.",
-            "text": "Elige los sabores, escribe una nota en el pedido y la despachamos lista para regalar.",
+            "text": "Elige los sabores, deja una nota en el carrito y la despachamos lista para regalar.",
             "button_label": "Ver el menú",
             "button_link": ""
           }
@@ -65,7 +65,7 @@
           "type": "step",
           "settings": {
             "when": "Hasta el [cierre]",
-            "text": "El menú está abierto. Cada producto tiene cupos según lo que sale del horno; cuando uno llega a cero, se cierra hasta la próxima tanda.",
+            "text": "El menú está abierto. Cada producto tiene cupos limitados: solo lo que podemos hornear bien en un día. Cuando uno llega a cero, se cierra hasta la próxima tanda.",
             "current": true
           }
         },
@@ -73,7 +73,7 @@
           "type": "step",
           "settings": {
             "when": "Horneamos el [horneado]",
-            "text": "Todos los pedidos de la tanda salen del horno el mismo día. Armamos las cajas una por una y las cerramos con tu nota.",
+            "text": "Todos los pedidos de la tanda salen del horno el mismo día. Armamos las cajas una por una y, si nos dejaste una nota, va adentro.",
             "current": false
           }
         },
@@ -124,7 +124,7 @@
           "type": "tile",
           "settings": {
             "title": "Cajas para regalar",
-            "text": "Varios sabores en una caja rosa, con tu nota adentro.",
+            "text": "Varios sabores en una caja rosa; deja tu nota en el carrito y va adentro.",
             "style": "pink",
             "fallback": "none",
             "collection": "cajas-para-regalar"
@@ -205,7 +205,7 @@
       ],
       "settings": {
         "title": "Lo más dulce, primero en tu correo.",
-        "text": "Los cupos de cada tanda dependen de lo que sale del horno y los favoritos se agotan primero. Te escribimos el día que abre el menú, antes de anunciarlo en redes.",
+        "text": "Cada producto tiene cupos limitados, solo lo que podemos hornear bien en un día, y los favoritos se agotan primero. Te escribimos el día que abre el menú, antes de anunciarlo en redes.",
         "color_scheme": "scheme-5"
       }
     },
@@ -217,7 +217,7 @@
           "settings": {
             "question": "¿Cuándo puedo hacer mi pedido?",
             "answer": "<p>Mientras el menú esté abierto. Para la [tanda], recibimos pedidos hasta el [cierre]. Horneamos el [horneado] y despachamos [despacho]. Las fechas de la tanda actual siempre están en la barra superior.</p>",
-            "closed_answer": "<p>La tanda ya cerró. El próximo menú abre pronto; suscríbete para enterarte primero.</p>"
+            "closed_answer": "<p>La tanda ya cerró. Suscríbete al boletín y te avisamos cuando abra el próximo menú.</p>"
           }
         },
         "q-soldout": {

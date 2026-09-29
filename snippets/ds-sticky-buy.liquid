@@ -4,7 +4,8 @@
   principal sale de pantalla (assets/ds-motion.js).
   Uso desde un bloque "Liquid personalizado": {% render 'ds-sticky-buy', product: product %}
 {% endcomment %}
-{%- if product.available and settings.ds_batch_open -%}
+{%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
+{%- if product.available and ds_closed != '1' -%}
   <div class="ds-sticky-buy" data-ds-sticky hidden>
     <div class="ds-sticky-buy__info">
       <strong>{{ product.title | escape }}</strong>

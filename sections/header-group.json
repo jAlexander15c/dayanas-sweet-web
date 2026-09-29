@@ -52,7 +52,7 @@
         "msg-closed": {
           "type": "message",
           "settings": {
-            "text": "La tanda [tanda] ya cerró. La próxima abre pronto: síguenos para enterarte primero.",
+            "text": "La tanda [tanda] ya cerró. Suscríbete al boletín y te avisamos cuando abra el próximo menú.",
             "link": "",
             "show_when": "closed"
           }

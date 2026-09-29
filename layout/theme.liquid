@@ -20,8 +20,8 @@
 
     <title>
       {{ page_title }}
-      {%- if current_tags %} &ndash; tagged "{{ current_tags | join: ', ' }}"{% endif -%}
-      {%- if current_page != 1 %} &ndash; Page {{ current_page }}{% endif -%}
+      {%- if current_tags %} &ndash; etiquetado "{{ current_tags | join: ', ' }}"{% endif -%}
+      {%- if current_page != 1 %} &ndash; Página {{ current_page }}{% endif -%}
       {%- unless page_title contains shop.name %} &ndash; {{ shop.name }}{% endunless -%}
     </title>
 
@@ -72,6 +72,8 @@
       assign body_font_bold = settings.type_body_font | font_modify: 'weight', 'bold'
       assign body_font_italic = settings.type_body_font | font_modify: 'style', 'italic'
       assign body_font_bold_italic = body_font_bold | font_modify: 'style', 'italic'
+      assign body_font_semibold = settings.type_body_font | font_modify: 'weight', '600'
+      assign header_font_italic = settings.type_header_font | font_modify: 'style', 'italic'
     %}
 
     {% style %}
@@ -79,7 +81,9 @@
       {{ body_font_bold | font_face: font_display: 'swap' }}
       {{ body_font_italic | font_face: font_display: 'swap' }}
       {{ body_font_bold_italic | font_face: font_display: 'swap' }}
+      {%- if body_font_semibold != nil %}{{ body_font_semibold | font_face: font_display: 'swap' }}{% endif %}
       {{ settings.type_header_font | font_face: font_display: 'swap' }}
+      {%- if header_font_italic != nil %}{{ header_font_italic | font_face: font_display: 'swap' }}{% endif %}
 
       {% assign scheme_classes = '' %}
       {% for scheme in settings.color_schemes -%}
@@ -286,7 +290,7 @@
     {{ 'ds-premium.css' | asset_url | stylesheet_tag }}
     {{ 'ds-conversion.css' | asset_url | stylesheet_tag }}
     {{ 'ds-header-ui.css' | asset_url | stylesheet_tag }}
-    {%- if template.name == 'page' or template.name == 'search' or template.name == 'cart' or template.name == '404' or template.name == 'list-collections' or template.name == 'blog' or template.name == 'article' or template.name == 'collection' or template.name == 'password' or template.name == 'gift_card' -%}
+    {%- if template.name == 'page' or template.name == 'search' or template.name == 'cart' or template.name == '404' or template.name == 'list-collections' or template.name == 'blog' or template.name == 'article' -%}
       {{ 'ds-pages.css' | asset_url | stylesheet_tag }}
     {%- endif -%}
     <link rel="stylesheet" href="{{ 'component-cart-items.css' | asset_url }}" media="print" onload="this.media='all'">
@@ -297,16 +301,6 @@
       {{ 'component-totals.css' | asset_url | stylesheet_tag }}
       {{ 'component-price.css' | asset_url | stylesheet_tag }}
       {{ 'component-discounts.css' | asset_url | stylesheet_tag }}
-    {%- endif -%}
-
-    {%- if template.name == 'index' -%}
-      {% comment %}
-        Foto LCP de la portada mientras la primera diapositiva usa la imagen de marca.
-        Si se sube una foto propia a esa diapositiva, Shopify la precarga solo: quitar este bloque.
-      {% endcomment %}
-      {% comment %}theme-check-disable AssetPreload{% endcomment %}
-      <link rel="preload" as="image" href="{{ 'ds-editorial-cookies-800.webp' | asset_url }}" imagesrcset="{{ 'ds-editorial-cookies-480.webp' | asset_url }} 480w, {{ 'ds-editorial-cookies-800.webp' | asset_url }} 800w, {{ 'ds-editorial-cookies-1200.webp' | asset_url }} 1200w" imagesizes="(min-width: 990px) 45vw, 100vw" fetchpriority="high">
-      {% comment %}theme-check-enable AssetPreload{% endcomment %}
     {%- endif -%}
 
     {%- unless settings.type_body_font.system? -%}

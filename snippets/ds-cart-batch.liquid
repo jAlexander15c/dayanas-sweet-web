@@ -1,9 +1,10 @@
 {% comment %}
   Aviso de tanda en el carrito (drawer y página). Usa Ajustes del tema > DS · Tanda de pedidos.
 {% endcomment %}
-{%- if cart != empty or settings.ds_batch_open == false -%}
+{%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
+{%- if cart != empty or ds_closed == '1' -%}
   <p class="ds-cart-batch">
     {% render 'ds-icon', name: 'box' %}
-    <span>{%- if settings.ds_batch_open == false -%}La tanda ya cerró. El próximo menú abre pronto; síguenos para enterarte primero.{%- else -%}Horneamos tu pedido el {{ settings.ds_batch_bake | escape }} y lo despachamos {{ settings.ds_batch_ship | escape }}. El servicio y el costo de envío los ves antes de pagar.{%- endif -%}</span>
+    <span>{%- if ds_closed == '1' -%}{{ settings.ds_batch_closed_text | escape }}{%- else -%}Horneamos tu pedido el {{ settings.ds_batch_bake | escape }} y lo despachamos {{ settings.ds_batch_ship | escape }}. El servicio y el costo de envío los ves antes de pagar.{%- endif -%}</span>
   </p>
 {%- endif -%}

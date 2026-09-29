@@ -2,8 +2,8 @@
   Bloque de la ficha de producto: cupo en la tanda, fechas y conservación.
   Se usa desde un bloque "Liquid personalizado" de main-product:
     {% render 'ds-product-batch', product: product %}
-  La conservación de galletas se muestra en productos con la etiqueta
-  definida en Ajustes del tema > DS · Tanda de pedidos. Los demás productos
+  La conservación de galletas se muestra en productos de tipo "Galletas" o con
+  la etiqueta definida en Ajustes del tema > DS · Tanda de pedidos. Los demás productos
   la indican en su propia descripción.
 {% endcomment %}
 {%- liquid
@@ -14,6 +14,9 @@
   endif
   assign storage_tag = settings.ds_storage_tag | default: 'galletas' | downcase
   assign show_storage = false
+  if product.type == 'Galletas'
+    assign show_storage = true
+  endif
   for tag in product.tags
     assign t = tag | downcase
     if t == storage_tag
@@ -22,17 +25,18 @@
     endif
   endfor
 -%}
+{%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
 <div class="ds-pbatch">
   <div id="DSBatchStock-{{ section.id }}" aria-live="polite">
     {%- comment -%}Con la tanda cerrada, el aviso lo muestra buy-buttons en lugar del botón.{%- endcomment -%}
-    {%- if settings.ds_batch_open == false -%}
+    {%- if ds_closed == '1' -%}
     {%- elsif variant.available == false -%}
-      <p class="ds-pbatch__stock is-out"><strong>Agotado en esta tanda.</strong> Vuelve a abrir con el próximo menú.</p>
+      <p class="ds-pbatch__stock is-out"><strong>Agotado en esta tanda.</strong> Vuelve con el próximo menú.</p>
     {%- elsif tracked and variant.inventory_quantity > 0 and variant.inventory_quantity <= settings.ds_low_stock -%}
       <p class="ds-pbatch__stock"><strong>Quedan {{ variant.inventory_quantity }}</strong> en esta tanda.</p>
     {%- endif -%}
   </div>
-  {%- if settings.ds_batch_open -%}
+  {%- if ds_closed != '1' -%}
   <ul class="ds-pbatch__dates" role="list">
     <li>{% render 'ds-icon', name: 'clock' %}<span>Pedidos hasta el {{ settings.ds_batch_close | escape }}</span></li>
     <li>{% render 'ds-icon', name: 'box' %}<span>Horneamos el {{ settings.ds_batch_bake | escape }}</span></li>

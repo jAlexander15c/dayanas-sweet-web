@@ -5,9 +5,28 @@
 {%- liquid
   assign fallbacks = 'ds-editorial-cookies.png,ds-brownie.png,ds-cookie-box-concept.png' | split: ','
   assign slide_count = section.blocks.size
+  assign hero_sizes = '(min-width: 1320px) 560px, (min-width: 750px) 45vw, calc(100vw - 32px)'
+  assign first_block = section.blocks.first
+  assign h1_text = first_block.settings.title | strip_html | remove: '*' | strip
+  if h1_text == blank
+    assign h1_text = shop.name
+  endif
 -%}
+{%- if first_block != blank and first_block.settings.image == blank -%}
+  {%- liquid
+    assign pre_base = fallbacks[0] | remove: '.png'
+    assign pre_480 = pre_base | append: '-480.webp' | asset_url
+    assign pre_800 = pre_base | append: '-800.webp' | asset_url
+    assign pre_1200 = pre_base | append: '-1200.webp' | asset_url
+  -%}
+  {% comment %}Foto LCP de marca: solo cuando la primera diapositiva no tiene foto propia (esa la precarga Shopify).{% endcomment %}
+  {% comment %}theme-check-disable AssetPreload{% endcomment %}
+  <link rel="preload" as="image" href="{{ pre_800 }}" imagesrcset="{{ pre_480 }} 480w, {{ pre_800 }} 800w, {{ pre_1200 }} 1200w" imagesizes="{{ hero_sizes }}" fetchpriority="high">
+  {% comment %}theme-check-enable AssetPreload{% endcomment %}
+{%- endif -%}
 <section class="ds-hero ds-wrap" data-ds-hero data-interval="{{ section.settings.interval }}" aria-roledescription="carrusel" aria-label="Destacados">
   <div class="ds-hero__copy">
+    <h1 class="visually-hidden">{{ h1_text | escape }}</h1>
     <div class="ds-hero__slides">
       {%- for block in section.blocks -%}
         {%- assign parts = block.settings.title | escape | split: '*' -%}
@@ -15,11 +34,7 @@
           {%- capture heading -%}
             {%- for part in parts -%}{%- assign mod = forloop.index0 | modulo: 2 -%}{%- if mod == 1 -%}<em>{{ part }}</em>{%- else -%}{{ part }}{%- endif -%}{%- endfor -%}
           {%- endcapture -%}
-          {%- if forloop.first -%}
-            <h1 class="ds-display ds-hero__title">{{ heading }}</h1>
-          {%- else -%}
-            <p class="ds-display ds-hero__title" role="heading" aria-level="2">{{ heading }}</p>
-          {%- endif -%}
+          <p class="ds-display ds-hero__title" role="heading" aria-level="2">{{ heading }}</p>
           {%- if block.settings.text != blank -%}<p class="ds-hero__text">{% render 'ds-batch-text', text: block.settings.text, escape: true %}</p>{%- endif -%}
           <div class="ds-ctas">
             {%- if block.settings.button_label != blank -%}
@@ -59,9 +74,13 @@
           assign fb_index = forloop.index0 | modulo: 3
         -%}
         {%- if block.settings.image != blank -%}
-          {{ block.settings.image | image_url: width: 1400 | image_tag: widths: '480, 750, 1000, 1400', sizes: '(min-width: 990px) 45vw, 100vw', class: img_class, loading: load, fetchpriority: priority, preload: forloop.first }}
+          {%- if forloop.first -%}
+            {{ block.settings.image | image_url: width: 1400 | image_tag: widths: '480, 750, 1000, 1400', sizes: hero_sizes, class: img_class, loading: load, fetchpriority: priority, preload: true }}
+          {%- else -%}
+            {{ block.settings.image | image_url: width: 1400 | image_tag: widths: '480, 750, 1000, 1400', sizes: hero_sizes, class: img_class, loading: load }}
+          {%- endif -%}
         {%- else -%}
-          {% render 'ds-fallback-image', name: fallbacks[fb_index], class: img_class, sizes: '(min-width: 990px) 45vw, 100vw', loading: load, fetchpriority: priority, alt: '' %}
+          {% render 'ds-fallback-image', name: fallbacks[fb_index], class: img_class, sizes: hero_sizes, loading: load, fetchpriority: priority, alt: '' %}
         {%- endif -%}
       {%- endfor -%}
     </div>

@@ -10,10 +10,11 @@
   Usage:
   {% render 'buy-buttons', block: block, product: product, product_form_id: product_form_id, section_id: section.id, show_pickup_availability: true %}
 {% endcomment %}
+{%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
 <div {{ block.shopify_attributes }}>
   {%- if product != blank -%}
-    {%- if settings.ds_batch_open == false -%}
-      <div class="product-form ds-batch-closed"><p class="ds-pbatch__stock is-out" role="status">{{ settings.ds_batch_closed_text | default: 'La tanda ya cerró. El próximo menú abre pronto.' | escape }}</p></div>
+    {%- if ds_closed == '1' -%}
+      <div class="product-form ds-batch-closed"><p class="ds-pbatch__stock is-out" role="status">{{ settings.ds_batch_closed_text | escape }}</p></div>
     {%- else -%}
     {%- liquid
       assign gift_card_recipient_feature_active = false
@@ -118,7 +119,7 @@
     </div>
   {%- endif -%}
 
-  {%- if show_pickup_availability and settings.ds_batch_open -%}
+  {%- if show_pickup_availability and ds_closed != '1' -%}
     {{ 'component-pickup-availability.css' | asset_url | stylesheet_tag }}
 
     {%- assign pick_up_availabilities = product.selected_or_first_available_variant.store_availabilities

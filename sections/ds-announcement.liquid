@@ -1,3 +1,4 @@
+{%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
 {%- liquid
   assign visible_count = 0
   for block in section.blocks
@@ -5,9 +6,9 @@
     assign show_message = false
     if show_when == 'always'
       assign show_message = true
-    elsif show_when == 'open' and settings.ds_batch_open
+    elsif show_when == 'open' and ds_closed != '1'
       assign show_message = true
-    elsif show_when == 'closed' and settings.ds_batch_open == false
+    elsif show_when == 'closed' and ds_closed == '1'
       assign show_message = true
     endif
     if show_message
@@ -16,6 +17,7 @@
   endfor
   assign visible_index = 0
 -%}
+{%- if visible_count > 0 -%}
 <div class="ds-announce" data-ds-rotate="{{ section.settings.speed }}" role="region" aria-label="Anuncios">
   {%- for block in section.blocks -%}
     {%- liquid
@@ -23,9 +25,9 @@
       assign show_message = false
       if show_when == 'always'
         assign show_message = true
-      elsif show_when == 'open' and settings.ds_batch_open
+      elsif show_when == 'open' and ds_closed != '1'
         assign show_message = true
-      elsif show_when == 'closed' and settings.ds_batch_open == false
+      elsif show_when == 'closed' and ds_closed == '1'
         assign show_message = true
       endif
     -%}
@@ -40,6 +42,7 @@
   {%- endfor -%}
   {%- if visible_count > 1 -%}<button type="button" class="ds-motion-control ds-announce__pause" data-ds-pause aria-pressed="false">Pausar</button>{%- endif -%}
 </div>
+{%- endif -%}
 
 {% schema %}
 {

@@ -2,6 +2,7 @@
 {{ 'component-totals.css' | asset_url | stylesheet_tag }}
 {{ 'component-price.css' | asset_url | stylesheet_tag }}
 {{ 'component-discounts.css' | asset_url | stylesheet_tag }}
+{%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
 
 {%- style -%}
   .section-{{ section.id }}-padding {
@@ -111,7 +112,7 @@
                   id="checkout"
                   class="cart__checkout-button button"
                   name="checkout"
-                  {% if cart == empty or settings.ds_batch_open == false %}
+                  {% if cart == empty or ds_closed == '1' %}
                     disabled
                   {% endif %}
                   form="cart"
@@ -120,7 +121,7 @@
                 </button>
               </div>
 
-              {%- if additional_checkout_buttons and settings.ds_batch_open -%}
+              {%- if additional_checkout_buttons and ds_closed != '1' -%}
                 <div class="cart__dynamic-checkout-buttons additional-checkout-buttons">
                   {{ content_for_additional_checkout_buttons }}
                 </div>

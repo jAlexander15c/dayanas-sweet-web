@@ -8,7 +8,7 @@ body .menu-drawer__menu-item{min-height:58px;padding:16px 18px;border-radius:12p
 body .menu-drawer summary.menu-drawer__menu-item{padding-right:52px}
 body .menu-drawer__menu-item .svg-wrapper{color:var(--ds-pink-deep)}
 body .menu-drawer__menu-item--active,body .menu-drawer__menu-item:hover,body .menu-drawer__menu-item:focus-visible,body .menu-drawer__close-button:hover,body .menu-drawer__close-button:focus-visible{background:var(--ds-blush);color:var(--ds-ink)}
-body .menu-drawer__menu-item:focus-visible,body .menu-drawer__close-button:focus-visible,body .menu-drawer__utility-links a:focus-visible{outline:3px solid var(--ds-red);outline-offset:2px}
+body .menu-drawer__menu-item:focus-visible,body .menu-drawer__close-button:focus-visible,body .menu-drawer__utility-links a:focus-visible{outline:3px solid var(--ds-ink);outline-offset:2px}
 body .menu-drawer__inner-submenu{padding:16px}
 body .menu-drawer__submenu .menu-drawer__menu-item{font-size:21px}
 body .menu-drawer__submenu .menu-drawer__submenu .menu-drawer__menu-item{font-size:18px}
@@ -31,8 +31,13 @@ body .predictive-search__item-heading{color:var(--ds-ink);font:700 17px/1.3 var(
 body .predictive-search__item-vendor{color:var(--ds-ink-soft);font-size:13px;letter-spacing:0;text-transform:none}
 body .predictive-search__item .price,body .predictive-search__item .price-item{color:var(--ds-ink);font:700 15px/1.3 var(--ds-body)}
 body .predictive-search__list-item[aria-selected='true']>.predictive-search__item,body .predictive-search__list-item[aria-selected='true'] .predictive-search__item,body .predictive-search__item:hover,body .predictive-search__item:focus-visible{background:var(--ds-blush);border-color:var(--ds-rose);color:var(--ds-ink)}
-body .predictive-search__item:focus-visible{outline:3px solid var(--ds-red);outline-offset:2px}
+body .predictive-search__item:focus-visible{outline:3px solid var(--ds-ink);outline-offset:2px}
 body .predictive-search__item--term{margin:10px 12px 14px;width:calc(100% - 24px);background:var(--ds-ink);color:#fff;border-radius:var(--ds-r-pill)}
 body .predictive-search__item--term:hover,body .predictive-search__item--term:focus-visible{background:var(--ds-pink-deep);color:#fff}
 body .predictive-search__item--term .icon-arrow{color:currentColor}
-
+@media (max-width:749px){
+  body .predictive-search__results-groups-wrapper{padding:8px;gap:4px}
+}
+@media (prefers-reduced-motion:reduce){
+  body .menu-drawer__menu-item,body .menu-drawer__close-button,body .predictive-search__item{transition:none}
+}

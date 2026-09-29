@@ -2,7 +2,6 @@
 (function () {
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
   var resources = new Map();
-  var feedbackTimers = new Set();
   function keep(el, dispose) {
     var section = el.closest('.shopify-section') || el;
     if (!resources.has(section)) resources.set(section, []);
@@ -13,8 +12,7 @@
     keep(el, function () { target.removeEventListener(name, handler); });
   }
   function cleanup(root) {
-    feedbackTimers.forEach(function (timer) { clearTimeout(timer); });
-    feedbackTimers.clear();
+    // Solo se liberan los recursos (incluidos timers de feedback) de la sección afectada.
     resources.forEach(function (disposers, section) {
       if (section !== root && !root.contains(section)) return;
       disposers.forEach(function (dispose) { dispose(); });
@@ -185,6 +183,7 @@
   function initSticky(root) {
     root.querySelectorAll('[data-ds-sticky]').forEach(function (bar) {
       if (bar.dsInit) return;
+      if (bar.closest('quick-add-modal')) return;
       bar.dsInit = true;
       keep(bar, function () { bar.dsInit = false; });
       var info = bar.closest('.product__info-container') || document;
@@ -197,7 +196,7 @@
       var observer = new IntersectionObserver(function (entries) {
         entries.forEach(function (en) {
           var below = en.boundingClientRect.top < 0;
-          bar.hidden = en.isIntersecting || !below || stickySubmit.disabled;
+          bar.hidden = en.isIntersecting || !below || submit.disabled || (stickySubmit && stickySubmit.disabled);
         });
       });
       observer.observe(submit);
@@ -207,24 +206,50 @@
 
 
   var REVEAL = '.ds-rail__head, .ds-rail > li, .ds-batch__title, .ds-batch__intro, .ds-step, .ds-cats__title, .ds-tile, .ds-season__copy, .ds-season__cards > li, .ds-story__img, .ds-story__copy, .ds-social__copy, .ds-insta > *, .ds-faq__side, .ds-qa, .product-grid .grid__item';
+  function revealAll() {
+    document.querySelectorAll('.ds-reveal:not(.is-in)').forEach(function (el) { el.classList.add('is-in'); });
+  }
+  var revealGuards = false;
+  function initRevealGuards() {
+    if (revealGuards) return;
+    revealGuards = true;
+    // Nada queda en opacidad 0: al imprimir, y al llegar al final de la página
+    // (los últimos elementos pueden no cruzar nunca el margen inferior del observer).
+    window.addEventListener('beforeprint', revealAll);
+    var queued = false;
+    window.addEventListener('scroll', function () {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(function () {
+        queued = false;
+        var doc = document.documentElement;
+        if (window.innerHeight + window.scrollY >= doc.scrollHeight - 4) revealAll();
+      });
+    }, { passive: true });
+  }
   function initReveal(root) {
-    if (reduce.matches || !('IntersectionObserver' in window)) return;
+    if (reduce.matches || !('IntersectionObserver' in window)) { revealAll(); return; }
     document.documentElement.classList.add('ds-js');
+    initRevealGuards();
     var elements = root.querySelectorAll(REVEAL);
     if (!elements.length) return;
     var observers = new Map();
     elements.forEach(function (el) {
       // The first product row can be visible at load; keep it paintable for LCP.
       if (el.matches('.product-grid .grid__item:nth-child(-n+2)')) return;
+      // Dawn ya anima estos elementos: evitar la doble animación.
+      if (el.closest('.scroll-trigger')) return;
       if (el.classList.contains('is-in')) return;
-      var i = Array.prototype.indexOf.call(el.parentElement.children, el);
+      var i = el.parentElement ? Array.prototype.indexOf.call(el.parentElement.children, el) : 0;
       el.style.setProperty('--ds-delay', Math.min(i, 4) * 50 + 'ms');
       el.classList.add('ds-reveal');
+      // Ya pasó por encima del viewport (p. ej. scroll restaurado): mostrar sin esperar al observer.
+      if (el.getBoundingClientRect().bottom <= 0) { el.classList.add('is-in'); return; }
       var section = el.closest('.shopify-section') || el;
       if (!observers.has(section)) {
         var observer = new IntersectionObserver(function (entries, currentObserver) {
           entries.forEach(function (en) {
-            if (!en.isIntersecting) return;
+            if (!en.isIntersecting && en.boundingClientRect.bottom > 0) return;
             en.target.classList.add('is-in');
             currentObserver.unobserve(en.target);
           });
@@ -232,8 +257,7 @@
         observers.set(section, observer);
         keep(el, observer.disconnect.bind(observer));
       }
-      var observer = observers.get(section);
-      observer.observe(el);
+      observers.get(section).observe(el);
     });
   }
 
@@ -243,10 +267,16 @@
       if (box.dsInit) return;
       box.dsInit = true;
       keep(box, function () { box.dsInit = false; });
-      var end = Date.parse(box.dataset.dsCountdown);
+      var raw = String(box.dataset.dsCountdown || '').trim();
+      var end = /^\d+$/.test(raw) ? parseInt(raw, 10) * 1000 : Date.parse(raw);
       if (isNaN(end)) return;
       var units = {};
       box.querySelectorAll('[data-unit]').forEach(function (el) { units[el.dataset.unit] = el; });
+      var labels = {};
+      box.querySelectorAll('[data-unit-label]').forEach(function (el) { labels[el.dataset.unitLabel] = el; });
+      var label = box.querySelector('.ds-countdown__label');
+      var timerEl = box.querySelector('.ds-countdown__units');
+      var done = box.querySelector('[data-ds-countdown-done]');
       var timer;
       function set(el, value) {
         if (!el || el.textContent === value) return;
@@ -256,15 +286,37 @@
         void el.offsetWidth;
         el.classList.add('is-tick');
       }
+      function word(n, one, other) { return n === 1 ? one : other; }
+      function setLabel(key, n) {
+        var el = labels[key];
+        if (!el) return;
+        var text = n === 1 ? el.dataset.one : el.dataset.other;
+        if (text != null && el.textContent !== text) el.textContent = text;
+      }
+      function finish() {
+        box.hidden = false;
+        if (label) label.hidden = true;
+        if (timerEl) { timerEl.hidden = true; timerEl.removeAttribute('aria-label'); }
+        if (done) done.hidden = false;
+      }
       function tick() {
         var left = end - Date.now();
-        if (left <= 0) { box.hidden = true; return; }
+        if (left <= 0) { finish(); return; }
         box.hidden = false;
+        if (done) done.hidden = true;
         var mins = Math.floor(left / 60000);
-        set(units.d, String(Math.floor(mins / 1440)));
-        set(units.h, String(Math.floor(mins / 60) % 24).padStart(2, '0'));
-        set(units.m, String(mins % 60).padStart(2, '0'));
-        box.setAttribute('aria-label', 'Faltan ' + units.d.textContent + ' días, ' + units.h.textContent + ' horas y ' + units.m.textContent + ' minutos para el cierre de pedidos');
+        var d = Math.floor(mins / 1440);
+        var h = Math.floor(mins / 60) % 24;
+        var m = mins % 60;
+        set(units.d, String(d));
+        set(units.h, String(h).padStart(2, '0'));
+        set(units.m, String(m).padStart(2, '0'));
+        setLabel('d', d);
+        setLabel('h', h);
+        setLabel('m', m);
+        if (timerEl) {
+          timerEl.setAttribute('aria-label', 'Faltan ' + d + ' ' + word(d, 'día', 'días') + ', ' + h + ' ' + word(h, 'hora', 'horas') + ' y ' + m + ' ' + word(m, 'minuto', 'minutos') + ' para el cierre de pedidos');
+        }
         timer = setTimeout(tick, (left % 60000) + 50);
       }
       tick();
@@ -272,13 +324,50 @@
     });
   }
 
+  // Último formulario de tarjeta enviado: el feedback (éxito o error) se aplica a ese.
+  var lastCardForm = null;
+  function cardVariant(form) {
+    var input = form && form.querySelector('input[name="id"]');
+    return input ? String(input.value) : '';
+  }
+  function cardFor(event) {
+    if (!lastCardForm || !lastCardForm.isConnected) return null;
+    if (event && event.productVariantId != null && String(event.productVariantId) !== cardVariant(lastCardForm)) return null;
+    return lastCardForm;
+  }
+  function cardErrorText(event) {
+    var parts = [];
+    if (event) {
+      if (event.message) parts.push(event.message);
+      if (typeof event.errors === 'string') parts.push(event.errors);
+      else if (event.errors && typeof event.errors === 'object') {
+        Object.keys(event.errors).forEach(function (k) { parts.push(String(event.errors[k])); });
+      }
+    }
+    var text = parts.join(' ');
+    var status = event && parseInt(event.status, 10);
+    if (status === 422 || /stock|available|disponib|sold.?out|agotad|inventar|inventory|quedan|in your cart|en tu carrito|en el carrito/i.test(text)) {
+      return 'Ya no quedan cupos de este producto.';
+    }
+    return (event && typeof event.errors === 'string' && event.errors) || (event && event.message) || 'No pudimos agregarlo. Intenta de nuevo.';
+  }
+
   function initCartFeedback() {
-    if (window.dsCartFeedback || typeof subscribe !== 'function' || typeof PUB_SUB_EVENTS === 'undefined') return;
+    if (window.dsCartFeedback) return;
     window.dsCartFeedback = true;
+    document.addEventListener('submit', function (e) {
+      var form = e.target;
+      lastCardForm = form && form.closest && form.closest('.ds-card__form') ? form : null;
+      if (!lastCardForm) return;
+      var wrap = form.closest('.ds-card__form');
+      var box = wrap && wrap.querySelector('[data-ds-card-error]');
+      if (box) { box.hidden = true; box.textContent = ''; }
+    }, true);
+    if (typeof subscribe !== 'function' || typeof PUB_SUB_EVENTS === 'undefined') return;
     subscribe(PUB_SUB_EVENTS.cartUpdate, function (event) {
       if (!event || event.source !== 'product-form') return;
-      var input = document.querySelector('.ds-card__form input[name="id"][value="' + event.productVariantId + '"]');
-      var btn = input && input.form.querySelector('.ds-add');
+      var form = cardFor(event);
+      var btn = form && form.querySelector('.ds-add');
       if (btn && !btn.classList.contains('is-added')) {
         var label = btn.querySelector('span');
         var path = btn.querySelector('.ds-ico path');
@@ -291,32 +380,38 @@
           btn.classList.remove('is-added');
           if (label) label.textContent = prev;
           if (path) path.setAttribute('d', prevPath);
-          feedbackTimers.delete(addedTimer);
         }, 1600);
-        feedbackTimers.add(addedTimer);
-        keep(btn, function () { clearTimeout(addedTimer); feedbackTimers.delete(addedTimer); });
+        keep(btn, function () { clearTimeout(addedTimer); });
       }
-      var bumpTimer = setTimeout(function () {
+      setTimeout(function () {
         document.querySelectorAll('.cart-count-bubble').forEach(function (b) {
           b.classList.remove('ds-bump');
           void b.offsetWidth;
           if (!reduce.matches) b.classList.add('ds-bump');
         });
-        feedbackTimers.delete(bumpTimer);
       }, 350);
-      feedbackTimers.add(bumpTimer);
+    });
+    if (!PUB_SUB_EVENTS.cartError) return;
+    subscribe(PUB_SUB_EVENTS.cartError, function (event) {
+      if (!event || event.source !== 'product-form') return;
+      var form = cardFor(event);
+      var wrap = form && form.closest('.ds-card__form');
+      var box = wrap && wrap.querySelector('[data-ds-card-error]');
+      if (!box) return;
+      clearTimeout(box.dsTimer);
+      box.textContent = cardErrorText(event);
+      box.hidden = false;
+      box.dsTimer = setTimeout(function () { box.hidden = true; }, 5000);
+      keep(box, function () { clearTimeout(box.dsTimer); });
     });
   }
 
   function init(root) {
     root = root || document;
-    initAnnouncement(root);
-    initHero(root);
-    initRails(root);
-    initSticky(root);
-    initReveal(root);
-    initCountdown(root);
-    initCartFeedback();
+    [initAnnouncement, initHero, initRails, initSticky, initReveal, initCountdown].forEach(function (fn) {
+      try { fn(root); } catch (err) { console.error(err); }
+    });
+    try { initCartFeedback(); } catch (err) { console.error(err); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { init(); });

@@ -291,8 +291,9 @@
             </div>
           </div>
           {% assign product_form_id = 'quick-add-' | append: section_id | append: card_product.id %}
-          {% if settings.ds_batch_open == false %}
-            <p class="ds-pbatch__stock is-out" role="status">La tanda ya cerró.</p>
+          {%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
+          {% if ds_closed == '1' %}
+            <p class="ds-pbatch__stock is-out">Tanda cerrada</p>
           {% elsif quick_add == 'standard' %}
             <div class="quick-add no-js-hidden">
               {%- liquid
