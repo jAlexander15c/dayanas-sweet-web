@@ -45,7 +45,7 @@
         "msg-ship": {
           "type": "message",
           "settings": {
-            "text": "Solo envíos: eliges el servicio y ves el costo antes de pagar",
+            "text": "Envíos gratis desde $100",
             "link": ""
           }
         },

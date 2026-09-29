@@ -81,7 +81,7 @@
           "type": "step",
           "settings": {
             "when": "Despacho [despacho]",
-            "text": "Entregamos tu pedido al transportista. La fecha de llegada depende del servicio de envío que elijas al pagar.",
+            "text": "Entregamos tu pedido al transportista; desde ahí, la fecha de llegada depende de tu dirección.",
             "current": false
           }
         }
@@ -231,7 +231,7 @@
           "type": "question",
           "settings": {
             "question": "¿Cómo veo las opciones de entrega?",
-            "answer": "<p>Realizamos únicamente envíos, sin retiro presencial. Las opciones y costos disponibles para tu dirección se muestran antes del pago. La fecha de despacho indica cuándo entregamos tu pedido al transportista; la llegada depende del servicio seleccionado.</p>"
+            "answer": "<p>Realizamos únicamente envíos, sin retiro presencial. El envío es gratis en pedidos desde $100; en pedidos menores, el costo aparece antes del pago. La fecha de despacho indica cuándo entregamos tu pedido al transportista; la llegada depende de tu dirección.</p>"
           }
         },
         "q-storage": {

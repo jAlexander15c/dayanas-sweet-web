@@ -5,6 +5,6 @@
 {%- if cart != empty or ds_closed == '1' -%}
   <p class="ds-cart-batch">
     {% render 'ds-icon', name: 'box' %}
-    <span>{%- if ds_closed == '1' -%}{{ settings.ds_batch_closed_text | escape }}{%- else -%}Horneamos tu pedido el {{ settings.ds_batch_bake | escape }} y lo despachamos {{ settings.ds_batch_ship | escape }}. El servicio y el costo de envío los ves antes de pagar.{%- endif -%}</span>
+    <span>{%- if ds_closed == '1' -%}{{ settings.ds_batch_closed_text | escape }}{%- else -%}Horneamos tu pedido el {{ settings.ds_batch_bake | escape }} y lo despachamos {{ settings.ds_batch_ship | escape }}. Envío gratis en pedidos desde $100; si no, ves el costo antes de pagar.{%- endif -%}</span>
   </p>
 {%- endif -%}
