@@ -15,10 +15,9 @@
       assign visible_count = visible_count | plus: 1
     endif
   endfor
-  assign visible_index = 0
 -%}
 {%- if visible_count > 0 -%}
-<div class="ds-announce" data-ds-rotate="{{ section.settings.speed }}" role="region" aria-label="Anuncios">
+{%- capture ds_items -%}
   {%- for block in section.blocks -%}
     {%- liquid
       assign show_when = block.settings.show_when | default: 'always'
@@ -32,15 +31,24 @@
       endif
     -%}
     {%- if show_message -%}
-    <p class="ds-announce__msg{% if visible_index == 0 %} is-on{% endif %}"{% if visible_index > 0 %} hidden inert aria-hidden="true"{% else %} aria-hidden="false"{% endif %} {{ block.shopify_attributes }}>
-      {%- if block.settings.link != blank -%}<a href="{{ block.settings.link }}">{%- endif -%}
-      {%- render 'ds-batch-text', text: block.settings.text, escape: true -%}
-      {%- if block.settings.link != blank -%}</a>{%- endif -%}
-    </p>
-    {%- assign visible_index = visible_index | plus: 1 -%}
+      <li class="ds-announce__msg" {{ block.shopify_attributes }}>
+        {%- if block.settings.link != blank -%}<a href="{{ block.settings.link }}">{%- endif -%}
+        {%- render 'ds-batch-text', text: block.settings.text, escape: true -%}
+        {%- if block.settings.link != blank -%}</a>{%- endif -%}
+      </li>
+      <li class="ds-announce__sep" aria-hidden="true">✦</li>
     {%- endif -%}
   {%- endfor -%}
-  {%- if visible_count > 1 -%}<button type="button" class="ds-motion-control ds-announce__pause" data-ds-pause aria-pressed="false">Pausar</button>{%- endif -%}
+{%- endcapture -%}
+{% comment %}Cinta continua: el grupo se duplica (y se repite en JS si es corto) para que el loop no tenga cortes.{% endcomment %}
+<div class="ds-announce" data-ds-marquee="{{ section.settings.marquee_speed }}" role="region" aria-label="Anuncios">
+  <div class="ds-announce__viewport">
+    <div class="ds-announce__track">
+      <ul class="ds-announce__group" role="list">{{ ds_items }}</ul>
+      <ul class="ds-announce__group" role="list" aria-hidden="true" data-ds-marquee-clone>{{ ds_items }}</ul>
+    </div>
+  </div>
+  <button type="button" class="ds-motion-control ds-announce__pause" data-ds-pause aria-pressed="false" hidden>Pausar</button>
 </div>
 {%- endif -%}
 
@@ -55,12 +63,13 @@
     },
     {
       "type": "range",
-      "id": "speed",
-      "label": "Segundos por mensaje",
-      "min": 3,
-      "max": 10,
-      "step": 1,
-      "default": 5
+      "id": "marquee_speed",
+      "label": "Velocidad de la cinta",
+      "info": "Píxeles por segundo.",
+      "min": 20,
+      "max": 120,
+      "step": 5,
+      "default": 45
     }
   ],
   "blocks": [

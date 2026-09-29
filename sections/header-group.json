@@ -23,7 +23,7 @@
     "ds-announcement": {
       "type": "ds-announcement",
       "settings": {
-        "speed": 5
+        "marquee_speed": 45
       },
       "blocks": {
         "msg-close": {

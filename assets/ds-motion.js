@@ -20,45 +20,65 @@
     });
   }
 
+  // Barra de anuncios como cinta continua. La pista contiene el grupo dos veces y se
+  // desplaza un grupo (-50%); si el grupo es más corto que la barra, se repiten sus mensajes.
   function initAnnouncement(root) {
-    root.querySelectorAll('[data-ds-rotate]').forEach(function (bar) {
+    root.querySelectorAll('[data-ds-marquee]').forEach(function (bar) {
       if (bar.dsInit) return;
       bar.dsInit = true;
       keep(bar, function () { bar.dsInit = false; });
-      var msgs = bar.querySelectorAll('.ds-announce__msg');
-      if (!msgs.length) return;
+      var viewport = bar.querySelector('.ds-announce__viewport');
+      var group = bar.querySelector('.ds-announce__group:not([data-ds-marquee-clone])');
+      var clone = bar.querySelector('[data-ds-marquee-clone]');
       var control = bar.querySelector('[data-ds-pause]');
-      var paused = reduce.matches;
-      var i = 0;
-      var ms = (parseInt(bar.dataset.dsRotate, 10) || 5) * 1000;
-      var timer;
-      function show(n) {
-        i = (n + msgs.length) % msgs.length;
-        msgs.forEach(function (msg, index) {
-          var active = index === i;
-          msg.classList.toggle('is-on', active);
-          msg.hidden = !active;
-          msg.inert = !active;
-          msg.setAttribute('aria-hidden', String(!active));
-        });
+      if (!viewport || !group || !clone) return;
+      var original = Array.prototype.slice.call(group.children);
+      var speed = parseInt(bar.dataset.dsMarquee, 10) || 45;
+      var paused = false;
+      function fill() {
+        // Vuelve al contenido original y repite los mensajes hasta cubrir el ancho de la barra.
+        while (group.children.length > original.length) group.removeChild(group.lastChild);
+        var guard = 0;
+        while (!reduce.matches && group.scrollWidth < viewport.clientWidth && guard < 20) {
+          original.forEach(function (node) {
+            var copy = node.cloneNode(true);
+            copy.setAttribute('aria-hidden', 'true');
+            copy.removeAttribute('data-shopify-editor-block');
+            group.appendChild(copy);
+          });
+          guard++;
+        }
+        clone.innerHTML = group.innerHTML;
+        clone.querySelectorAll('a').forEach(function (a) { a.tabIndex = -1; });
+        bar.style.setProperty('--ds-marquee-duration', (group.scrollWidth / speed).toFixed(2) + 's');
       }
-      function start() {
-        clearInterval(timer);
-        if (paused || reduce.matches || msgs.length < 2) return;
-        timer = setInterval(function () { if (!document.hidden) show(i + 1); }, ms);
-      }
-      function updateControl() {
+      function update() {
+        var run = !reduce.matches;
+        bar.classList.toggle('is-running', run);
+        bar.classList.toggle('is-paused', run && paused);
         if (!control) return;
-        control.disabled = reduce.matches;
+        control.hidden = !run;
         control.setAttribute('aria-pressed', String(paused));
-        control.textContent = reduce.matches ? 'Movimiento pausado' : paused ? 'Reanudar' : 'Pausar';
+        control.textContent = paused ? 'Reanudar' : 'Pausar';
       }
-      show(0);
-      updateControl();
-      start();
-      keep(bar, function () { clearInterval(timer); });
-      if (control) listen(bar, control, 'click', function () { paused = !paused; updateControl(); start(); });
-      listen(bar, reduce, 'change', function () { if (reduce.matches) paused = true; updateControl(); start(); });
+      clone.inert = true;
+      fill();
+      update();
+      var resizeTimer;
+      var lastWidth = viewport.clientWidth;
+      listen(bar, window, 'resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () {
+          // En celular la barra de direcciones cambia el alto al hacer scroll; solo importa el ancho.
+          if (viewport.clientWidth === lastWidth) return;
+          lastWidth = viewport.clientWidth;
+          fill();
+        }, 150);
+      });
+      keep(bar, function () { clearTimeout(resizeTimer); });
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(fill);
+      if (control) listen(bar, control, 'click', function () { paused = !paused; update(); });
+      listen(bar, reduce, 'change', function () { fill(); update(); });
     });
   }
 

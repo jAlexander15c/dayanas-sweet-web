@@ -47,10 +47,22 @@ body{background:var(--ds-blush);color:var(--ds-ink);-webkit-font-smoothing:antia
 
 /* Barra de anuncios */
 .ds-announce{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;min-height:38px;overflow:hidden;background:var(--ds-ink);color:var(--ds-blush);font:500 13px/1.3 var(--ds-body);letter-spacing:.01em}
-/* Un solo mensaje visible a la vez: ocupa la celda y puede partirse en 2 líneas */
-.ds-announce__msg{grid-area:1/1;display:grid;place-items:center;margin:0;padding:5px var(--ds-gutter);text-align:center;opacity:0;transform:translateY(8px);transition:opacity .5s var(--ds-ease),transform .5s var(--ds-ease)}
-.ds-announce__msg[hidden]{display:none}
-.ds-announce__msg.is-on{opacity:1;transform:none}
+/* Cinta continua: la pista trae el grupo dos veces y se desplaza exactamente un grupo (-50%) */
+.ds-announce__viewport{grid-area:1/1;min-width:0;overflow:hidden}
+.ds-announce__track{display:flex;width:max-content}
+.ds-announce__group{display:flex;flex:none;align-items:center;margin:0;padding:0;list-style:none}
+.ds-announce__msg,.ds-announce__sep{margin:0;padding:8px 0;white-space:nowrap}
+.ds-announce__sep{padding-inline:22px;font-size:10px;color:var(--ds-tang)}
+.ds-announce.is-running .ds-announce__track{animation:ds-marquee var(--ds-marquee-duration,30s) linear infinite}
+.ds-announce.is-paused .ds-announce__track{animation-play-state:paused}
+@media (hover:hover) and (pointer:fine){.ds-announce.is-running:hover .ds-announce__track{animation-play-state:paused}}
+.ds-announce:focus-within .ds-announce__track{animation-play-state:paused}
+@keyframes ds-marquee{to{transform:translateX(-50%)}}
+/* Sin JS o con movimiento reducido: la cinta no se mueve sola; se desliza con el dedo o la rueda */
+.ds-announce:not(.is-running) .ds-announce__viewport{overflow-x:auto;scrollbar-width:none;overscroll-behavior-x:contain}
+.ds-announce:not(.is-running) .ds-announce__viewport::-webkit-scrollbar{display:none}
+.ds-announce:not(.is-running) .ds-announce__group{padding-inline:var(--ds-gutter)}
+.ds-announce:not(.is-running) [data-ds-marquee-clone],.ds-announce:not(.is-running) .ds-announce__group>.ds-announce__sep:last-child{display:none}
 .ds-motion-control{position:relative;border:1px solid currentColor;border-radius:var(--ds-r-pill);background:transparent;color:var(--ds-ink);padding:6px 12px;font:600 12px/1.2 var(--ds-body);cursor:pointer}
 .ds-motion-control:disabled{cursor:default;opacity:.75}
 /* Área táctil de 44 px sin agrandar el botón */
@@ -255,7 +267,7 @@ body{background:var(--ds-blush);color:var(--ds-ink);-webkit-font-smoothing:antia
 }
 @media (prefers-reduced-motion:reduce){
   .ds-js .ds-reveal{opacity:1;transform:none;transition:none}
-  .ds-hero__slide,.ds-hero__img,.ds-announce__msg{transform:none!important;transition:opacity .25s ease,visibility 0s}
+  .ds-hero__slide,.ds-hero__img{transform:none!important;transition:opacity .25s ease,visibility 0s}
   .ds-tile,.ds-tile img,.ds-insta img,.ds-btn,.ds-btn .ds-ico{transition:none}
   .ds-hero__dots .is-on i{animation:none;transform:scaleX(1)}
   .ds-countdown__units b.is-tick{animation:none}
