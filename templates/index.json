@@ -139,13 +139,24 @@
             "fallback": "none",
             "collection": "postres"
           }
+        },
+        "tile-canned": {
+          "type": "tile",
+          "settings": {
+            "title": "Enlatados",
+            "text": "Conservas artesanales, como el tomate confitado. Cada frasco indica su conservación.",
+            "style": "pink",
+            "fallback": "none",
+            "collection": "enlatados"
+          }
         }
       },
       "block_order": [
         "tile-cookies",
         "tile-brownies",
         "tile-boxes",
-        "tile-desserts"
+        "tile-desserts",
+        "tile-canned"
       ],
       "settings": {
         "title": "¿Qué se te antoja hoy?"
