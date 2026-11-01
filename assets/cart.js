@@ -26,6 +26,7 @@ class CartItems extends window.StandardEvents.createViewEventElement(HTMLElement
   }
 
   cartUpdateUnsubscriber = undefined;
+  cartRefreshController = undefined;
 
   static pendingCartDataPromise = null;
 
@@ -36,7 +37,11 @@ class CartItems extends window.StandardEvents.createViewEventElement(HTMLElement
     super.connectedCallback();
 
     this.cartUpdateUnsubscriber = subscribe(PUB_SUB_EVENTS.cartUpdate, (event) => {
+      this.cartRefreshController?.abort();
       if (event.source === 'cart-items') return;
+      // product-form renders bundled drawer sections itself, including opening the drawer.
+      if (event.source === 'product-form' && this.tagName === 'CART-DRAWER-ITEMS' &&
+          typeof event.cartData?.sections?.['cart-drawer'] === 'string') return;
       return this.onCartUpdate();
     });
   }
@@ -59,6 +64,7 @@ class CartItems extends window.StandardEvents.createViewEventElement(HTMLElement
   }
 
   disconnectedCallback() {
+    this.cartRefreshController?.abort();
     if (this.cartUpdateUnsubscriber) {
       this.cartUpdateUnsubscriber();
     }
@@ -110,10 +116,14 @@ class CartItems extends window.StandardEvents.createViewEventElement(HTMLElement
   }
 
   onCartUpdate() {
+    this.cartRefreshController?.abort();
+    const controller = new AbortController();
+    this.cartRefreshController = controller;
     if (this.tagName === 'CART-DRAWER-ITEMS') {
-      return fetch(`${routes.cart_url}?section_id=cart-drawer`)
+      return fetch(`${routes.cart_url}?section_id=cart-drawer`, { signal: controller.signal })
         .then((response) => response.text())
         .then((responseText) => {
+          if (controller.signal.aborted || !this.isConnected) return;
           const html = new DOMParser().parseFromString(responseText, 'text/html');
           const selectors = ['cart-drawer-items', '.cart-drawer__footer'];
           for (const selector of selectors) {
@@ -125,18 +135,19 @@ class CartItems extends window.StandardEvents.createViewEventElement(HTMLElement
           }
         })
         .catch((e) => {
-          console.error(e);
+          if (e.name !== 'AbortError') console.error(e);
         });
     } else {
-      return fetch(`${routes.cart_url}?section_id=main-cart-items`)
+      return fetch(`${routes.cart_url}?section_id=main-cart-items`, { signal: controller.signal })
         .then((response) => response.text())
         .then((responseText) => {
+          if (controller.signal.aborted || !this.isConnected) return;
           const html = new DOMParser().parseFromString(responseText, 'text/html');
           const sourceQty = html.querySelector('cart-items');
-          this.innerHTML = sourceQty.innerHTML;
+          if (sourceQty) this.innerHTML = sourceQty.innerHTML;
         })
         .catch((e) => {
-          console.error(e);
+          if (e.name !== 'AbortError') console.error(e);
         });
     }
   }
@@ -167,6 +178,7 @@ class CartItems extends window.StandardEvents.createViewEventElement(HTMLElement
   }
 
   updateQuantity(line, quantity, event, name, variantId) {
+    this.cartRefreshController?.abort();
     const eventTarget = event.currentTarget instanceof CartRemoveButton ? 'clear' : 'change';
     const cartPerformanceUpdateMarker = CartPerformance.createStartingMarker(`${eventTarget}:user-action`);
 

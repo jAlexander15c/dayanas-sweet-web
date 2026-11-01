@@ -1,0 +1,123 @@
+{%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
+{%- capture ds_r_logo -%}
+  {%- if section.settings.logo != blank -%}
+    <img src="{{ section.settings.logo | image_url: width: 936 }}" width="{{ section.settings.logo.width }}" height="{{ section.settings.logo.height }}" alt="{{ shop.name | escape }}">
+  {%- else -%}
+    <img src="{{ 'ds-r-logo.png' | asset_url }}" width="936" height="322" alt="{{ shop.name | escape }}">
+  {%- endif -%}
+{%- endcapture -%}
+{%- capture ds_r_nav -%}
+  <a href="{{ routes.root_url }}#menu" data-ds-r-close-link>{{ section.settings.menu_label | escape }}</a>
+  <button type="button" data-ds-r-open="how" aria-haspopup="dialog" aria-controls="DS-R-How">{{ section.settings.how_label | escape }}</button>
+  <button type="button" data-ds-r-open="about" aria-haspopup="dialog" aria-controls="DS-R-About">{{ section.settings.about_label | escape }}</button>
+  <a href="{{ routes.root_url | append: '/pages/contact' | replace: '//', '/' }}">{{ section.settings.contact_label | escape }}</a>
+{%- endcapture -%}
+{%- capture ds_r_close_icon -%}<img src="{{ 'ds-r-icon-x.svg' | asset_url }}" alt="" width="25" height="25">{%- endcapture -%}
+
+<header class="ds-r-site-header">
+  <div class="ds-r-header-inner">
+    <button class="ds-r-icon-button ds-r-mobile-toggle" type="button" data-ds-r-open="mobile" aria-label="{{ section.settings.mobile_label | escape }}" aria-haspopup="dialog" aria-controls="DS-R-Mobile" aria-expanded="false"><img src="{{ 'ds-r-icon-menu-2.svg' | asset_url }}" alt="" width="25" height="25"></button>
+    <a class="ds-r-brand" href="{{ routes.root_url }}" aria-label="{{ shop.name | escape }}, {{ section.settings.home_label | escape }}">{{ ds_r_logo }}</a>
+    <nav class="ds-r-desktop-nav" aria-label="{{ section.settings.navigation_label | escape }}">{{ ds_r_nav }}</nav>
+    <div class="ds-r-header-actions">
+      <button class="ds-r-icon-button" type="button" data-ds-r-open="search" aria-label="{{ section.settings.search_button | escape }}" aria-haspopup="dialog" aria-controls="DS-R-Search"><img src="{{ 'ds-r-icon-search.svg' | asset_url }}" alt="" width="26" height="26"></button>
+      {%- if shop.customer_accounts_enabled -%}
+        <a class="ds-r-icon-button ds-r-account-button" href="{{ routes.account_url }}" aria-label="{{ section.settings.account_label | escape }}"><img src="{{ 'ds-r-icon-user.svg' | asset_url }}" alt="" width="26" height="26"></a>
+      {%- endif -%}
+      {% comment %}Dawn replaces the contents of this link via the cart-icon-bubble section. Keep the link, id and generic accessible name outside that replacement.{% endcomment %}
+      <a class="ds-r-icon-button ds-r-cart-button" id="cart-icon-bubble" href="{{ routes.cart_url }}" aria-label="{{ section.settings.cart_label | escape }}">
+        <img src="{{ 'ds-r-icon-shopping-bag.svg' | asset_url }}" alt="" width="26" height="26">
+        <span class="ds-r-sr-only">{{ 'templates.cart.cart' | t }}</span>
+        {%- if cart.item_count > 0 -%}
+          <div class="cart-count-bubble ds-r-cart-count">
+            {%- if cart.item_count < 100 -%}<span aria-hidden="true">{{ cart.item_count }}</span>{%- endif -%}
+            <span class="visually-hidden">{{ 'sections.header.cart_count' | t: count: cart.item_count }}</span>
+          </div>
+        {%- endif -%}
+      </a>
+    </div>
+  </div>
+</header>
+
+<dialog id="DS-R-Mobile" class="ds-r-dialog ds-r-mobile-menu" data-ds-r-dialog aria-label="{{ section.settings.navigation_label | escape }}">
+  <div class="ds-r-dialog-top"><a class="ds-r-dialog-logo" href="{{ routes.root_url }}">{{ ds_r_logo }}</a><button class="ds-r-icon-button" type="button" data-ds-r-close aria-label="{{ section.settings.close_label | escape }}">{{ ds_r_close_icon }}</button></div>
+  <nav aria-label="{{ section.settings.mobile_label | escape }}">
+    {{ ds_r_nav }}
+    {%- if shop.customer_accounts_enabled -%}<a href="{{ routes.account_url }}">{{ section.settings.account_label | escape }}</a>{%- endif -%}
+  </nav>
+</dialog>
+
+<dialog id="DS-R-How" class="ds-r-dialog" data-ds-r-dialog aria-labelledby="DS-R-How-Title">
+  <button class="ds-r-icon-button ds-r-dialog-close" type="button" data-ds-r-close aria-label="{{ section.settings.close_label | escape }}">{{ ds_r_close_icon }}</button>
+  <p class="ds-r-eyebrow">{{ section.settings.how_eyebrow | escape }}</p>
+  <h2 id="DS-R-How-Title">{{ section.settings.how_title | escape }}</h2>
+  <ol class="ds-r-steps">
+    <li><h3>{{ section.settings.step_1_title | escape }}</h3><p>{{ section.settings.step_1_body | escape }}</p></li>
+    <li><h3>{{ section.settings.step_2_title | escape }}</h3><p>{{ section.settings.step_2_body | escape }}</p></li>
+    <li><h3>{{ section.settings.step_3_title | escape }}</h3><p>{{ section.settings.step_3_body | escape }}</p></li>
+  </ol>
+  {%- if ds_closed == '1' -%}
+    <a class="ds-r-button" href="{{ routes.root_url }}#ds-r-email" data-ds-r-signup>{{ section.settings.signup_label | escape }}<img class="ds-r-light-icon" src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="20" height="20"></a>
+  {%- else -%}
+    <a class="ds-r-button" href="{{ routes.root_url }}#menu" data-ds-r-close-link>{{ section.settings.order_label | escape }}<img class="ds-r-light-icon" src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="20" height="20"></a>
+  {%- endif -%}
+</dialog>
+
+<dialog id="DS-R-About" class="ds-r-dialog" data-ds-r-dialog aria-labelledby="DS-R-About-Title">
+  <button class="ds-r-icon-button ds-r-dialog-close" type="button" data-ds-r-close aria-label="{{ section.settings.close_label | escape }}">{{ ds_r_close_icon }}</button>
+  <h2 id="DS-R-About-Title">{{ section.settings.about_title | escape }}</h2>
+  <p>{{ section.settings.about_body | escape }}</p>
+</dialog>
+
+<dialog id="DS-R-Search" class="ds-r-dialog" data-ds-r-dialog aria-labelledby="DS-R-Search-Title">
+  <button class="ds-r-icon-button ds-r-dialog-close" type="button" data-ds-r-close aria-label="{{ section.settings.close_label | escape }}">{{ ds_r_close_icon }}</button>
+  <h2 id="DS-R-Search-Title">{{ section.settings.search_title | escape }}</h2>
+  <form action="{{ routes.search_url }}" method="get" role="search">
+    <label for="DS-R-Query">{{ section.settings.search_label | escape }}</label>
+    <input class="ds-r-search-input" id="DS-R-Query" name="q" type="search" placeholder="{{ section.settings.search_placeholder | escape }}" autocomplete="off" required>
+    <input type="hidden" name="type" value="product">
+    <button class="ds-r-button" type="submit">{{ section.settings.search_button | escape }}<img class="ds-r-light-icon" src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="20" height="20"></button>
+  </form>
+</dialog>
+
+{% schema %}
+{
+  "name": "DS · Cabecera opción 1",
+  "class": "ds-r-header-section",
+  "limit": 1,
+  "enabled_on": { "groups": ["header"] },
+  "settings": [
+    { "type": "image_picker", "id": "logo", "label": "Logotipo", "info": "Si se deja vacío, se usa el logotipo de la propuesta aprobada." },
+    { "type": "text", "id": "home_label", "label": "Etiqueta de inicio", "default": "inicio" },
+    { "type": "text", "id": "navigation_label", "label": "Etiqueta de navegación", "default": "Navegación principal" },
+    { "type": "text", "id": "mobile_label", "label": "Etiqueta de menú móvil", "default": "Abrir menú" },
+    { "type": "text", "id": "menu_label", "label": "Enlace al menú", "default": "Menú" },
+    { "type": "text", "id": "how_label", "label": "Botón de cómo pedir", "default": "Cómo pedir" },
+    { "type": "text", "id": "about_label", "label": "Botón de presentación", "default": "Conócenos" },
+    { "type": "text", "id": "contact_label", "label": "Enlace de contacto", "default": "Contacto" },
+    { "type": "text", "id": "account_label", "label": "Enlace de cuenta", "default": "Mi cuenta" },
+    { "type": "text", "id": "cart_label", "label": "Enlace de carrito", "default": "Ver carrito" },
+    { "type": "text", "id": "close_label", "label": "Cerrar diálogos", "default": "Cerrar" },
+    { "type": "header", "content": "Cómo pedir" },
+    { "type": "text", "id": "how_eyebrow", "label": "Antetítulo", "default": "HECHO A MANO, POR ENCARGO" },
+    { "type": "text", "id": "how_title", "label": "Título", "default": "Así llega tu antojo." },
+    { "type": "text", "id": "step_1_title", "label": "Paso 1 · título", "default": "Consulta la fecha" },
+    { "type": "textarea", "id": "step_1_body", "label": "Paso 1 · texto", "default": "Antes de comprar, verás la fecha de envío anunciada. Esa fecha indica cuándo sale tu pedido de Houston." },
+    { "type": "text", "id": "step_2_title", "label": "Paso 2 · título", "default": "Elige y confirma" },
+    { "type": "textarea", "id": "step_2_body", "label": "Paso 2 · texto", "default": "Agrega tus favoritos al carrito y completa el pago. Tu pedido queda pagado y confirmado para la fecha de envío anunciada." },
+    { "type": "text", "id": "step_3_title", "label": "Paso 3 · título", "default": "Lo preparamos para ti" },
+    { "type": "textarea", "id": "step_3_body", "label": "Paso 3 · texto", "default": "Elaboramos a mano y por encargo. Todos los pedidos de esa apertura salen juntos por USPS Priority, con envíos a todo Estados Unidos." },
+    { "type": "text", "id": "signup_label", "label": "Botón con pedidos cerrados", "default": "Avísame cuando abran los pedidos" },
+    { "type": "text", "id": "order_label", "label": "Botón con pedidos abiertos", "default": "Elegir mis favoritos" },
+    { "type": "header", "content": "Presentación" },
+    { "type": "text", "id": "about_title", "label": "Título de presentación", "default": "Un pedacito de Cuba en Houston." },
+    { "type": "textarea", "id": "about_body", "label": "Texto de presentación", "default": "Sabores que te llevan a casa y otros que te invitan a probar algo nuevo. Todo hecho a mano, por encargo y con nuestro toque." },
+    { "type": "header", "content": "Búsqueda" },
+    { "type": "text", "id": "search_title", "label": "Título de búsqueda", "default": "¿Qué se te antoja?" },
+    { "type": "text", "id": "search_label", "label": "Etiqueta del campo", "default": "Buscar en el menú" },
+    { "type": "text", "id": "search_placeholder", "label": "Ejemplo de búsqueda", "default": "Galletas, brownies…" },
+    { "type": "text", "id": "search_button", "label": "Botón de búsqueda", "default": "Buscar" }
+  ],
+  "presets": [{ "name": "DS · Cabecera opción 1" }]
+}
+{% endschema %}

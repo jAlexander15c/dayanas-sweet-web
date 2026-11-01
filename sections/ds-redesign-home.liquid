@@ -1,0 +1,139 @@
+{%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
+{%- liquid
+  assign newsletter_id = 'ds-r-newsletter-' | append: section.id
+  assign status_id = 'ds-r-signup-status-' | append: section.id
+  assign hero_title_id = 'ds-r-hero-title-' | append: section.id
+  assign batch_title_id = 'ds-r-batch-title-' | append: section.id
+  assign menu_title_id = 'ds-r-menu-title-' | append: section.id
+  assign closed_text = settings.ds_batch_closed_text | default: section.settings.closed_text
+-%}
+<section class="ds-r-hero" id="inicio" aria-labelledby="{{ hero_title_id }}">
+  {%- if section.settings.hero_image != blank -%}
+    <img class="ds-r-hero-photo" src="{{ section.settings.hero_image | image_url: width: 1440 }}" width="{{ section.settings.hero_image.width }}" height="{{ section.settings.hero_image.height }}" alt="{{ section.settings.hero_image_alt | escape }}" loading="eager" fetchpriority="high">
+  {%- else -%}
+    <img class="ds-r-hero-photo" src="{{ 'ds-r-hero.png' | asset_url }}" width="1440" height="576" alt="{{ section.settings.hero_image_alt | escape }}" loading="eager" fetchpriority="high">
+  {%- endif -%}
+  <div class="ds-r-hero-inner">
+    <div class="ds-r-hero-copy">
+      <h1 id="{{ hero_title_id }}"><span>{{ section.settings.hero_line_1 | escape }}</span><span>{{ section.settings.hero_line_2 | escape }}</span><em>{{ section.settings.hero_line_3 | escape }}</em></h1>
+      <p>{{ section.settings.hero_text | escape }}</p>
+      <div class="ds-r-hero-actions">
+        <a class="ds-r-button" href="#menu">{{ section.settings.hero_cta | escape }}<img class="ds-r-light-icon" src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="22" height="22"></a>
+        <button class="ds-r-text-link" type="button" data-ds-r-open="how">{{ section.settings.how_label | escape }}</button>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="ds-r-batch" aria-labelledby="{{ batch_title_id }}">
+  <div class="ds-r-batch-inner">
+    <div class="ds-r-batch-mark"><img src="{{ 'ds-r-cupcake.png' | asset_url }}" width="64" height="76" alt="" loading="lazy"></div>
+    <div class="ds-r-batch-copy">
+      {%- if ds_closed == '1' -%}
+        <h2 id="{{ batch_title_id }}">{{ section.settings.closed_title | escape }}</h2>
+        <p>{{ closed_text | escape }}</p>
+        {%- capture dates -%}{%- render 'ds-order-dates' -%}{%- endcapture -%}
+        {%- if dates != blank -%}<ul class="ds-r-order-dates" role="list" aria-label="{{ section.settings.dates_label | escape }}">{{ dates }}</ul>{%- endif -%}
+      {%- else -%}
+        <h2 id="{{ batch_title_id }}">{{ section.settings.open_title | escape }}</h2>
+        <p>{% render 'ds-batch-text', text: section.settings.open_text, escape: true %}</p>
+      {%- endif -%}
+    </div>
+    {%- if ds_closed == '1' -%}
+      {%- assign newsletter_class = 'ds-r-newsletter' -%}
+      {% form 'customer', id: newsletter_id, class: newsletter_class %}
+        <input type="hidden" name="contact[tags]" value="newsletter">
+        <label class="ds-r-sr-only" for="ds-r-email">{{ section.settings.email_label | escape }}</label>
+        <div class="ds-r-email-row">
+          <img src="{{ 'ds-r-icon-mail.svg' | asset_url }}" alt="" width="19" height="19">
+          <input id="ds-r-email" name="contact[email]" type="email" value="{{ form.email | escape }}" required autocomplete="email" autocorrect="off" autocapitalize="off" placeholder="{{ section.settings.email_label | escape }}" aria-describedby="{{ status_id }}"{% if form.errors %} aria-invalid="true"{% endif %}>
+          <button type="submit">{{ section.settings.signup_label | escape }}</button>
+        </div>
+        <div class="ds-r-signup-status" id="{{ status_id }}" role="status" aria-live="polite">
+          {%- if form.posted_successfully? -%}
+            <p>{{ section.settings.signup_success | escape }}</p>
+          {%- elsif form.errors -%}
+            {{ form.errors | default_errors }}
+          {%- endif -%}
+        </div>
+      {% endform %}
+    {%- else -%}
+      <a class="ds-r-button" href="#menu">{{ section.settings.open_cta | escape }}<img class="ds-r-light-icon" src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="22" height="22"></a>
+    {%- endif -%}
+  </div>
+</section>
+<section class="ds-r-menu-section" id="menu" aria-labelledby="{{ menu_title_id }}">
+  <div class="ds-r-menu-heading">
+    <h2 id="{{ menu_title_id }}">{{ section.settings.menu_title | escape }}</h2>
+    <p>{{ section.settings.menu_text | escape }}</p>
+    <a class="ds-r-button ds-r-menu-all" href="{{ routes.all_products_collection_url }}">{{ section.settings.menu_cta | escape }}<img src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="22" height="22"></a>
+  </div>
+  <div class="ds-r-category-grid">
+    {%- for block in section.blocks -%}
+      {%- if block.type == 'category' -%}
+        {%- liquid
+          assign category_collection = block.settings.collection
+          assign category_title = category_collection.title | default: block.settings.title
+          assign category_url = category_collection.url | default: routes.all_products_collection_url
+          assign category_style = 'ds-r-cookies'
+          assign category_asset = 'ds-r-cookies-category.png'
+          if block.settings.fallback_image == 'brownies'
+            assign category_style = 'ds-r-brownies'
+            assign category_asset = 'ds-r-brownie-category.png'
+          endif
+        -%}
+        <a class="ds-r-category {{ category_style }}" href="{{ category_url }}" {{ block.shopify_attributes }}>
+          {%- if block.settings.image != blank -%}
+            <img class="ds-r-category-photo" src="{{ block.settings.image | image_url: width: 1200 }}" width="{{ block.settings.image.width }}" height="{{ block.settings.image.height }}" alt="{{ block.settings.image_alt | escape }}" loading="lazy">
+          {%- else -%}
+            <img class="ds-r-category-photo" src="{{ category_asset | asset_url }}" width="1200" height="1200" alt="{{ block.settings.image_alt | escape }}" loading="lazy">
+          {%- endif -%}
+          <div class="ds-r-category-caption"><h3>{{ category_title | escape }}</h3><span>{{ block.settings.link_label | escape }}<img src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="21" height="21"></span></div>
+        </a>
+      {%- endif -%}
+    {%- endfor -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "DS · Portada opción 1",
+  "class": "ds-r-home",
+  "limit": 1,
+  "enabled_on": {"templates": ["index"]},
+  "settings": [
+    {"type":"text","id":"hero_line_1","label":"Titular · línea 1","default":"Un pedacito"},
+    {"type":"text","id":"hero_line_2","label":"Titular · línea 2","default":"de Cuba en"},
+    {"type":"text","id":"hero_line_3","label":"Titular · línea 3","default":"Houston."},
+    {"type":"textarea","id":"hero_text","label":"Presentación","default":"Sabores que te llevan a casa y otros que te invitan a probar algo nuevo. Todo hecho a mano, por encargo y con nuestro toque."},
+    {"type":"image_picker","id":"hero_image","label":"Foto de portada"},
+    {"type":"text","id":"hero_image_alt","label":"Descripción de la foto","default":"Galletas con trozos de chocolate sobre una base de cerámica"},
+    {"type":"text","id":"hero_cta","label":"Botón de portada","default":"Descubre el menú"},
+    {"type":"text","id":"how_label","label":"Botón de instrucciones","default":"Cómo pedir"},
+    {"type":"text","id":"closed_title","label":"Título con pedidos cerrados","default":"Que no se te pase"},
+    {"type":"textarea","id":"closed_text","label":"Aviso cerrado de respaldo","info":"Se usa si el mensaje en Ajustes del tema > DS · Pedidos y envíos está vacío.","default":"Los pedidos están cerrados. Déjanos tu correo para saber cuándo abrimos y cuál será la próxima fecha de envío."},
+    {"type":"text","id":"dates_label","label":"Etiqueta de fechas accesible","default":"Fechas de pedidos"},
+    {"type":"text","id":"open_title","label":"Título con pedidos abiertos","default":"Ya puedes hacer tu pedido"},
+    {"type":"textarea","id":"open_text","label":"Aviso abierto","info":"[envio] y [cierre] usan las fechas compartidas de Ajustes del tema.","default":"El próximo envío sale el [envio]. Elige tus favoritos y confirma tu pedido antes del [cierre]."},
+    {"type":"text","id":"open_cta","label":"Botón con pedidos abiertos","default":"Elegir mis favoritos"},
+    {"type":"text","id":"email_label","label":"Etiqueta del correo","default":"Tu correo electrónico"},
+    {"type":"text","id":"signup_label","label":"Botón de suscripción","default":"Quiero enterarme"},
+    {"type":"textarea","id":"signup_success","label":"Suscripción confirmada","default":"¡Ya estás en la lista! Te avisaremos cuando abramos los pedidos y anunciemos la próxima fecha de envío."},
+    {"type":"text","id":"menu_title","label":"Título del menú","default":"Elige tu antojo"},
+    {"type":"textarea","id":"menu_text","label":"Presentación del menú","default":"Sabores de Cuba y Estados Unidos, con nuestro toque, desde Houston."},
+    {"type":"text","id":"menu_cta","label":"Botón del catálogo","default":"Ver todo el menú"}
+  ],
+  "max_blocks": 2,
+  "blocks": [{
+    "type":"category","name":"Categoría","limit":2,
+    "settings":[
+      {"type":"collection","id":"collection","label":"Colección"},
+      {"type":"text","id":"title","label":"Título de respaldo","default":"Galletas","info":"Si hay colección seleccionada, se muestra su título real."},
+      {"type":"text","id":"link_label","label":"Texto del enlace","default":"Ver galletas"},
+      {"type":"image_picker","id":"image","label":"Foto de categoría"},
+      {"type":"text","id":"image_alt","label":"Descripción de la foto","default":"Caja rosa con galletas de chocolate"},
+      {"type":"select","id":"fallback_image","label":"Foto de respaldo","default":"cookies","options":[{"value":"cookies","label":"Galletas"},{"value":"brownies","label":"Brownies"}]}
+    ]
+  }],
+  "presets":[{"name":"DS · Portada opción 1","blocks":[{"type":"category","settings":{"title":"Galletas","link_label":"Ver galletas","fallback_image":"cookies","image_alt":"Caja rosa con galletas de chocolate"}},{"type":"category","settings":{"title":"Brownies","link_label":"Ver brownies","fallback_image":"brownies","image_alt":"Brownie de chocolate de corteza crujiente"}}]}]
+}
+{% endschema %}

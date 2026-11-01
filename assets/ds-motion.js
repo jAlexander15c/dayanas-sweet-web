@@ -43,6 +43,7 @@
           original.forEach(function (node) {
             var copy = node.cloneNode(true);
             copy.setAttribute('aria-hidden', 'true');
+            copy.inert = true;
             copy.removeAttribute('data-shopify-editor-block');
             group.appendChild(copy);
           });
@@ -344,16 +345,12 @@
     });
   }
 
-  // Último formulario de tarjeta enviado: el feedback (éxito o error) se aplica a ese.
-  var lastCardForm = null;
-  function cardVariant(form) {
-    var input = form && form.querySelector('input[name="id"]');
-    return input ? String(input.value) : '';
-  }
+  // Cada respuesta pertenece al formulario y a la solicitud que la originaron.
   function cardFor(event) {
-    if (!lastCardForm || !lastCardForm.isConnected) return null;
-    if (event && event.productVariantId != null && String(event.productVariantId) !== cardVariant(lastCardForm)) return null;
-    return lastCardForm;
+    var form = event && event.form;
+    if (!form || !form.isConnected || !form.closest('.ds-card__form')) return null;
+    if (form.dataset.cartRequestId !== event.requestId) return null;
+    return form;
   }
   function cardErrorText(event) {
     var parts = [];
@@ -365,8 +362,7 @@
       }
     }
     var text = parts.join(' ');
-    var status = event && parseInt(event.status, 10);
-    if (status === 422 || /stock|available|disponib|sold.?out|agotad|inventar|inventory|quedan|in your cart|en tu carrito|en el carrito/i.test(text)) {
+    if (/stock|sold.?out|agotad|inventar|inventory|quedan/i.test(text)) {
       return 'Ya no quedan cupos de este producto.';
     }
     return (event && typeof event.errors === 'string' && event.errors) || (event && event.message) || 'No pudimos agregarlo. Intenta de nuevo.';
@@ -377,11 +373,10 @@
     window.dsCartFeedback = true;
     document.addEventListener('submit', function (e) {
       var form = e.target;
-      lastCardForm = form && form.closest && form.closest('.ds-card__form') ? form : null;
-      if (!lastCardForm) return;
+      if (!form || !form.closest || !form.closest('.ds-card__form')) return;
       var wrap = form.closest('.ds-card__form');
       var box = wrap && wrap.querySelector('[data-ds-card-error]');
-      if (box) { box.hidden = true; box.textContent = ''; }
+      if (box) { clearTimeout(box.dsTimer); box.hidden = true; box.textContent = ''; }
     }, true);
     if (typeof subscribe !== 'function' || typeof PUB_SUB_EVENTS === 'undefined') return;
     subscribe(PUB_SUB_EVENTS.cartUpdate, function (event) {

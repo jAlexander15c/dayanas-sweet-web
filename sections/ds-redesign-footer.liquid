@@ -1,0 +1,23 @@
+<footer class="ds-r-footer">
+  <p>© {{ 'now' | date: '%Y' }} <a href="{{ routes.root_url }}">{{ shop.name | escape }}</a></p>
+  <nav class="ds-r-footer-links" aria-label="{{ section.settings.navigation_label | escape }}">
+    <a href="{{ routes.root_url | append: '/pages/contact' | replace: '//', '/' }}">{{ section.settings.contact_label | escape }}</a>
+    {%- for policy in shop.policies -%}
+      {%- if policy.url != blank -%}<a href="{{ policy.url }}">{{ policy.title | escape }}</a>{%- endif -%}
+    {%- endfor -%}
+  </nav>
+</footer>
+
+{% schema %}
+{
+  "name": "DS · Pie opción 1",
+  "class": "ds-r-footer-section",
+  "limit": 1,
+  "enabled_on": { "groups": ["footer"] },
+  "settings": [
+    { "type": "text", "id": "contact_label", "label": "Enlace de contacto", "default": "Contacto" },
+    { "type": "text", "id": "navigation_label", "label": "Etiqueta de navegación", "default": "Contacto y políticas" }
+  ],
+  "presets": [{ "name": "DS · Pie opción 1" }]
+}
+{% endschema %}

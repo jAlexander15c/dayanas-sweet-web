@@ -285,6 +285,8 @@
       "product_disclosure": "Produktupplysning",
       "product_disclosures": "Produktupplysningar",
       "cart_error": "Ett fel uppstod när du uppdaterade din varukorg. Försök igen.",
+      "add_unconfirmed": "Vi kunde inte bekräfta om produkten lades till. Kontrollera din varukorg innan du försöker igen.",
+      "quantity_limit": "Du har nått det högsta antalet av den här produkten i din varukorg.",
       "cart_quantity_error_html": "Du kan endast lägga till {{ quantity }} av denna artikel i din varukorg.",
       "headings": {
         "product": "Produkt",

@@ -285,6 +285,8 @@
       "product_disclosure": "제품 고지 사항",
       "product_disclosures": "제품 고지 사항",
       "cart_error": "카트를 업데이트하는 중 오류가 발생했습니다. 다시 시도하십시오.",
+      "add_unconfirmed": "상품이 추가되었는지 확인할 수 없습니다. 다시 시도하기 전에 장바구니를 확인해 주세요.",
+      "quantity_limit": "장바구니에 담을 수 있는 이 상품의 최대 수량에 도달했습니다.",
       "cart_quantity_error_html": "카트에는 이 품목을 {{ quantity }}개만 추가할 수 있습니다.",
       "headings": {
         "product": "제품",

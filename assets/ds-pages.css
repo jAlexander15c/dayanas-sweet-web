@@ -62,8 +62,9 @@
 .template-search .search__input.field__input{height:58px;border:0;border-radius:var(--ds-r-pill);background:transparent;color:var(--ds-ink);font-size:16px;box-shadow:none}
 .template-search .search .field__label{color:var(--ds-ink-soft)}
 .template-search .search .field__button{height:48px;width:48px;margin:5px;border-radius:50%;color:var(--ds-ink)}
-.template-search .search .search__button{background:var(--ds-pink);color:#fff}
-.template-search .search .search__button:hover{background:var(--ds-pink-deep)}
+/* component-search.css se carga después (dentro de la sección) y fija background:inherit con (0,3,0): la especificidad extra evita lupa blanca sobre blanco */
+.template-search .search button.search__button.field__button{background:var(--ds-pink);color:#fff}
+.template-search .search button.search__button.field__button:hover,.template-search .search button.search__button.field__button:focus-visible{background:var(--ds-pink-deep)}
 .template-search .predictive-search{background:var(--ds-paper);border:1px solid var(--ds-line);border-radius:var(--ds-r-card);overflow:hidden}
 .template-search .template-search__header p[role=status]{font-size:16px;color:var(--ds-ink-soft)}
 .template-search .facets-wrapper,.template-search .template-search__results{padding-bottom:24px}

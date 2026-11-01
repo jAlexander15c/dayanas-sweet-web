@@ -285,6 +285,8 @@
       "product_disclosure": "商品揭露資訊",
       "product_disclosures": "商品揭露資訊",
       "cart_error": "更新購物車時發生錯誤。請再試一次。",
+      "add_unconfirmed": "無法確認商品是否已加入。請先檢查購物車，再重試。",
+      "quantity_limit": "購物車中此商品的數量已達上限。",
       "cart_quantity_error_html": "您只能將 {{ quantity }} 項商品加入您的購物車。",
       "headings": {
         "product": "產品",

@@ -1,10 +1,30 @@
 {% comment %}
-  Aviso de tanda en el carrito (drawer y página). Usa Ajustes del tema > DS · Tanda de pedidos.
+  Aviso en el carrito (drawer y página). Usa Ajustes del tema > DS · Pedidos y envíos.
+  empty_notice: true prepara el aviso cerrado dentro de la región de carrito
+  vacío, también antes de eliminar el último artículo mediante AJAX.
 {% endcomment %}
 {%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
-{%- if cart != empty or ds_closed == '1' -%}
+{%- liquid
+  assign show_notice = false
+  if ds_closed == '1'
+    assign show_notice = true
+  elsif empty_notice != true and cart != empty
+    assign show_notice = true
+  endif
+-%}
+{%- if show_notice -%}
   <p class="ds-cart-batch">
     {% render 'ds-icon', name: 'box' %}
-    <span>{%- if ds_closed == '1' -%}{{ settings.ds_batch_closed_text | escape }}{%- else -%}Horneamos tu pedido el {{ settings.ds_batch_bake | escape }} y lo despachamos {{ settings.ds_batch_ship | escape }}. Envío gratis en pedidos desde $100; si no, ves el costo antes de pagar.{%- endif -%}</span>
+    <span>
+      {%- if ds_closed == '1' -%}
+        {{ settings.ds_batch_closed_text | escape }}
+        {%- assign start_text = settings.ds_batch_start | strip -%}
+        {%- if start_text != blank %} Apertura de pedidos: {{ start_text | escape }}.{% endif -%}
+      {%- else -%}
+        {%- assign bake_text = settings.ds_batch_bake | strip -%}
+        {%- if bake_text != blank %}Preparamos tu pedido el {{ bake_text | escape }}. {% endif -%}
+        Enviamos tu pedido el {{ settings.ds_batch_ship | strip | escape }} por USPS Priority. Envío gratis en pedidos desde $100; si no, ves el costo antes de pagar.
+      {%- endif -%}
+    </span>
   </p>
 {%- endif -%}

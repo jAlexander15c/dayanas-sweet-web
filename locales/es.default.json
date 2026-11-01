@@ -295,6 +295,8 @@
       "product_disclosure": "Aviso sobre el producto",
       "product_disclosures": "Avisos sobre el producto",
       "cart_error": "Hubo un error al actualizar tu carrito de compra. Inténtalo de nuevo.",
+      "add_unconfirmed": "No pudimos confirmar si se agregó el producto. Revisa tu carrito antes de intentarlo de nuevo.",
+      "quantity_limit": "Ya alcanzaste la cantidad máxima de este producto en tu carrito.",
       "cart_quantity_error_html": "Solo puedes agregar {{ quantity }} de este artículo a tu carrito.",
       "headings": {
         "product": "Producto",

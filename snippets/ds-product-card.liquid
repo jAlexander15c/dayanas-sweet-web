@@ -5,6 +5,8 @@
     - section_id: {string} para el formulario de producto de Dawn
     - lazy: {boolean} carga diferida de la imagen (por defecto true)
     - rank_badge: {string} etiqueta por posición en ventas (la pone ds-product-rail)
+    - quick_add: {string} 'none' oculta la compra rápida; por defecto 'standard'
+    - show_secondary_image: {boolean} muestra foto alternativa; por defecto true
   Etiquetas del producto:
     - "badge:Texto" muestra una etiqueta sobre la foto (por ejemplo badge:Favorito)
   La sección que lo usa debe cargar product-form.js.
@@ -57,12 +59,13 @@
     assign loading = 'eager'
   endif
   assign card_sizes = image_sizes | default: '(min-width: 990px) 300px, 70vw'
+  assign card_quick_add = quick_add | default: 'standard'
 -%}
 <article class="ds-card{% if sold_out %} is-out{% endif %}">
   <a class="ds-card__media" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
     {%- if product.featured_media -%}
       {{ product.featured_media | image_url: width: 720 | image_tag: widths: '300, 450, 600, 720', sizes: card_sizes, loading: loading, class: 'ds-card__img', alt: img_alt }}
-      {%- if product.media[1] -%}
+      {%- if show_secondary_image != false and product.media[1] -%}
         {{ product.media[1] | image_url: width: 720 | image_tag: widths: '300, 450, 600, 720', sizes: card_sizes, loading: 'lazy', class: 'ds-card__img ds-card__img--alt', alt: '' }}
       {%- endif -%}
     {%- else -%}
@@ -84,6 +87,7 @@
         {%- if product.price_varies -%}Desde {% endif -%}
         {{ card_price | money }}
       </span>
+      {%- if card_quick_add == 'standard' -%}
       {%- if sold_out or ds_closed == '1' -%}
         <span class="ds-add is-disabled">{% if sold_out %}Agotado{% else %}Cerrado{% endif %}</span>
       {%- elsif needs_choice == false -%}
@@ -100,6 +104,7 @@
         </product-form>
       {%- else -%}
         <a class="ds-add" href="{{ product.url }}" aria-label="Elegir opciones de {{ product.title | escape }}">Elegir</a>
+      {%- endif -%}
       {%- endif -%}
     </div>
   </div>

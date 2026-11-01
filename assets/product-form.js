@@ -23,6 +23,14 @@ if (!customElements.get('product-form')) {
 
         this.handleErrorMessage();
 
+        // Quantity can live outside the form and be associated through its form attribute.
+        const quantityInput = this.form.elements.namedItem('quantity');
+        if (quantityInput && !quantityInput.checkValidity()) {
+          this.handleErrorMessage(quantityInput.validationMessage);
+          quantityInput.reportValidity();
+          return;
+        }
+
         this.submitButton.setAttribute('aria-disabled', true);
         this.submitButton.classList.add('loading');
         this.querySelector('.loading__spinner').classList.remove('hidden');
@@ -44,15 +52,18 @@ if (!customElements.get('product-form')) {
 
         const variantId = formData.get('id');
         const quantity = parseInt(formData.get('quantity')) || 1;
+        const requestId = String((this.requestId = (this.requestId || 0) + 1));
+        this.form.dataset.cartRequestId = requestId;
+        const eventContext = { source: 'product-form', productVariantId: variantId, form: this.form, requestId };
         const linesUpdateDeferred = this.createCartLinesUpdateEvent(variantId, quantity);
 
-        fetch(`${routes.cart_add_url}`, config)
+        return fetch(`${routes.cart_add_url}`, config)
           .then((response) => response.json())
           .then((response) => {
             if (response.status) {
               publish(PUB_SUB_EVENTS.cartError, {
-                source: 'product-form',
-                productVariantId: variantId,
+                ...eventContext,
+                status: response.status,
                 errors: response.errors || response.description,
                 message: response.message,
               });
@@ -78,8 +89,7 @@ if (!customElements.get('product-form')) {
             const startMarker = CartPerformance.createStartingMarker('add:wait-for-subscribers');
             if (!this.error)
               publish(PUB_SUB_EVENTS.cartUpdate, {
-                source: 'product-form',
-                productVariantId: variantId,
+                ...eventContext,
                 cartData: response,
               }).then(() => {
                 CartPerformance.measureFromMarker('add:wait-for-subscribers', startMarker);
@@ -107,6 +117,9 @@ if (!customElements.get('product-form')) {
           })
           .catch((e) => {
             console.error(e);
+            const message = window.cartStrings.addUnconfirmed;
+            this.handleErrorMessage(message);
+            publish(PUB_SUB_EVENTS.cartError, { ...eventContext, message, errors: message });
             this.dispatchCartErrorEvent(e.message || 'Network error', 'SERVICE_UNAVAILABLE');
             linesUpdateDeferred?.reject(e);
           })

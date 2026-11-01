@@ -7,7 +7,8 @@
   <div class="ds-contact__grid">
     <div class="ds-contact__form-card">
       <h2 class="ds-display ds-contact__heading">{{ section.settings.form_title | escape }}</h2>
-      {%- form 'contact', id: 'DSContactForm' -%}
+      {%- assign contact_id = 'DSContactForm-' | append: section.id -%}
+      {%- form 'contact', id: contact_id -%}
         {%- if form.posted_successfully? -%}
           <p class="ds-contact__status" role="status" tabindex="-1">{{ section.settings.success_text | escape }}</p>
         {%- endif -%}
@@ -16,24 +17,24 @@
             <p>{{ section.settings.error_text | escape }}</p>
             <ul role="list">
               {%- for field in form.errors -%}
-                <li><a href="#DSContactForm-{{ field }}">{{ form.errors.translated_fields[field] | default: field | capitalize }}: {{ form.errors.messages[field] }}</a></li>
+                <li><a href="#{{ contact_id }}-{{ field }}">{{ form.errors.translated_fields[field] | default: field | capitalize }}: {{ form.errors.messages[field] }}</a></li>
               {%- endfor -%}
             </ul>
           </div>
         {%- endif -%}
         <div class="ds-contact__fields">
           <div class="ds-contact__field">
-            <label for="DSContactForm-name">{{ section.settings.name_label | escape }}</label>
-            <input id="DSContactForm-name" type="text" name="contact[name]" autocomplete="name" value="{{ form.name | default: customer.name | escape }}">
+            <label for="{{ contact_id }}-name">{{ section.settings.name_label | escape }}</label>
+            <input id="{{ contact_id }}-name" type="text" name="contact[name]" autocomplete="name" value="{{ form.name | default: customer.name | escape }}">
           </div>
           <div class="ds-contact__field">
-            <label for="DSContactForm-email">{{ section.settings.email_label | escape }} <span aria-hidden="true">*</span></label>
-            <input id="DSContactForm-email" type="email" name="contact[email]" autocomplete="email" autocapitalize="off" spellcheck="false" required aria-required="true" value="{{ form.email | default: customer.email | escape }}"{% if form.errors contains 'email' %} aria-invalid="true" aria-describedby="DSContactForm-email-error"{% endif %}>
-            {%- if form.errors contains 'email' -%}<small id="DSContactForm-email-error">{{ form.errors.messages.email }}</small>{%- endif -%}
+            <label for="{{ contact_id }}-email">{{ section.settings.email_label | escape }} <span aria-hidden="true">*</span></label>
+            <input id="{{ contact_id }}-email" type="email" name="contact[email]" autocomplete="email" autocapitalize="off" spellcheck="false" required aria-required="true" value="{{ form.email | default: customer.email | escape }}"{% if form.errors contains 'email' %} aria-invalid="true" aria-describedby="{{ contact_id }}-email-error"{% endif %}>
+            {%- if form.errors contains 'email' -%}<small id="{{ contact_id }}-email-error">{{ form.errors.messages.email }}</small>{%- endif -%}
           </div>
           <div class="ds-contact__field ds-contact__field--wide">
-            <label for="DSContactForm-body">{{ section.settings.message_label | escape }} <span aria-hidden="true">*</span></label>
-            <textarea id="DSContactForm-body" name="contact[body]" rows="7" required aria-required="true">{{ form.body | escape }}</textarea>
+            <label for="{{ contact_id }}-body">{{ section.settings.message_label | escape }} <span aria-hidden="true">*</span></label>
+            <textarea id="{{ contact_id }}-body" name="contact[body]" rows="7" required aria-required="true">{{ form.body | escape }}</textarea>
           </div>
         </div>
         <button type="submit" class="ds-btn">{{ section.settings.submit_label | escape }}{% render 'ds-icon', name: 'arrow' %}</button>

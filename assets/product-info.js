@@ -7,6 +7,7 @@ if (!customElements.get('product-info')) {
       onVariantChangeUnsubscriber = undefined;
       cartUpdateUnsubscriber = undefined;
       abortController = undefined;
+      quantityRulesController = undefined;
       pendingRequestUrl = null;
       preProcessHtmlCallbacks = [];
       postProcessHtmlCallbacks = [];
@@ -48,6 +49,7 @@ if (!customElements.get('product-info')) {
       disconnectedCallback() {
         this.onVariantChangeUnsubscriber();
         this.cartUpdateUnsubscriber?.();
+        this.quantityRulesController?.abort();
       }
 
       initializeProductSwapUtility() {
@@ -364,18 +366,19 @@ if (!customElements.get('product-info')) {
         };
 
         let min = data.min;
-        const max = data.max === null ? data.max : data.max - data.cartQuantity;
+        const max = data.max === null ? null : Math.max(0, data.max - data.cartQuantity);
         if (max !== null) min = Math.min(min, max);
         if (data.cartQuantity >= data.min) min = Math.min(min, data.step);
 
         this.quantityInput.min = min;
 
-        if (max) {
+        if (max !== null) {
           this.quantityInput.max = max;
         } else {
           this.quantityInput.removeAttribute('max');
         }
         this.quantityInput.value = min;
+        this.quantityInput.setCustomValidity(max === 0 ? window.cartStrings.quantityLimit : '');
 
         publish(PUB_SUB_EVENTS.quantityUpdate, undefined);
       }
@@ -384,22 +387,31 @@ if (!customElements.get('product-info')) {
         const currentVariantId = this.productForm?.variantIdInput?.value;
         if (!currentVariantId) return;
 
-        this.querySelector('.quantity__rules-cart .loading__spinner').classList.remove('hidden');
-        return fetch(`${this.dataset.url}?variant=${currentVariantId}&section_id=${this.dataset.section}`)
+        this.quantityRulesController?.abort();
+        const controller = new AbortController();
+        this.quantityRulesController = controller;
+        const spinner = this.querySelector('.quantity__rules-cart .loading__spinner');
+        spinner?.classList.remove('hidden');
+        return fetch(`${this.dataset.url}?variant=${currentVariantId}&section_id=${this.dataset.section}`, {
+          signal: controller.signal,
+        })
           .then((response) => response.text())
           .then((responseText) => {
+            if (controller.signal.aborted || !this.isConnected || this.productForm?.variantIdInput?.value !== currentVariantId) return;
             const html = new DOMParser().parseFromString(responseText, 'text/html');
             this.updateQuantityRules(this.dataset.section, html);
           })
-          .catch((e) => console.error(e))
-          .finally(() => this.querySelector('.quantity__rules-cart .loading__spinner').classList.add('hidden'));
+          .catch((e) => { if (e.name !== 'AbortError') console.error(e); })
+          .finally(() => {
+            if (this.quantityRulesController === controller) spinner?.classList.add('hidden');
+          });
       }
 
       updateQuantityRules(sectionId, html) {
-        if (!this.quantityInput) return;
-        this.setQuantityBoundries();
+        if (!this.quantityInput || !this.quantityForm) return;
 
         const quantityFormUpdated = html.getElementById(`Quantity-Form-${sectionId}`);
+        if (!quantityFormUpdated) return;
         const selectors = ['.quantity__input', '.quantity__rules', '.quantity__label'];
         for (let selector of selectors) {
           const current = this.quantityForm.querySelector(selector);
@@ -432,6 +444,7 @@ if (!customElements.get('product-info')) {
             }
           }
         }
+        this.setQuantityBoundries();
       }
 
       get productForm() {

@@ -1,7 +1,8 @@
 {%- comment -%}
   Estado de la tanda. Imprime "1" si está cerrada y nada si está abierta.
-  Cerrada = "Menú abierto" desmarcado o ya pasó la fecha de cierre exacta
-  (Ajustes del tema > DS · Tanda de pedidos). Como un snippet no devuelve
+  Cerrada = pedidos no activados, falta cierre/envío o pasó el cierre exacto.
+  (Ajustes del tema > DS · Pedidos y envíos). La apertura escrita es informativa.
+  Como un snippet no devuelve
   valores, se captura:
     {%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
     {%- if ds_closed == '1' -%}…{%- endif -%}
@@ -9,7 +10,9 @@
 {%- endcomment -%}
 {%- liquid
   assign closed = false
-  if settings.ds_batch_open == false
+  assign close_text = settings.ds_batch_close | strip
+  assign ship_text = settings.ds_batch_ship | strip
+  if settings.ds_batch_open != true or close_text == blank or ship_text == blank
     assign closed = true
   elsif settings.ds_batch_close_at != blank
     assign close_s = settings.ds_batch_close_at | date: '%s'

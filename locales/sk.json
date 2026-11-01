@@ -305,6 +305,8 @@
       "product_disclosure": "Zverejnená informácia o produkte",
       "product_disclosures": "Zverejnené informácie o produkte",
       "cart_error": "Pri aktualizácii košíka sa vyskytla chyba. Skúste to znova.",
+      "add_unconfirmed": "Nepodarilo sa potvrdiť pridanie produktu. Pred ďalším pokusom skontrolujte košík.",
+      "quantity_limit": "V košíku ste dosiahli maximálne množstvo tohto produktu.",
       "cart_quantity_error_html": "Do košíka môžete túto položku pridať len v počte {{ quantity }}.",
       "update": "Aktualizovať",
       "headings": {

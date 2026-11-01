@@ -11,7 +11,10 @@
     elsif show_when == 'closed' and ds_closed == '1'
       assign show_message = true
     endif
-    if show_message
+    capture message_text
+      render 'ds-batch-text', text: block.settings.text, escape: true
+    endcapture
+    if show_message and message_text != blank
       assign visible_count = visible_count | plus: 1
     endif
   endfor
@@ -30,10 +33,11 @@
         assign show_message = true
       endif
     -%}
-    {%- if show_message -%}
+    {%- capture message_text -%}{%- render 'ds-batch-text', text: block.settings.text, escape: true -%}{%- endcapture -%}
+    {%- if show_message and message_text != blank -%}
       <li class="ds-announce__msg" {{ block.shopify_attributes }}>
         {%- if block.settings.link != blank -%}<a href="{{ block.settings.link }}">{%- endif -%}
-        {%- render 'ds-batch-text', text: block.settings.text, escape: true -%}
+        {{- message_text -}}
         {%- if block.settings.link != blank -%}</a>{%- endif -%}
       </li>
       <li class="ds-announce__sep" aria-hidden="true">✦</li>
@@ -45,7 +49,7 @@
   <div class="ds-announce__viewport">
     <div class="ds-announce__track">
       <ul class="ds-announce__group" role="list">{{ ds_items }}</ul>
-      <ul class="ds-announce__group" role="list" aria-hidden="true" data-ds-marquee-clone>{{ ds_items }}</ul>
+      <ul class="ds-announce__group" role="list" aria-hidden="true" inert data-ds-marquee-clone>{{ ds_items }}</ul>
     </div>
   </div>
   <button type="button" class="ds-motion-control ds-announce__pause" data-ds-pause aria-pressed="false" hidden>Pausar</button>
@@ -59,7 +63,7 @@
   "settings": [
     {
       "type": "paragraph",
-      "content": "Puedes usar [tanda], [cierre], [horneado] y [despacho]; se reemplazan por las fechas de Ajustes del tema > DS · Tanda de pedidos."
+      "content": "Usa [apertura], [cierre], [envio] y [mensaje_cerrado] desde Ajustes del tema > DS · Pedidos y envíos. Los mensajes con fechas pendientes se ocultan. Los marcadores anteriores siguen siendo compatibles."
     },
     {
       "type": "range",
@@ -81,7 +85,7 @@
           "type": "text",
           "id": "text",
           "label": "Texto",
-          "default": "[tanda]: pedidos hasta el [cierre]"
+          "default": "Pedidos hasta el [cierre] · Envío: [envio]"
         },
         {
           "type": "url",

@@ -285,6 +285,8 @@
       "product_disclosure": "Productvermelding",
       "product_disclosures": "Productvermeldingen",
       "cart_error": "Er is een fout opgetreden bij het bijwerken van je winkelwagen. Probeer het opnieuw.",
+      "add_unconfirmed": "We konden niet bevestigen of het product is toegevoegd. Controleer je winkelwagen voordat je het opnieuw probeert.",
+      "quantity_limit": "Je hebt het maximale aantal van dit product in je winkelwagen bereikt.",
       "cart_quantity_error_html": "Je kunt maar {{ quantity }} van dit artikel toevoegen aan je winkelwagen.",
       "headings": {
         "product": "Product",

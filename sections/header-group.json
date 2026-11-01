@@ -18,7 +18,8 @@
         "margin_bottom": 0,
         "padding_top": 12,
         "padding_bottom": 12
-      }
+      },
+      "disabled": true
     },
     "ds-announcement": {
       "type": "ds-announcement",
@@ -29,7 +30,7 @@
         "msg-close": {
           "type": "message",
           "settings": {
-            "text": "[tanda]: pedidos hasta el [cierre]",
+            "text": "Pedidos hasta el [cierre]",
             "link": "",
             "show_when": "open"
           }
@@ -37,7 +38,7 @@
         "msg-bake": {
           "type": "message",
           "settings": {
-            "text": "Horneamos el [horneado] y despachamos [despacho]",
+            "text": "Próximo envío: [envio]",
             "link": "",
             "show_when": "open"
           }
@@ -52,7 +53,15 @@
         "msg-closed": {
           "type": "message",
           "settings": {
-            "text": "La tanda [tanda] ya cerró. Suscríbete al boletín y te avisamos cuando abra el próximo menú.",
+            "text": "[mensaje_cerrado]",
+            "link": "",
+            "show_when": "closed"
+          }
+        },
+        "msg-opening": {
+          "type": "message",
+          "settings": {
+            "text": "Apertura de pedidos: [apertura]",
             "link": "",
             "show_when": "closed"
           }
@@ -62,11 +71,18 @@
         "msg-close",
         "msg-bake",
         "msg-ship",
-        "msg-closed"
-      ]
+        "msg-closed",
+        "msg-opening"
+      ],
+      "disabled": true
+    },
+    "redesign": {
+      "type": "ds-redesign-header",
+      "settings": {}
     }
   },
   "order": [
+    "redesign",
     "ds-announcement",
     "header"
   ]

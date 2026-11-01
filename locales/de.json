@@ -285,6 +285,8 @@
       "product_disclosure": "Produktoffenlegung",
       "product_disclosures": "Produktoffenlegungen",
       "cart_error": "Beim Aktualisieren deines Warenkorbs ist ein Fehler aufgetreten. Bitte versuche es erneut.",
+      "add_unconfirmed": "Wir konnten nicht bestätigen, ob das Produkt hinzugefügt wurde. Prüfe deinen Warenkorb, bevor du es erneut versuchst.",
+      "quantity_limit": "Du hast die Höchstmenge dieses Produkts in deinem Warenkorb erreicht.",
       "cart_quantity_error_html": "Du kannst deinem Warenkorb nur {{ quantity }} Stück dieses Artikels hinzufügen.",
       "headings": {
         "product": "Produkt",

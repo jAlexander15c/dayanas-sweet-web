@@ -42,7 +42,8 @@
         "interval": 6,
         "tag_label": "",
         "tag_value": ""
-      }
+      },
+      "disabled": true
     },
     "bestsellers": {
       "type": "ds-product-rail",
@@ -56,7 +57,8 @@
         "auto_badge": false,
         "badge_count": 3,
         "badge_label": "Más pedido"
-      }
+      },
+      "disabled": true
     },
     "batch": {
       "type": "ds-batch",
@@ -95,7 +97,8 @@
         "title": "Horneamos por tandas, no para una vitrina.",
         "text": "<p>Abrimos el menú unos días, reunimos todos los pedidos y los horneamos juntos para una misma fecha de despacho. No horneamos en el minuto en que pides, pero nada sale del horno para quedarse esperando en un mostrador: se hace para tu tanda.</p>",
         "color_scheme": "scheme-3"
-      }
+      },
+      "disabled": true
     },
     "categories": {
       "type": "ds-categories",
@@ -160,7 +163,8 @@
       ],
       "settings": {
         "title": "¿Qué se te antoja hoy?"
-      }
+      },
+      "disabled": true
     },
     "season": {
       "type": "ds-season",
@@ -170,7 +174,8 @@
         "dates": "",
         "button_label": "Ver la edición",
         "color_scheme": "scheme-6"
-      }
+      },
+      "disabled": true
     },
     "story": {
       "type": "ds-story",
@@ -178,7 +183,8 @@
         "title": "Recetas con memoria cubana, horneadas en Texas.",
         "text": "<p>Dayana’s Sweet nace de más de 15 años de experiencia en la pastelería y de una historia que comenzó en Cuba. Hoy, desde Fulshear, Texas, unimos nuestras raíces con sabores e ingredientes de Estados Unidos para crear galletas y postres con personalidad propia.</p><p>Trabajamos por tandas porque así cada caja sale del horno para su fecha de despacho, y los cupos dependen de lo que podemos hornear bien en un día. Cuando algo se acaba, esperamos a la próxima tanda en lugar de apurar el horno.</p>",
         "facts": "Más de 15 años de oficio\nHorneado para tu fecha de despacho\nCupos según lo que sale del horno"
-      }
+      },
+      "disabled": true
     },
     "social": {
       "type": "ds-social",
@@ -218,7 +224,8 @@
         "title": "Lo más dulce, primero en tu correo.",
         "text": "Cada producto tiene cupos limitados, solo lo que podemos hornear bien en un día, y los favoritos se agotan primero. Te escribimos el día que abre el menú, antes de anunciarlo en redes.",
         "color_scheme": "scheme-5"
-      }
+      },
+      "disabled": true
     },
     "faq": {
       "type": "ds-faq",
@@ -270,10 +277,42 @@
       "settings": {
         "title": "Antes de pedir",
         "text": "Lo que conviene saber antes de elegir, para que tu caja llegue justo cuando la esperas."
-      }
+      },
+      "disabled": true
+    },
+    "redesign": {
+      "type": "ds-redesign-home",
+      "blocks": {
+        "cookies": {
+          "type": "category",
+          "settings": {
+            "collection": "galletas",
+            "title": "Galletas",
+            "fallback_image": "cookies",
+            "link_label": "Ver galletas",
+            "image_alt": "Caja rosa con galletas de chocolate"
+          }
+        },
+        "brownies": {
+          "type": "category",
+          "settings": {
+            "collection": "brownies",
+            "title": "Brownies",
+            "fallback_image": "brownies",
+            "link_label": "Ver brownies",
+            "image_alt": "Brownie de chocolate de corteza crujiente"
+          }
+        }
+      },
+      "block_order": [
+        "cookies",
+        "brownies"
+      ],
+      "settings": {}
     }
   },
   "order": [
+    "redesign",
     "hero",
     "bestsellers",
     "batch",

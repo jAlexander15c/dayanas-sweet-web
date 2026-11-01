@@ -36,10 +36,16 @@
         "margin_top": 0,
         "padding_top": 56,
         "padding_bottom": 28
-      }
+      },
+      "disabled": true
+    },
+    "redesign": {
+      "type": "ds-redesign-footer",
+      "settings": {}
     }
   },
   "order": [
+    "redesign",
     "footer"
   ]
 }

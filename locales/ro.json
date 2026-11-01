@@ -295,6 +295,8 @@
       "product_disclosure": "Mențiune referitoare la produs",
       "product_disclosures": "Mențiuni referitoare la produs",
       "cart_error": "A apărut o eroare în timpul actualizării coșului. Încercați din nou.",
+      "add_unconfirmed": "Nu am putut confirma dacă produsul a fost adăugat. Verifică coșul înainte de a încerca din nou.",
+      "quantity_limit": "Ai atins cantitatea maximă pentru acest produs în coș.",
       "cart_quantity_error_html": "Cantitatea maximă pe care o poți adăuga în coș din acest articol: {{ quantity }}.",
       "update": "Actualizați",
       "headings": {

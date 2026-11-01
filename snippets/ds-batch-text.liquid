@@ -1,20 +1,41 @@
-{% comment %}
-  Reemplaza [tanda], [cierre], [horneado] y [despacho] por los valores de
-  Ajustes del tema > DS · Tanda de pedidos.
-  Acepta:
-    - text: {string}
-    - escape: {boolean} escapa el texto (para campos de texto plano)
-  Los valores de las fechas se escapan siempre, también en texto enriquecido.
-{% endcomment %}
+{%- comment -%}
+  Textos compartidos de Ajustes del tema > DS · Pedidos y envíos.
+  [apertura], [pedidos], [cierre], [envio], [mensaje_cerrado].
+  Compatibilidad: [tanda], [horneado], [despacho].
+  Omite una frase completa si depende de un campo pendiente.
+  text: contenido; escape: true para texto plano. Valores siempre escapados.
+{%- endcomment -%}
 {%- liquid
-  assign ds_name = settings.ds_batch_name | default: '' | escape
-  assign ds_close = settings.ds_batch_close | default: '' | escape
-  assign ds_bake = settings.ds_batch_bake | default: '' | escape
-  assign ds_ship = settings.ds_batch_ship | default: '' | escape
   assign out = text | default: ''
   if escape
     assign out = out | escape
   endif
-  assign out = out | replace: '[tanda]', ds_name | replace: '[cierre]', ds_close | replace: '[horneado]', ds_bake | replace: '[despacho]', ds_ship
+  assign tokens = 'apertura,pedidos,tanda,cierre,horneado,envio,despacho,mensaje_cerrado' | split: ','
+  for token in tokens
+    assign key = '[' | append: token | append: ']'
+    if out contains key
+      case token
+        when 'apertura'
+          assign value = settings.ds_batch_start
+        when 'pedidos', 'tanda'
+          assign value = settings.ds_batch_name
+        when 'cierre'
+          assign value = settings.ds_batch_close
+        when 'horneado'
+          assign value = settings.ds_batch_bake
+        when 'envio', 'despacho'
+          assign value = settings.ds_batch_ship
+        when 'mensaje_cerrado'
+          assign value = settings.ds_batch_closed_text
+      endcase
+      assign value = value | default: '' | strip
+      if value == blank
+        assign out = ''
+        break
+      endif
+      assign value = value | escape
+      assign out = out | replace: key, value
+    endif
+  endfor
   echo out
 -%}

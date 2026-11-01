@@ -305,6 +305,8 @@
       "product_disclosure": "Razkritje o izdelku",
       "product_disclosures": "Razkritja o izdelku",
       "cart_error": "Pri posodabljanju vaše košarice je prišlo do napake. Poskusite znova.",
+      "add_unconfirmed": "Ni bilo mogoče potrditi, ali je bil izdelek dodan. Pred ponovnim poskusom preverite košarico.",
+      "quantity_limit": "V košarici ste dosegli največjo dovoljeno količino tega izdelka.",
       "cart_quantity_error_html": "V košarico lahko dodate največ toliko tovrstnih izdelkov: {{ quantity }}.",
       "update": "Posodobitev",
       "headings": {

@@ -1,7 +1,6 @@
-{{ 'quick-add.css' | asset_url | stylesheet_tag }}
-<script src="{{ 'product-form.js' | asset_url }}" defer="defer"></script>
 {%- assign c = section.settings.collection -%}
 {%- if c != blank and c.products_count > 0 -%}
+  <script src="{{ 'product-form.js' | asset_url }}" defer="defer"></script>
   <section class="ds-season color-{{ section.settings.color_scheme }} ds-scallop-top ds-scallop-bottom" aria-labelledby="DSSeason-{{ section.id }}">
     <div class="ds-wrap ds-season__grid">
       <div class="ds-season__copy">

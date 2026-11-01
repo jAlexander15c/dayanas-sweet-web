@@ -285,6 +285,8 @@
       "product_disclosure": "Tuoteilmoitus",
       "product_disclosures": "Tuoteilmoitukset",
       "cart_error": "Ostoskorisi päivityksessä tapahtui virhe. Yritä uudelleen.",
+      "add_unconfirmed": "Emme voineet vahvistaa, lisättiinkö tuote. Tarkista ostoskorisi ennen kuin yrität uudelleen.",
+      "quantity_limit": "Ostoskorissasi on jo enimmäismäärä tätä tuotetta.",
       "cart_quantity_error_html": "Voit lisätä ostoskoriisi vain {{ quantity }} kappaletta tätä tuotetta.",
       "headings": {
         "product": "Tuote",

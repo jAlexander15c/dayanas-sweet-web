@@ -285,6 +285,8 @@
       "product_disclosure": "商品の開示情報",
       "product_disclosures": "商品の開示情報",
       "cart_error": "カートをアップデートするときにエラーが発生しました。もう一度お試しください。",
+      "add_unconfirmed": "商品が追加されたか確認できませんでした。もう一度お試しになる前にカートをご確認ください。",
+      "quantity_limit": "カート内のこの商品は購入可能な数量の上限に達しています。",
       "cart_quantity_error_html": "このアイテムは{{ quantity }}個しかカートに追加することができません。",
       "headings": {
         "product": "商品",

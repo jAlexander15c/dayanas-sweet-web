@@ -285,6 +285,8 @@
       "product_disclosure": "产品披露信息",
       "product_disclosures": "产品披露信息",
       "cart_error": "更新购物车时出错。请重试。",
+      "add_unconfirmed": "无法确认商品是否已添加。请先检查购物车，再重试。",
+      "quantity_limit": "购物车中此商品的数量已达到上限。",
       "cart_quantity_error_html": "您只能向购物车添加 {{ quantity }} 件此商品。",
       "headings": {
         "product": "产品",

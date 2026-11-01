@@ -1468,54 +1468,75 @@
     ]
   },
   {
-    "name": "DS · Tanda de pedidos",
+    "name": "DS · Pedidos y envíos",
     "settings": [
       {
         "type": "paragraph",
-        "content": "Estas fechas se usan en la barra de anuncios, la sección de tandas, la ficha de producto y el carrito. En los textos puedes escribir [tanda], [cierre], [horneado] y [despacho] y se reemplazan por estos valores."
+        "content": "Cambia las fechas aquí una sola vez y guarda. Se comparten en los avisos, la portada, los productos y el carrito. Puedes dejar los pedidos cerrados y las fechas vacías hasta preparar la próxima apertura."
       },
       {
         "type": "checkbox",
         "id": "ds_batch_open",
-        "label": "Menú abierto para pedidos",
-        "default": true,
-        "info": "Oculta botones y cierra el carrito en la tienda, pero no bloquea enlaces directos al checkout. Para cerrar de verdad, deja el stock de los productos en 0."
+        "label": "Pedidos abiertos",
+        "default": false,
+        "info": "Actívalo al abrir pedidos, después de completar cierre y envío. Este control cambia la interfaz. Para impedir compras por enlaces directos al checkout, controla también el stock en Shopify."
       },
       {
         "type": "text",
-        "id": "ds_batch_name",
-        "label": "Nombre de la tanda",
-        "default": "Primera hornada"
+        "id": "ds_batch_start",
+        "label": "Próxima apertura (opcional)",
+        "placeholder": "Ej.: jueves 5 de noviembre, 6 p. m.",
+        "info": "Se anuncia mientras los pedidos están cerrados. No abre las ventas automáticamente; usa el interruptor Pedidos abiertos."
       },
       {
         "type": "text",
         "id": "ds_batch_close",
         "label": "Cierre de pedidos",
-        "default": "sábado 17 de octubre a las 11:59 p. m. CT"
-      },
-      {
-        "type": "text",
-        "id": "ds_batch_close_at",
-        "label": "Fecha y hora exacta del cierre",
-        "info": "Fecha y hora de cierre, p. ej. 2026-10-17T23:59-05:00 (usa -05:00 en horario de verano y -06:00 en invierno). Al pasar esa hora la tienda se muestra cerrada."
-      },
-      {
-        "type": "text",
-        "id": "ds_batch_bake",
-        "label": "Día de horneado",
-        "default": "domingo 18 de octubre"
+        "placeholder": "Ej.: viernes 6 de noviembre, 8 p. m., hora de Houston",
+        "info": "Escribe la fecha y hora como quieres que la vea el cliente. Este campo es informativo; cierra los pedidos con el interruptor."
       },
       {
         "type": "text",
         "id": "ds_batch_ship",
-        "label": "Despacho",
-        "default": "a más tardar el martes 20 de octubre"
+        "label": "Fecha de envío",
+        "placeholder": "Ej.: lunes 9 de noviembre",
+        "info": "Día en que los pedidos salen de Houston por USPS Priority. Es la fecha de salida; la llegada depende del transporte."
+      },
+      {
+        "type": "textarea",
+        "id": "ds_batch_closed_text",
+        "label": "Mensaje con los pedidos cerrados",
+        "default": "Los pedidos están cerrados. Déjanos tu correo y te avisaremos cuando abramos."
+      },
+      {
+        "type": "header",
+        "content": "Opciones avanzadas"
+      },
+      {
+        "type": "paragraph",
+        "content": "Para la operación manual solo necesitas los campos anteriores. En los textos puedes usar [apertura], [cierre], [envio] y [mensaje_cerrado]. Las frases con fechas pendientes se ocultan."
       },
       {
         "type": "text",
-        "id": "ds_batch_closed_text",
-        "label": "Mensaje con el menú cerrado",
-        "default": "La tanda ya cerró. Suscríbete al boletín y te avisamos cuando abra el próximo menú."
+        "id": "ds_batch_name",
+        "label": "Nombre de la apertura (opcional)",
+        "info": "Puedes usarlo en textos con [pedidos]. Se conservan los marcadores anteriores por compatibilidad."
+      },
+      {
+        "type": "text",
+        "id": "ds_batch_bake",
+        "label": "Día de preparación (opcional)",
+        "info": "Se muestra solamente si lo completas."
+      },
+      {
+        "type": "text",
+        "id": "ds_batch_close_at",
+        "label": "Cierre exacto de la interfaz (opcional)",
+        "info": "Puedes dejarlo vacío y cerrar manualmente. Para el contador heredado usa ISO 8601, p. ej. 2026-11-06T20:00:00-06:00, con el desfase correcto de Houston. Debe coincidir con el cierre anunciado. No cambia el inventario."
+      },
+      {
+        "type": "header",
+        "content": "Opciones de productos"
       },
       {
         "type": "range",

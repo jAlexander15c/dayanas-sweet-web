@@ -285,6 +285,8 @@
       "product_disclosure": "Ürün bildirimi",
       "product_disclosures": "Ürün bildirimleri",
       "cart_error": "Sepetiniz güncellenirken bir hata oluştu. Lütfen tekrar deneyin.",
+      "add_unconfirmed": "Ürünün eklenip eklenmediğini doğrulayamadık. Tekrar denemeden önce sepetinizi kontrol edin.",
+      "quantity_limit": "Sepetinizde bu ürün için izin verilen maksimum adede ulaştınız.",
       "cart_quantity_error_html": "Sepetinize bu üründen yalnızca {{ quantity }} adet ekleyebilirsiniz.",
       "headings": {
         "product": "Ürün",

@@ -265,15 +265,10 @@ class QuantityInput extends HTMLElement {
 
   validateQtyRules() {
     const value = parseInt(this.input.value);
-    if (this.input.min) {
-      const buttonMinus = this.querySelector(".quantity__button[name='minus']");
-      buttonMinus.classList.toggle('disabled', parseInt(value) <= parseInt(this.input.min));
-    }
-    if (this.input.max) {
-      const max = parseInt(this.input.max);
-      const buttonPlus = this.querySelector(".quantity__button[name='plus']");
-      buttonPlus.classList.toggle('disabled', value >= max);
-    }
+    const buttonMinus = this.querySelector(".quantity__button[name='minus']");
+    const buttonPlus = this.querySelector(".quantity__button[name='plus']");
+    buttonMinus.classList.toggle('disabled', this.input.min !== '' && value <= parseInt(this.input.min));
+    buttonPlus.classList.toggle('disabled', this.input.max !== '' && value >= parseInt(this.input.max));
   }
 }
 

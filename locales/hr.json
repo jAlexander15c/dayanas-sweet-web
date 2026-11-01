@@ -295,6 +295,8 @@
       "product_disclosure": "Obavijest o proizvodu",
       "product_disclosures": "Obavijesti o proizvodu",
       "cart_error": "Došlo je do pogreške prilikom ažuriranja košarice. Pokušajte ponovno.",
+      "add_unconfirmed": "Nismo mogli potvrditi je li proizvod dodan. Provjerite košaricu prije ponovnog pokušaja.",
+      "quantity_limit": "Dosegnuli ste maksimalnu količinu ovog proizvoda u košarici.",
       "cart_quantity_error_html": "U svoju košaricu možete dodati {{ quantity }} kom ovog artikla.",
       "update": "Ažuriraj",
       "headings": {

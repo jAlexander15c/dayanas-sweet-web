@@ -301,6 +301,9 @@
       {{ 'component-totals.css' | asset_url | stylesheet_tag }}
       {{ 'component-price.css' | asset_url | stylesheet_tag }}
       {{ 'component-discounts.css' | asset_url | stylesheet_tag }}
+    {%- elsif settings.cart_type == 'notification' -%}
+      {{ 'component-cart-notification.css' | asset_url | stylesheet_tag }}
+      {{ 'component-price.css' | asset_url | stylesheet_tag }}
     {%- endif -%}
 
     {%- unless settings.type_body_font.system? -%}
@@ -328,6 +331,8 @@
       >
     {%- endif -%}
 
+    {{ 'ds-redesign.css' | asset_url | stylesheet_tag }}
+
     <script>
       if (Shopify.designMode) {
         document.documentElement.classList.add('shopify-design-mode');
@@ -335,7 +340,7 @@
     </script>
   </head>
 
-  <body class="gradient{% if settings.animations_hover_elements != 'none' %} animate--hover-{{ settings.animations_hover_elements }}{% endif %}">
+  <body class="gradient ds-redesign{% if settings.animations_hover_elements != 'none' %} animate--hover-{{ settings.animations_hover_elements }}{% endif %}">
     <a class="skip-to-content-link button visually-hidden" href="#MainContent">
       {{ 'accessibility.skip_to_text' | t }}
     </a>
@@ -345,6 +350,10 @@
     {%- endif -%}
 
     {% sections 'header-group' %}
+
+    {%- if settings.cart_type == 'notification' -%}
+      {%- render 'cart-notification', color_scheme: 'scheme-1', desktop_menu_type: 'dropdown' -%}
+    {%- endif -%}
 
     <main
       id="MainContent"
@@ -374,6 +383,8 @@
       };
 
       window.cartStrings = {
+        addUnconfirmed: {{ 'sections.cart.add_unconfirmed' | t | json }},
+        quantityLimit: {{ 'sections.cart.quantity_limit' | t | json }},
         error: `{{ 'sections.cart.cart_error' | t }}`,
         quantityError: `{{ 'sections.cart.cart_quantity_error_html' | t: quantity: '[quantity]' }}`,
       };
@@ -414,7 +425,10 @@
 
     {%- if settings.cart_type == 'drawer' -%}
       <script src="{{ 'cart-drawer.js' | asset_url }}" defer="defer"></script>
+    {%- elsif settings.cart_type == 'notification' -%}
+      <script src="{{ 'cart-notification.js' | asset_url }}" defer="defer"></script>
     {%- endif -%}
     <script src="{{ 'ds-motion.js' | asset_url }}" defer="defer"></script>
+    <script src="{{ 'ds-redesign.js' | asset_url }}" defer="defer"></script>
   </body>
 </html>

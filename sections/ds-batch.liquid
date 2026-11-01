@@ -7,7 +7,12 @@
     {%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
     {%- if ds_closed == '1' -%}
       <p class="ds-batch__closed" role="status">{{ settings.ds_batch_closed_text | escape }}</p>
-    {%- else -%}
+    {%- endif -%}
+    {%- capture dates -%}{%- render 'ds-order-dates' -%}{%- endcapture -%}
+    {%- if dates != blank -%}
+      <ul class="ds-pbatch__dates" role="list" aria-label="Fechas de pedidos">{{ dates }}</ul>
+    {%- endif -%}
+    {%- if ds_closed != '1' -%}
     {%- liquid
       # La cuenta regresiva solo se muestra si la fecha exacta se puede leer (date devuelve dígitos).
       assign close_s = settings.ds_batch_close_at | date: '%s'
@@ -21,7 +26,7 @@
           <span><b data-unit="h">00</b> <span data-unit-label="h" data-one="hora" data-other="horas">horas</span></span>
           <span><b data-unit="m">00</b> min</span>
         </p>
-        <p class="ds-countdown__done" data-ds-countdown-done hidden>Pedidos cerrados para esta tanda.</p>
+        <p class="ds-countdown__done" data-ds-countdown-done hidden>{{ settings.ds_batch_closed_text | escape }}</p>
       </div>
     {%- endif -%}
     <ol class="ds-steps" role="list">
@@ -29,7 +34,8 @@
         <li class="ds-step{% if block.settings.current %} is-now{% endif %}"{% if block.settings.current %} aria-current="step"{% endif %} {{ block.shopify_attributes }}>
           <span class="ds-step__num" aria-hidden="true">{{ forloop.index }}</span>
           {%- if block.settings.current -%}<span class="ds-step__now">Ahora</span>{%- endif -%}
-          <span class="ds-step__when">{% render 'ds-batch-text', text: block.settings.when, escape: true %}</span>
+          {%- capture when_text -%}{% render 'ds-batch-text', text: block.settings.when, escape: true %}{%- endcapture -%}
+          {%- if when_text != blank -%}<span class="ds-step__when">{{ when_text }}</span>{%- endif -%}
           <p>{% render 'ds-batch-text', text: block.settings.text, escape: true %}</p>
         </li>
       {%- endfor -%}
@@ -40,18 +46,18 @@
 
 {% schema %}
 {
-  "name": "DS · Tandas de pedidos",
+  "name": "DS · Pedidos y envíos",
   "class": "ds-batch-wrap",
   "settings": [
     {
       "type": "paragraph",
-      "content": "Puedes usar [tanda], [cierre], [horneado] y [despacho]; se reemplazan por las fechas de Ajustes del tema > DS · Tanda de pedidos."
+      "content": "Las fechas se configuran en Ajustes del tema > DS · Pedidos y envíos. Puedes usar [apertura], [cierre], [envio] y [pedidos]. Los marcadores anteriores siguen siendo compatibles."
     },
     {
       "type": "text",
       "id": "title",
       "label": "Título",
-      "default": "Horneamos por tandas, no para una vitrina."
+      "default": "Así llega tu antojo."
     },
     {
       "type": "richtext",
@@ -95,7 +101,7 @@
   ],
   "presets": [
     {
-      "name": "DS · Tandas de pedidos",
+      "name": "DS · Pedidos y envíos",
       "blocks": [
         { "type": "step" },
         { "type": "step" },

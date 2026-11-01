@@ -285,6 +285,8 @@
       "product_disclosure": "Terméktájékoztató",
       "product_disclosures": "Terméktájékoztatók",
       "cart_error": "Hiba történt a kosár frissítése közben. Próbálkozz újra.",
+      "add_unconfirmed": "Nem sikerült megerősíteni, hogy a termék bekerült-e a kosárba. Újabb próbálkozás előtt ellenőrizze a kosarát.",
+      "quantity_limit": "Elérte a termékből a kosárba helyezhető maximális mennyiséget.",
       "cart_quantity_error_html": "Ebből a termékből legfeljebb {{ quantity }} darabot rakhatsz a kosárba.",
       "headings": {
         "product": "Termék",

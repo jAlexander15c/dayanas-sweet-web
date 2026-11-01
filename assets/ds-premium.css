@@ -205,6 +205,8 @@ body{background:var(--ds-blush);color:var(--ds-ink);-webkit-font-smoothing:antia
 .ds-social__grid{display:grid;grid-template-columns:1fr 1.2fr;gap:clamp(28px,5vw,64px);align-items:center}
 .ds-social__grid>*,.ds-season__grid>*,.ds-hero>*,.ds-story>*,.ds-faq>*{min-width:0}
 .ds-social__text{font-size:17px;line-height:1.6;margin:16px 0 0;max-width:42ch}
+/* Dawn pinta el texto de cada esquema al 75 %; sobre el rosa del boletín eso da 3,26:1. Opaco da 4,68:1 */
+.ds-social__text,.ds-news label,.ds-news__msg{color:rgb(var(--color-foreground))}
 .ds-news{margin-top:28px;display:flex;flex-direction:column;gap:8px;max-width:460px}
 .ds-news label{font-weight:600;font-size:14px}
 .ds-news__row{display:flex;gap:8px;background:#fff;border-radius:var(--ds-r-pill);padding:6px}

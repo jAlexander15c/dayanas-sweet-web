@@ -1,0 +1,26 @@
+{%- comment -%}
+  Filas de fechas compartidas. Devuelve <li> para una lista del consumidor.
+  Con pedidos cerrados solo anuncia la próxima apertura si está definida.
+{%- endcomment -%}
+{%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
+{%- liquid
+  assign start_text = settings.ds_batch_start | strip
+  assign close_text = settings.ds_batch_close | strip
+  assign bake_text = settings.ds_batch_bake | strip
+  assign ship_text = settings.ds_batch_ship | strip
+-%}
+{%- if ds_closed == '1' -%}
+  {%- if start_text != blank -%}
+    <li>{% render 'ds-icon', name: 'clock' %}<span>Apertura de pedidos: {{ start_text | escape }}</span></li>
+  {%- endif -%}
+{%- else -%}
+  {%- if close_text != blank -%}
+    <li>{% render 'ds-icon', name: 'clock' %}<span>Pedidos hasta el {{ close_text | escape }}</span></li>
+  {%- endif -%}
+  {%- if bake_text != blank -%}
+    <li>{% render 'ds-icon', name: 'box' %}<span>Preparación: {{ bake_text | escape }}</span></li>
+  {%- endif -%}
+  {%- if ship_text != blank -%}
+    <li>{% render 'ds-icon', name: 'truck' %}<span>Envío: {{ ship_text | escape }}</span></li>
+  {%- endif -%}
+{%- endif -%}

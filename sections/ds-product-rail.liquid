@@ -1,5 +1,3 @@
-{{ 'quick-add.css' | asset_url | stylesheet_tag }}
-<script src="{{ 'product-form.js' | asset_url }}" defer="defer"></script>
 {%- liquid
   assign source = section.settings.collection
   if source == blank
@@ -12,34 +10,40 @@
   endif
   assign shown = 0
 -%}
+{%- capture cards -%}
+  {%- for rail_product in source.products -%}
+    {%- liquid
+      if rail_product.id == current_id
+        continue
+      endif
+      if shown >= section.settings.limit
+        break
+      endif
+      assign shown = shown | plus: 1
+      assign rank_badge = ''
+      if section.settings.auto_badge and shown <= section.settings.badge_count
+        assign rank_badge = section.settings.badge_label
+      endif
+    -%}
+    <li>{% render 'ds-product-card', product: rail_product, section_id: section.id, rank_badge: rank_badge %}</li>
+  {%- endfor -%}
+{%- endcapture -%}
+{%- if shown > 0 -%}
+  <script src="{{ 'product-form.js' | asset_url }}" defer="defer"></script>
+{%- endif -%}
 <section class="ds-rail-section color-{{ section.settings.color_scheme }} ds-scallop-top ds-scallop-bottom" aria-labelledby="{{ rail_id }}-title">
   <div class="ds-wrap ds-rail__head">
     <h2 class="ds-display ds-h2" id="{{ rail_id }}-title">{{ section.settings.title | escape }}</h2>
-    {%- if source.products_count > 3 -%}
+    {%- if shown > 3 -%}
       <div class="ds-rail__arrows">
         <button type="button" data-ds-rail="{{ rail_id }}" data-dir="-1" aria-label="Productos anteriores">{% render 'ds-icon', name: 'left' %}</button>
         <button type="button" data-ds-rail="{{ rail_id }}" data-dir="1" aria-label="Productos siguientes">{% render 'ds-icon', name: 'right' %}</button>
       </div>
     {%- endif -%}
   </div>
-  {%- if source.products_count > 0 -%}
+  {%- if shown > 0 -%}
     <ul class="ds-rail" id="{{ rail_id }}" role="list">
-      {%- for product in source.products -%}
-        {%- liquid
-          if product.id == current_id
-            continue
-          endif
-          if shown >= section.settings.limit
-            break
-          endif
-          assign shown = shown | plus: 1
-          assign rank_badge = ''
-          if section.settings.auto_badge and forloop.index <= section.settings.badge_count
-            assign rank_badge = section.settings.badge_label
-          endif
-        -%}
-        <li>{% render 'ds-product-card', product: product, section_id: section.id, rank_badge: rank_badge %}</li>
-      {%- endfor -%}
+      {{ cards }}
     </ul>
     {%- if section.settings.link_label != blank -%}
       <div class="ds-wrap ds-rail__more"><a href="{{ source.url | default: routes.all_products_collection_url }}">{{ section.settings.link_label | escape }}</a></div>

@@ -5,11 +5,22 @@
   </div>
   {%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
   <div class="ds-faq__items">
+    {%- assign first_visible = true -%}
     {%- for block in section.blocks -%}
-      <details class="ds-qa"{% if forloop.first %} open{% endif %} {{ block.shopify_attributes }}>
+      {%- capture answer -%}
+        {%- if ds_closed == '1' and block.settings.closed_answer != blank -%}
+          {% render 'ds-batch-text', text: block.settings.closed_answer %}
+        {%- else -%}
+          {% render 'ds-batch-text', text: block.settings.answer %}
+        {%- endif -%}
+      {%- endcapture -%}
+      {%- if answer != blank -%}
+      <details class="ds-qa"{% if first_visible %} open{% endif %} {{ block.shopify_attributes }}>
         <summary>{{ block.settings.question | escape }}{% render 'ds-icon', name: 'plus' %}</summary>
-        <div class="ds-qa__a rte">{%- if ds_closed == '1' and block.settings.closed_answer != blank -%}{% render 'ds-batch-text', text: block.settings.closed_answer %}{%- else -%}{% render 'ds-batch-text', text: block.settings.answer %}{%- endif -%}</div>
+        <div class="ds-qa__a rte">{{ answer }}</div>
       </details>
+      {%- assign first_visible = false -%}
+      {%- endif -%}
     {%- endfor -%}
   </div>
 </section>
@@ -53,7 +64,7 @@
         {
           "type": "richtext",
           "id": "closed_answer",
-          "label": "Respuesta cuando la tanda está cerrada",
+          "label": "Respuesta con los pedidos cerrados",
           "info": "Opcional. Si está vacía, se usa la respuesta habitual."
         }
       ]

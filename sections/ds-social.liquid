@@ -13,7 +13,10 @@
         </div>
         <p class="ds-news__msg" id="DSNewsMsg-{{ section.id }}" role="status">
           {%- if form.posted_successfully? -%}Listo. Te escribiremos el día que abra el próximo menú.
-          {%- elsif form.errors -%}Revisa el correo: parece que falta el @ o el dominio.
+          {%- elsif form.errors -%}
+            {%- for field in form.errors -%}
+              {{ form.errors.translated_fields[field] | default: field | capitalize | escape }}: {{ form.errors.messages[field] | escape }}{% unless forloop.last %}<br>{% endunless %}
+            {%- endfor -%}
           {%- endif -%}
         </p>
       {%- endform -%}

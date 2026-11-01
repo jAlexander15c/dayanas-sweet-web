@@ -305,6 +305,8 @@
       "product_disclosure": "Atskleidžiama produkto informacija",
       "product_disclosures": "Atskleidžiama produkto informacija",
       "cart_error": "Atnaujinant krepšelį įvyko klaida. Bandykite dar kartą.",
+      "add_unconfirmed": "Nepavyko patvirtinti, ar prekė buvo pridėta. Prieš bandydami dar kartą patikrinkite krepšelį.",
+      "quantity_limit": "Krepšelyje pasiekėte didžiausią leidžiamą šios prekės kiekį.",
       "cart_quantity_error_html": "Į krepšelį galite įdėti tik {{ quantity }}šios prekės vnt.",
       "update": "Atnaujinti",
       "headings": {

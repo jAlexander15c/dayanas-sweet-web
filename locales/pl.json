@@ -305,6 +305,8 @@
       "product_disclosure": "Dodatkowa informacja o produkcie",
       "product_disclosures": "Dodatkowe informacje o produkcie",
       "cart_error": "Wystąpił błąd podczas aktualizowania Twojego koszyka. Spróbuj ponownie.",
+      "add_unconfirmed": "Nie udało się potwierdzić, czy produkt został dodany. Sprawdź koszyk przed ponowną próbą.",
+      "quantity_limit": "Osiągnięto maksymalną liczbę sztuk tego produktu w koszyku.",
       "cart_quantity_error_html": "Możesz dodać do koszyka tylko {{ quantity }} sztuk(i) tej pozycji.",
       "update": "Aktualizuj",
       "headings": {

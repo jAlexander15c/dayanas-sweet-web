@@ -285,6 +285,8 @@
       "product_disclosure": "Thông tin công bố sản phẩm",
       "product_disclosures": "Thông tin công bố sản phẩm",
       "cart_error": "Đã xảy ra lỗi khi cập nhật giỏ hàng. Vui lòng thử lại.",
+      "add_unconfirmed": "Chúng tôi không thể xác nhận sản phẩm đã được thêm hay chưa. Vui lòng kiểm tra giỏ hàng trước khi thử lại.",
+      "quantity_limit": "Bạn đã đạt số lượng tối đa của sản phẩm này trong giỏ hàng.",
       "cart_quantity_error_html": "Bạn chỉ có thể thêm {{ quantity }} mặt hàng này vào giỏ hàng.",
       "headings": {
         "product": "Sản phẩm",

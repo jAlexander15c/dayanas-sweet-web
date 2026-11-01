@@ -1,6 +1,11 @@
 {
   "current": {
-    "ds_batch_close_at": "2026-10-17T23:59-05:00",
+    "ds_batch_open": false,
+    "ds_batch_start": "",
+    "ds_batch_close": "",
+    "ds_batch_ship": "",
+    "ds_batch_bake": "",
+    "ds_batch_close_at": "",
     "logo_width": 190,
     "customer_account_menu": "customer-account-main-menu",
     "color_schemes": {
