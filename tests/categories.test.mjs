@@ -11,7 +11,7 @@ const css = readFileSync('assets/ds-categories.css', 'utf8');
 const home = readFileSync('sections/ds-redesign-home.liquid', 'utf8');
 const listing = readFileSync('sections/main-list-collections.liquid', 'utf8');
 test('changed theme files are UTF-8 without BOM, replacement characters or damaged accents', () => {
-  const files = ['assets/ds-categories.css', 'docs/categorias.md', 'locales/es.default.json', 'locales/en.default.json',
+  const files = ['assets/ds-categories.css', 'docs/categorias.md', 'locales/es.default.json', 'locales/en.json',
     'sections/ds-redesign-home.liquid', 'sections/main-list-collections.liquid', 'snippets/ds-category-grid.liquid',
     'templates/list-collections.json', 'tests/categories.test.mjs', 'tests/redesign-home.test.mjs', 'tests/helpers/shopify-liquid.mjs'];
   for (const file of files) {
