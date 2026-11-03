@@ -19,7 +19,11 @@
       <p>{{ section.settings.hero_text | escape }}</p>
       <div class="ds-r-hero-actions">
         <a class="ds-r-button" href="#menu">{{ section.settings.hero_cta | escape }}<img class="ds-r-light-icon" src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="22" height="22"></a>
-        <button class="ds-r-text-link" type="button" data-ds-r-open="how">{{ section.settings.how_label | escape }}</button>
+        {%- if pages['pasteles-personalizados'] != blank -%}
+          <a class="ds-r-button" href="{{ pages['pasteles-personalizados'].url }}">Cotiza tu pastel<img class="ds-r-light-icon" src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="22" height="22"></a>
+        {%- else -%}
+          <button class="ds-r-text-link" type="button" data-ds-r-open="how">{{ section.settings.how_label | escape }}</button>
+        {%- endif -%}
       </div>
     </div>
   </div>
