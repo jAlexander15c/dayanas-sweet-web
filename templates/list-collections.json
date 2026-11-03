@@ -2,12 +2,36 @@
   "sections": {
     "main": {
       "type": "main-list-collections",
+      "blocks": {
+        "cookies": {
+          "type": "category",
+          "settings": {
+            "collection": "galletas",
+            "title": "Galletas",
+            "fallback_image": "cookies",
+            "link_label": "Ver galletas",
+            "image_alt": "Caja rosa con galletas de chocolate"
+          }
+        },
+        "brownies": {
+          "type": "category",
+          "settings": {
+            "collection": "brownies",
+            "title": "Brownies",
+            "fallback_image": "brownies",
+            "link_label": "Ver brownies",
+            "image_alt": "Brownie de chocolate de corteza crujiente"
+          }
+        }
+      },
+      "block_order": [
+        "cookies",
+        "brownies"
+      ],
       "settings": {
-        "title": "Nuestras colecciones",
-        "sort": "alphabetical",
-        "image_ratio": "square",
-        "columns_desktop": 3,
-        "columns_mobile": "2"
+        "title": "Nuestras categor?as",
+        "show_count": false,
+        "hide_empty": false
       }
     }
   },

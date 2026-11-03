@@ -1,3 +1,4 @@
+{{ 'ds-categories.css' | asset_url | stylesheet_tag }}
 {%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
 {%- liquid
   assign newsletter_id = 'ds-r-newsletter-' | append: section.id
@@ -67,31 +68,7 @@
     <p>{{ section.settings.menu_text | escape }}</p>
     <a class="ds-r-button ds-r-menu-all" href="{{ routes.all_products_collection_url }}">{{ section.settings.menu_cta | escape }}<img src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="22" height="22"></a>
   </div>
-  <div class="ds-r-category-grid">
-    {%- for block in section.blocks -%}
-      {%- if block.type == 'category' -%}
-        {%- liquid
-          assign category_collection = block.settings.collection
-          assign category_title = category_collection.title | default: block.settings.title
-          assign category_url = category_collection.url | default: routes.all_products_collection_url
-          assign category_style = 'ds-r-cookies'
-          assign category_asset = 'ds-r-cookies-category.png'
-          if block.settings.fallback_image == 'brownies'
-            assign category_style = 'ds-r-brownies'
-            assign category_asset = 'ds-r-brownie-category.png'
-          endif
-        -%}
-        <a class="ds-r-category {{ category_style }}" href="{{ category_url }}" {{ block.shopify_attributes }}>
-          {%- if block.settings.image != blank -%}
-            <img class="ds-r-category-photo" src="{{ block.settings.image | image_url: width: 1200 }}" width="{{ block.settings.image.width }}" height="{{ block.settings.image.height }}" alt="{{ block.settings.image_alt | escape }}" loading="lazy">
-          {%- else -%}
-            <img class="ds-r-category-photo" src="{{ category_asset | asset_url }}" width="1200" height="1200" alt="{{ block.settings.image_alt | escape }}" loading="lazy">
-          {%- endif -%}
-          <div class="ds-r-category-caption"><h3>{{ category_title | escape }}</h3><span>{{ block.settings.link_label | escape }}<img src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="21" height="21"></span></div>
-        </a>
-      {%- endif -%}
-    {%- endfor -%}
-  </div>
+  {% render 'ds-category-grid', blocks: section.blocks, hide_empty: section.settings.hide_empty, show_count: section.settings.show_count, heading_id: menu_title_id %}
 </section>
 
 {% schema %}
@@ -118,13 +95,15 @@
     {"type":"text","id":"email_label","label":"Etiqueta del correo","default":"Tu correo electrónico"},
     {"type":"text","id":"signup_label","label":"Botón de suscripción","default":"Quiero enterarme"},
     {"type":"textarea","id":"signup_success","label":"Suscripción confirmada","default":"¡Ya estás en la lista! Te avisaremos cuando abramos los pedidos y anunciemos la próxima fecha de envío."},
+    {"type":"checkbox","id":"show_count","label":"Mostrar contador de productos","default":false},
+    {"type":"checkbox","id":"hide_empty","label":"Ocultar categor?as sin productos disponibles","default":false},
     {"type":"text","id":"menu_title","label":"Título del menú","default":"Elige tu antojo"},
     {"type":"textarea","id":"menu_text","label":"Presentación del menú","default":"Sabores de Cuba y Estados Unidos, con nuestro toque, desde Houston."},
     {"type":"text","id":"menu_cta","label":"Botón del catálogo","default":"Ver todo el menú"}
   ],
-  "max_blocks": 2,
+  "max_blocks": 12,
   "blocks": [{
-    "type":"category","name":"Categoría","limit":2,
+    "type":"category","name":"Categoría","limit":12,
     "settings":[
       {"type":"collection","id":"collection","label":"Colección"},
       {"type":"text","id":"title","label":"Título de respaldo","default":"Galletas","info":"Si hay colección seleccionada, se muestra su título real."},

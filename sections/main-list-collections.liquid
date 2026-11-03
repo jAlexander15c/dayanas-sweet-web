@@ -1,139 +1,86 @@
-{{ 'component-card.css' | asset_url | stylesheet_tag }}
-{{ 'section-collection-list.css' | asset_url | stylesheet_tag }}
-
-<div class="page-width">
-  <h1 class="title title--primary inline-richtext{% if settings.animations_reveal_on_scroll %} scroll-trigger animate--fade-in{% endif %}">
-    {{ section.settings.title }}
-  </h1>
-  {%- liquid
-    case section.settings.sort
-      when 'products_high', 'products_low'
-        assign collections = collections | sort: 'all_products_count'
-      when 'date', 'date_reversed'
-        assign collections = collections | sort: 'published_at'
-    endcase
-
-    if section.settings.sort == 'products_high' or section.settings.sort == 'date_reversed' or section.settings.sort == 'alphabetical_reversed'
-      assign collections = collections | reverse
-    endif
-
-    assign moduloResult = 28 | modulo: section.settings.columns_desktop
-    assign paginate_by = 30
-    if moduloResult == 0
-      assign paginate_by = 28
-    endif
-  -%}
-  {%- paginate collections by paginate_by -%}
-    <ul
-      class="collection-list grid grid--{{ section.settings.columns_desktop }}-col-desktop grid--{{ section.settings.columns_mobile }}-col-tablet-down"
-      role="list"
-    >
-      {%- for collection in collections -%}
-        <li
-          class="collection-list__item grid__item{% if settings.animations_reveal_on_scroll %} scroll-trigger animate--slide-in{% endif %}"
-          {% if settings.animations_reveal_on_scroll %}
-            data-cascade
-            style="--animation-order: {{ forloop.index }};"
-          {% endif %}
-        >
-          {% render 'card-collection',
-            card_collection: collection,
-            media_aspect_ratio: section.settings.image_ratio,
-            columns: 3
-          %}
-        </li>
-      {%- endfor -%}
-    </ul>
-    {% render 'pagination', paginate: paginate %}
-  {%- endpaginate -%}
-</div>
+{{ 'ds-categories.css' | asset_url | stylesheet_tag }}
+{%- assign heading_id = 'ds-category-title-' | append: section.id -%}
+<section class="ds-r-menu-section" aria-labelledby="{{ heading_id }}">
+  <div class="ds-r-menu-heading"><h1 class="ds-category-page-title" id="{{ heading_id }}">{{ section.settings.title | escape }}</h1></div>
+  {% render 'ds-category-grid', blocks: section.blocks, hide_empty: section.settings.hide_empty, show_count: section.settings.show_count, heading_id: heading_id %}
+</section>
 {% schema %}
 {
-  "name": "t:sections.main-list-collections.name",
-  "class": "section",
+  "name": "DS ? Categor?as",
+  "class": "ds-r-home",
   "settings": [
     {
-      "type": "inline_richtext",
+      "type": "text",
       "id": "title",
-      "label": "t:sections.main-list-collections.settings.title.label",
-      "default": "t:sections.main-list-collections.settings.title.default"
+      "label": "T?tulo",
+      "default": "Nuestras categor?as"
     },
     {
-      "type": "select",
-      "id": "sort",
-      "options": [
+      "type": "checkbox",
+      "id": "show_count",
+      "label": "Mostrar contador de productos",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "hide_empty",
+      "label": "Ocultar categor?as sin productos disponibles",
+      "default": false
+    }
+  ],
+  "max_blocks": 12,
+  "blocks": [
+    {
+      "type": "category",
+      "name": "Categoría",
+      "limit": 12,
+      "settings": [
         {
-          "value": "alphabetical",
-          "label": "t:sections.main-list-collections.settings.sort.options__1.label"
+          "type": "collection",
+          "id": "collection",
+          "label": "Colección"
         },
         {
-          "value": "alphabetical_reversed",
-          "label": "t:sections.main-list-collections.settings.sort.options__2.label"
+          "type": "text",
+          "id": "title",
+          "label": "Título de respaldo",
+          "default": "Galletas",
+          "info": "Si hay colección seleccionada, se muestra su título real."
         },
         {
-          "value": "date_reversed",
-          "label": "t:sections.main-list-collections.settings.sort.options__3.label"
+          "type": "text",
+          "id": "link_label",
+          "label": "Texto del enlace",
+          "default": "Ver galletas"
         },
         {
-          "value": "date",
-          "label": "t:sections.main-list-collections.settings.sort.options__4.label"
+          "type": "image_picker",
+          "id": "image",
+          "label": "Foto de categoría"
         },
         {
-          "value": "products_high",
-          "label": "t:sections.main-list-collections.settings.sort.options__5.label"
+          "type": "text",
+          "id": "image_alt",
+          "label": "Descripción de la foto",
+          "default": "Caja rosa con galletas de chocolate"
         },
         {
-          "value": "products_low",
-          "label": "t:sections.main-list-collections.settings.sort.options__6.label"
+          "type": "select",
+          "id": "fallback_image",
+          "label": "Foto de respaldo",
+          "default": "cookies",
+          "options": [
+            {
+              "value": "cookies",
+              "label": "Galletas"
+            },
+            {
+              "value": "brownies",
+              "label": "Brownies"
+            }
+          ]
         }
-      ],
-      "default": "alphabetical",
-      "label": "t:sections.main-list-collections.settings.sort.label"
-    },
-    {
-      "type": "select",
-      "id": "image_ratio",
-      "options": [
-        {
-          "value": "adapt",
-          "label": "t:sections.main-list-collections.settings.image_ratio.options__1.label"
-        },
-        {
-          "value": "portrait",
-          "label": "t:sections.main-list-collections.settings.image_ratio.options__2.label"
-        },
-        {
-          "value": "square",
-          "label": "t:sections.main-list-collections.settings.image_ratio.options__3.label"
-        }
-      ],
-      "default": "adapt",
-      "label": "t:sections.main-list-collections.settings.image_ratio.label"
-    },
-    {
-      "type": "range",
-      "id": "columns_desktop",
-      "min": 1,
-      "max": 6,
-      "step": 1,
-      "default": 3,
-      "label": "t:sections.main-list-collections.settings.columns_desktop.label"
-    },
-    {
-      "type": "select",
-      "id": "columns_mobile",
-      "options": [
-        {
-          "value": "1",
-          "label": "t:sections.main-list-collections.settings.columns_mobile.options__1.label"
-        },
-        {
-          "value": "2",
-          "label": "t:sections.main-list-collections.settings.columns_mobile.options__2.label"
-        }
-      ],
-      "default": "2",
-      "label": "t:sections.main-list-collections.settings.columns_mobile.label"
+      ]
     }
   ]
 }
