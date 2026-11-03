@@ -1,11 +1,11 @@
 {
   "current": {
-    "ds_batch_open": false,
+    "ds_batch_open": true,
     "ds_batch_start": "",
-    "ds_batch_close": "",
-    "ds_batch_ship": "",
+    "ds_batch_close": "domingo 15 de noviembre, 11:59 p. m., hora de Houston",
+    "ds_batch_ship": "miércoles 18 de noviembre",
     "ds_batch_bake": "",
-    "ds_batch_close_at": "",
+    "ds_batch_close_at": "2026-11-15T23:59:00-06:00",
     "logo_width": 190,
     "customer_account_menu": "customer-account-main-menu",
     "color_schemes": {
