@@ -60,6 +60,9 @@
   endif
   assign card_sizes = image_sizes | default: '(min-width: 990px) 300px, 70vw'
   assign card_quick_add = quick_add | default: 'standard'
+  capture requires_topping
+    render 'ds-topping-picker', product: product, mode: 'requires'
+  endcapture
 -%}
 <article class="ds-card{% if sold_out %} is-out{% endif %}">
   <a class="ds-card__media" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
@@ -90,6 +93,8 @@
       {%- if card_quick_add == 'standard' -%}
       {%- if sold_out or ds_closed == '1' -%}
         <span class="ds-add is-disabled">{% if sold_out %}Agotado{% else %}Cerrado{% endif %}</span>
+      {%- elsif requires_topping == '1' -%}
+        <a class="ds-add" href="{{ product.url }}" aria-label="Elegir topping de {{ product.title | escape }}">{{ 'products.product.choose_topping' | t }}</a>
       {%- elsif needs_choice == false -%}
         <product-form class="ds-card__form" data-section-id="{{ section_id }}" data-hide-errors="true">
           {%- form 'product', product, id: form_id, novalidate: 'novalidate', data-type: 'add-to-cart-form' -%}

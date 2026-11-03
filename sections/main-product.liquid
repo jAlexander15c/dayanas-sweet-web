@@ -492,6 +492,8 @@
                     block: block,
                     product_form_id: product_form_id
                   %}
+                {%- when 'ds_topping' -%}
+                  {%- render 'ds-topping-picker', product: product, block: block, product_form_id: product_form_id -%}
                 {%- when 'buy_buttons' -%}
                   {%- render 'buy-buttons',
                     block: block,
@@ -920,6 +922,48 @@
             }
           ],
           "default": "circle"
+        }
+      ]
+    },
+    {
+      "type": "ds_topping",
+      "name": "Selector de opción obligatoria",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Producto que requiere topping"
+        },
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Etiqueta",
+          "default": "Elige tu topping"
+        },
+        {
+          "type": "text",
+          "id": "property_name",
+          "label": "Nombre de la propiedad de línea",
+          "default": "Topping"
+        },
+        {
+          "type": "textarea",
+          "id": "options",
+          "label": "Opciones (una por línea)",
+          "default": "Chocolate\nCaramelo\nDulce de leche"
+        },
+        {
+          "type": "text",
+          "id": "error_text",
+          "label": "Mensaje de error",
+          "default": "Elige un topping para continuar."
+        },
+        {
+          "type": "checkbox",
+          "id": "hide_dynamic_checkout",
+          "label": "Ocultar botones de pago dinámico",
+          "default": true
         }
       ]
     },
