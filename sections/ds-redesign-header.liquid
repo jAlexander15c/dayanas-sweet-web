@@ -56,6 +56,10 @@
     <li><h3>{{ section.settings.step_2_title | escape }}</h3><p>{{ section.settings.step_2_body | escape }}</p></li>
     <li><h3>{{ section.settings.step_3_title | escape }}</h3><p>{{ section.settings.step_3_body | escape }}</p></li>
   </ol>
+  {%- if pages['pasteles-personalizados'] != blank -%}
+    <p>Para un pastel personalizado, envía tu idea y fotos de referencia. Dayana te responderá con una propuesta y su precio.</p>
+    <p><a class="ds-r-text-link" href="{{ pages['pasteles-personalizados'].url }}">Cotizar un pastel o consultar mis solicitudes</a></p>
+  {%- endif -%}
   {%- if ds_closed == '1' -%}
     <a class="ds-r-button" href="{{ routes.root_url }}#ds-r-email" data-ds-r-signup>{{ section.settings.signup_label | escape }}<img class="ds-r-light-icon" src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="20" height="20"></a>
   {%- else -%}

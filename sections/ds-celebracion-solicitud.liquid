@@ -1,0 +1,165 @@
+{{ 'ds-celebracion-solicitud.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'ds-celebracion-solicitud.js' | asset_url }}" defer="defer"></script>
+
+<section class="ds-request" data-ds-request data-enabled="{{ section.settings.service_enabled }}" data-customer="{% if customer %}true{% else %}false{% endif %}" data-customer-key="{{ customer.id }}" data-proxy="{{ section.settings.proxy_path | escape }}" data-tracking-url="{{ section.settings.tracking_page.url | escape }}" aria-labelledby="DSRequestTitle-{{ section.id }}">
+  <div class="ds-request__wrap">
+    <header>
+      <p class="ds-request__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      <h1 id="DSRequestTitle-{{ section.id }}">{{ section.settings.title | escape }} <em>{{ section.settings.title_accent | escape }}</em></h1>
+      <p class="ds-request__intro">{{ section.settings.intro | escape }}</p>
+    </header>
+    <div class="ds-request__note" data-gate role="status">
+      {% if section.settings.service_enabled == false %}
+        {{ section.settings.unavailable_message | escape }}
+      {% elsif customer == blank %}
+        <p>Inicia sesión en tu cuenta de Shopify para enviar una solicitud y continuar la conversación con Dayana.</p>
+        <a class="ds-request__button" href="{{ routes.storefront_login_url | escape }}">Iniciar sesión</a>
+      {% else %}
+        Preparando tu solicitud…
+      {% endif %}
+    </div>
+    {% if customer %}
+      <p class="ds-request__muted" data-js-note>Necesitas JavaScript para completar la solicitud y adjuntar fotos.</p>
+      <div data-live hidden>
+        <ol class="ds-request__steps" aria-label="Pasos de tu solicitud">
+          <li data-marker="0" aria-current="step"><b>1</b>Tu pastel</li>
+          <li data-marker="1"><b>2</b>Tu idea</li>
+          <li data-marker="2"><b>3</b>Fecha y contacto</li>
+          <li data-marker="3"><b>4</b>Revisión</li>
+        </ol>
+        <div class="ds-request__layout" data-layout>
+          <form data-form novalidate>
+            <section data-step="0" aria-labelledby="DSRequestStep0-{{ section.id }}">
+              <h2 id="DSRequestStep0-{{ section.id }}" tabindex="-1">Empecemos por tu pastel</h2>
+              <fieldset>
+                <legend>¿Cuántos pisos?</legend>
+                <div class="ds-request__choices">
+                  <button type="button" data-floors="1" aria-pressed="true">Un piso</button>
+                  <button type="button" data-floors="2" aria-pressed="false">Dos pisos</button>
+                </div>
+              </fieldset>
+              <fieldset data-size-field>
+                <legend>Diámetro del pastel redondo</legend>
+                <div class="ds-request__choices">
+                  {% assign ds_diameters = '6,8,10,12,14,16' | split: ',' %}
+                  {% for ds_diameter in ds_diameters %}
+                    <button type="button" data-diameter="{{ ds_diameter }}" aria-pressed="{% if ds_diameter == '8' %}true{% else %}false{% endif %}">{{ ds_diameter }}″</button>
+                  {% endfor %}
+                </div>
+              </fieldset>
+              <p class="ds-request__note" data-height-note>Dayana propondrá la altura según tu diseño.</p>
+              <div data-flavors></div>
+              <label>Cobertura para todo el pastel<select data-coating></select></label>
+            </section>
+            <section data-step="1" hidden aria-labelledby="DSRequestStep1-{{ section.id }}">
+              <h2 id="DSRequestStep1-{{ section.id }}" tabindex="-1">Cuéntanos cómo lo imaginas</h2>
+              <label for="DSRequestPhotos-{{ section.id }}">Fotos de referencia</label>
+              <input id="DSRequestPhotos-{{ section.id }}" data-files type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="DSRequestPhotoHelp-{{ section.id }}">
+              <p id="DSRequestPhotoHelp-{{ section.id }}" class="ds-request__muted">Opcionales. Hasta 3 fotos JPEG, PNG o WEBP, de 2 MB cada una. Son referencias privadas para Dayana; no garantizan una reproducción exacta. Al elegir nuevas fotos, se reemplaza la selección anterior.</p>
+              <div class="ds-request__photos" data-photos></div>
+              <label for="DSRequestComments-{{ section.id }}">Comentarios e información adicional</label>
+              <textarea id="DSRequestComments-{{ section.id }}" data-comments rows="7" maxlength="2000" placeholder="Cuéntanos los colores, nombres, textos y cualquier detalle importante de tu idea."></textarea>
+              <fieldset class="ds-request__decorations">
+                <legend>Decoración que te gustaría</legend>
+                <label class="ds-request__check"><input type="checkbox" data-decoration="0">Topper personalizado</label>
+                <label class="ds-request__check"><input type="checkbox" data-decoration="1">Imagen comestible</label>
+                <label class="ds-request__check"><input type="checkbox" data-decoration="2">Flores de fondant</label>
+              </fieldset>
+              <p class="ds-request__note">Dayana revisará todos los detalles y cotizará la decoración según tu diseño.</p>
+            </section>
+            <section data-step="2" hidden aria-labelledby="DSRequestStep2-{{ section.id }}">
+              <h2 id="DSRequestStep2-{{ section.id }}" tabindex="-1">¿Cuándo celebramos?</h2>
+              <p class="ds-request__muted">Recogida · Horario de Houston (America/Chicago)</p>
+              <div class="ds-request__note">
+                <p><strong>Dirección de recogida:</strong> {{ section.settings.pickup_address | escape }}</p>
+                <p>{{ section.settings.pickup_hours | escape }}</p>
+                <p>Dayana puede cerrar fechas en el calendario. La fecha que solicites necesita su aceptación.</p>
+              </div>
+              <div class="ds-request__two">
+                <label>Fecha solicitada<input type="date" data-date required></label>
+                <label>Hora solicitada<input type="time" data-time min="08:00" max="18:00" required></label>
+              </div>
+              <p class="ds-request__muted" data-calendar-status role="status">Consultando las fechas disponibles…</p>
+              <button type="button" data-calendar-retry>Actualizar fechas disponibles</button>
+              <p class="ds-request__note" data-date-status aria-live="polite">Indica la fecha y hora que te gustaría. Dayana confirmará los horarios y la disponibilidad.</p>
+              <p class="ds-request__muted">Personalizados normales: desde 7 días. Entre 24 horas y menos de 7 días: solicitud urgente, sujeta a aprobación y recargo. No se aceptan solicitudes con menos de 24 horas. Dayana debe confirmar la disponibilidad.</p>
+              <h3>Tu contacto</h3>
+              <p>Usaremos tu cuenta de Shopify: <strong>{{ customer.name | escape }}</strong> · {{ customer.email | escape }}</p>
+              <p class="ds-request__muted">Podrás leer la cotización y responder a Dayana desde el seguimiento de tu solicitud.</p>
+              <p class="ds-request__note">{{ section.settings.payment_policy | escape }}</p>
+            </section>
+            <section data-step="3" hidden aria-labelledby="DSRequestStep3-{{ section.id }}">
+              <h2 id="DSRequestStep3-{{ section.id }}" tabindex="-1">Revisa los detalles</h2>
+              <dl class="ds-request__summary ds-request__review" data-review></dl>
+              <p class="ds-request__muted">Recogida: {{ section.settings.pickup_address | escape }}. {{ section.settings.pickup_hours | escape }}</p>
+              <p class="ds-request__note">{{ section.settings.payment_policy | escape }}</p>
+              <p class="ds-request__note">Enviar la solicitud no reserva cupo ni realiza cobros. Dayana revisará tu idea y preparará una cotización con precio, detalles y vencimiento. Podrás pedir ajustes antes de aceptarla. Aceptar la cotización tampoco confirma una reserva: esta depende del pago correspondiente y de que siga habiendo disponibilidad.</p>
+              <label class="ds-request__check"><input type="checkbox" data-confirm required>Entiendo que la fecha está sujeta a confirmación y que enviar esta solicitud no confirma una reserva.</label>
+            </section>
+            <div class="ds-request__actions">
+              <button class="ds-request__back" data-back type="button" hidden>Volver</button>
+              <button class="ds-request__button" data-next type="submit">Continuar a tu idea</button>
+            </div>
+          </form>
+          <aside class="ds-request__aside" aria-label="Resumen de tu selección">
+            <h3>Tu pastel</h3>
+            <dl class="ds-request__summary" data-summary></dl>
+            <p class="ds-request__note">Hecho a mano, para tu celebración. El precio se define en tu cotización.</p>
+            <p class="ds-request__muted">Tu selección se conserva al avanzar o volver.</p>
+          </aside>
+        </div>
+        <section class="ds-request__note" data-recovery hidden aria-labelledby="DSRequestRecovery-{{ section.id }}">
+          <h2 id="DSRequestRecovery-{{ section.id }}">Tu solicitud ya está creada</h2>
+          <p>Identificador: <span data-recovery-id></span>. Puedes completar el envío de las fotos sin crear otra solicitud.</p>
+          <p>Fotos pendientes: <span data-pending-photos></span></p>
+          <label>Selecciona de nuevo las mismas fotos pendientes<input type="file" data-recover-files multiple accept="image/jpeg,image/png,image/webp"></label>
+          <button type="button" class="ds-request__button" data-recover-submit>Completar envío de fotos</button>
+          <a data-recovery-link hidden>Ver seguimiento</a>
+        </section>
+        <p class="ds-request__error" data-error role="alert" hidden></p>
+        <button type="button" class="ds-request__button" data-retry hidden>Reintentar envío sin duplicar solicitud</button>
+        <button type="button" data-edit hidden>Revisar los datos de mi solicitud</button>
+        <a data-login href="{{ routes.storefront_login_url | escape }}" hidden>Iniciar sesión de nuevo</a>
+        <div class="ds-request__note" data-created hidden role="status">
+          <p>Solicitud creada: <span data-created-id></span>. El envío de la solicitud no confirma reserva.</p>
+          <a data-created-link hidden>Ver seguimiento de esta solicitud</a>
+        </div>
+        <section class="ds-request__success" data-success hidden>
+          <h2 tabindex="-1" data-success-title>{{ section.settings.success_title | escape }}</h2>
+          <p>{{ section.settings.success_message | escape }}</p>
+          <a class="ds-request__button" data-success-link hidden>Ver mi solicitud</a>
+        </section>
+        <section class="ds-request__requests" aria-labelledby="DSRequestList-{{ section.id }}">
+          <h2 id="DSRequestList-{{ section.id }}">Tus solicitudes</h2>
+          <p class="ds-request__muted" data-list-status role="status"></p>
+          <ul data-requests></ul>
+          <button type="button" data-list-retry>Actualizar mis solicitudes</button>
+        </section>
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "DS — Solicitud pastel",
+  "tag": "section",
+  "class": "section-ds-request",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Texto superior", "default": "Dayana’s Sweet · Celebraciones" },
+    { "type": "text", "id": "title", "label": "Título", "default": "Un pastel para" },
+    { "type": "text", "id": "title_accent", "label": "Título destacado", "default": "tu celebración." },
+    { "type": "textarea", "id": "intro", "label": "Introducción", "default": "Cuéntanos la idea que tienes en mente. Dayana preparará una propuesta para tu pastel personalizado." },
+    { "type": "checkbox", "id": "service_enabled", "label": "Activar solicitudes", "default": false, "info": "Activar solo después de configurar y validar el servicio, la agenda y el acceso de clientes." },
+    { "type": "text", "id": "proxy_path", "label": "Ruta del servicio", "default": "/apps/celebraciones", "info": "Ruta local del app proxy de Shopify, sin barra final." },
+    { "type": "page", "id": "tracking_page", "label": "Página de seguimiento", "info": "Página con la plantilla celebracion-seguimiento." },
+    { "type": "text", "id": "pickup_address", "label": "Dirección de recogida", "default": "4319 Freya Point Dr, Fulshear, TX 77441" },
+    { "type": "text", "id": "pickup_hours", "label": "Horario de recogida", "default": "Todos los días, de 8:00 a. m. a 6:00 p. m. (horario de Houston). Última hora de recogida: 18:00." },
+    { "type": "textarea", "id": "payment_policy", "label": "Política de pagos", "default": "Personalizados normales: 60% de anticipo y 40% de saldo, que debe pagarse 24 horas antes de recoger. Urgentes: pago del 100% después de la aprobación. Los pasteles se entregan en su caja, sin impuesto de venta. No pagas al enviar la solicitud. La reserva se confirma con el pago correspondiente, siempre que siga habiendo disponibilidad." },
+    { "type": "textarea", "id": "unavailable_message", "label": "Servicio no disponible", "default": "Estamos preparando las solicitudes de pasteles personalizados. Pronto podrás contarnos tu idea desde aquí." },
+    { "type": "text", "id": "success_title", "label": "Título al enviar", "default": "Tu idea ya está en manos de Dayana." },
+    { "type": "textarea", "id": "success_message", "label": "Mensaje al enviar", "default": "Recibimos tu solicitud y las fotos seleccionadas. Dayana revisará los detalles y la disponibilidad. Podrás consultar la propuesta y continuar la conversación desde tu seguimiento. Todavía no hay una reserva confirmada." }
+  ],
+  "presets": [{ "name": "DS — Solicitud pastel" }]
+}
+{% endschema %}

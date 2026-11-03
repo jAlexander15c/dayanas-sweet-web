@@ -1,0 +1,9 @@
+{
+  "sections": {
+    "main": {
+      "type": "ds-celebracion-solicitud",
+      "settings": { "service_enabled": true, "tracking_page": "seguimiento-de-tu-pastel" }
+    }
+  },
+  "order": ["main"]
+}

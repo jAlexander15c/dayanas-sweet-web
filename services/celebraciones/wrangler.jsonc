@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "dayanas-celebraciones",
+  "main": "src/cloudflare-worker.mjs",
+  "compatibility_date": "2026-11-03",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": { "enabled": false },
+  "rules": [{ "type": "Text", "globs": ["**/admin-ui.js", "**/admin-ui.css"], "fallthrough": false }],
+  "vars": {
+    "SERVICE_ENABLED": "true",
+    "PAYMENTS_ENABLED": "true",
+    "PAYMENTS_MODE": "REAL",
+    "TEST_CUSTOMER_IDS": "",
+    "SHOPIFY_CLIENT_ID": "76bab560bfbcd26f94c8fd493bd2dbaa",
+    "SHOPIFY_SHOP": "2n36xt-3a.myshopify.com",
+    "SHOPIFY_STAFF_IDS": "164797317424",
+    "STOREFRONT_ORIGIN": "https://dayanassweet.com"
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "CELEBRATIONS", "class_name": "CelebrationStore" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["CelebrationStore"] }]
+}

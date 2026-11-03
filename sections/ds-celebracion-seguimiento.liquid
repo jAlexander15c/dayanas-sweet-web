@@ -1,0 +1,160 @@
+{{ 'ds-celebracion-seguimiento.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'ds-celebracion-seguimiento.js' | asset_url }}" defer="defer"></script>
+<script src="{{ 'ds-celebracion-servicio.js' | asset_url }}" defer="defer"></script>
+
+<section class="ds-tracking" data-ds-tracking data-tracking-id="" data-service-enabled="{{ section.settings.service_enabled }}" data-proxy-path="{{ section.settings.proxy_path | escape }}" data-shop="{{ shop.permanent_domain | escape }}" data-payment-host="{{ shop.domain | escape }}" aria-labelledby="DSTrackingTitle-{{ section.id }}">
+  <div class="ds-tracking__wrap">
+    <header class="ds-tracking__header">
+      <p class="ds-tracking__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      <h1 id="DSTrackingTitle-{{ section.id }}">{{ section.settings.title | escape }} <em>{{ section.settings.title_accent | escape }}</em></h1>
+    </header>
+
+    <div class="ds-tracking__availability">
+      <p data-status-message role="status">El seguimiento todavía no está disponible.</p>
+      <button class="ds-tracking__button ds-tracking__button--secondary" data-retry type="button" hidden>{{ section.settings.retry_label | escape }}</button>
+    </div>
+
+    <div data-content hidden>
+      <div class="ds-tracking__order">
+        <p class="ds-tracking__pickup" data-pickup></p>
+        <p class="ds-tracking__status" data-order-status></p>
+      </div>
+
+      <section class="ds-tracking__card ds-tracking__payments" aria-labelledby="DSTrackingPayments-{{ section.id }}">
+        <h2 class="ds-tracking__eyebrow" id="DSTrackingPayments-{{ section.id }}">{{ section.settings.payments_title | escape }}</h2>
+        <dl class="ds-tracking__amounts">
+          <div>
+            <dt data-total-label>{{ section.settings.total_label | escape }}</dt>
+            <dd data-total></dd>
+          </div>
+          <div>
+            <dt>{{ section.settings.paid_label | escape }}</dt>
+            <dd data-paid></dd>
+          </div>
+          <div class="ds-tracking__balance">
+            <dt data-balance-label>{{ section.settings.balance_label | escape }}</dt>
+            <dd data-balance></dd>
+          </div>
+        </dl>
+        <div class="ds-tracking__breakdown" data-breakdown hidden></div>
+        <p class="ds-tracking__muted" data-credit-note hidden>{{ section.settings.credit_note | escape }}</p>
+        <p class="ds-tracking__muted" data-payments-note>{{ section.settings.payments_note | escape }}</p>
+        <div class="ds-tracking__comment-form" aria-label="Pago del pedido">
+          <p class="ds-tracking__muted" data-payment-note role="status" aria-live="polite"></p>
+          <button class="ds-tracking__button" data-pay type="button" hidden>Pagar anticipo</button>
+          <a class="ds-tracking__button" data-payment-link rel="noopener noreferrer" hidden>Pagar anticipo</a>
+          <button class="ds-tracking__button ds-tracking__button--secondary" data-payment-sync type="button" hidden>{{ section.settings.payment_sync_label | escape }}</button>
+        </div>
+      </section>
+
+      <section class="ds-tracking__pending" data-pending hidden aria-labelledby="DSTrackingPending-{{ section.id }}">
+        <h2 id="DSTrackingPending-{{ section.id }}" data-pending-title>{{ section.settings.pending_title | escape }}</h2>
+        <p class="ds-tracking__copy" data-pending-reply></p>
+        <div class="ds-tracking__two">
+          <div>
+            <h3>{{ section.settings.can_title | escape }}</h3>
+            <p class="ds-tracking__copy" data-pending-can></p>
+          </div>
+          <div>
+            <h3>{{ section.settings.changes_title | escape }}</h3>
+            <p class="ds-tracking__copy" data-pending-changes></p>
+          </div>
+        </div>
+        <dl class="ds-tracking__pending-amounts">
+          <div><dt>{{ section.settings.pending_total_label | escape }}</dt><dd data-pending-total></dd></div>
+          <div><dt>{{ section.settings.pending_balance_label | escape }}</dt><dd data-pending-balance></dd></div>
+        </dl>
+        <div class="ds-tracking__breakdown" data-pending-breakdown hidden></div>
+        <p class="ds-tracking__muted" data-pending-note>{{ section.settings.pending_note | escape }}</p>
+        <button class="ds-tracking__button" data-accept type="button">{{ section.settings.accept_label | escape }}</button>
+      </section>
+
+      <section class="ds-tracking__card" data-accepted aria-labelledby="DSTrackingAccepted-{{ section.id }}">
+        <h2 class="ds-tracking__eyebrow" id="DSTrackingAccepted-{{ section.id }}">{{ section.settings.accepted_title | escape }}</h2>
+        <div class="ds-tracking__request">
+          <h3>{{ section.settings.request_title | escape }}</h3>
+          <p class="ds-tracking__copy" data-request></p>
+        </div>
+        <div class="ds-tracking__two">
+          <div>
+            <h3>{{ section.settings.can_title | escape }}</h3>
+            <p class="ds-tracking__copy" data-can-prepare></p>
+          </div>
+          <div>
+            <h3>{{ section.settings.changes_title | escape }}</h3>
+            <p class="ds-tracking__copy" data-changes></p>
+          </div>
+        </div>
+        <div class="ds-tracking__answer">
+          <h3>{{ section.settings.reply_title | escape }}</h3>
+          <p class="ds-tracking__copy" data-reply></p>
+        </div>
+      </section>
+
+      <section class="ds-tracking__card" aria-labelledby="DSTrackingConversation-{{ section.id }}">
+        <p class="ds-tracking__eyebrow">{{ section.settings.comments_label | escape }}</p>
+        <h2 id="DSTrackingConversation-{{ section.id }}">{{ section.settings.comments_title | escape }}</h2>
+        <p class="ds-tracking__muted">{{ section.settings.comments_note | escape }}</p>
+        <div class="ds-tracking__comments" data-comments></div>
+        <form class="ds-tracking__comment-form" data-comment-form>
+          <label for="DSTrackingComment-{{ section.id }}">{{ section.settings.comment_label | escape }}</label>
+          <textarea id="DSTrackingComment-{{ section.id }}" name="comment" rows="5" maxlength="2000" required data-comment-input aria-describedby="DSTrackingCommentHelp-{{ section.id }}"></textarea>
+          <p class="ds-tracking__muted" id="DSTrackingCommentHelp-{{ section.id }}">{{ section.settings.comment_help | escape }}</p>
+          <button class="ds-tracking__button" data-send type="submit">{{ section.settings.send_label | escape }}</button>
+        </form>
+        <p class="ds-tracking__closed" data-comment-closed hidden>{{ section.settings.comments_closed | escape }}</p>
+      </section>
+
+      <details class="ds-tracking__history">
+        <summary>{{ section.settings.history_title | escape }}</summary>
+        <div class="ds-tracking__history-items" data-history></div>
+      </details>
+    </div>
+
+    <p class="ds-tracking__action-message" data-action-message role="status" aria-atomic="true"></p>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "DS · Seguimiento pastel",
+  "settings": [
+    { "type": "checkbox", "id": "service_enabled", "label": "Activar servicio conectado", "default": false, "info": "Activar solo después de configurar y verificar la app y su proxy." },
+    { "type": "text", "id": "proxy_path", "label": "Ruta del proxy de la app", "default": "/apps/celebraciones" },
+    { "type": "text", "id": "eyebrow", "label": "Etiqueta superior", "default": "Tu celebración" },
+    { "type": "text", "id": "title", "label": "Título", "default": "Tu pastel," },
+    { "type": "text", "id": "title_accent", "label": "Título destacado", "default": "paso a paso." },
+    { "type": "text", "id": "retry_label", "label": "Botón de reintento", "default": "Volver a intentar" },
+    { "type": "header", "content": "Reserva y pagos" },
+    { "type": "text", "id": "payments_title", "label": "Título de pagos", "default": "Tu reserva y pagos" },
+    { "type": "text", "id": "total_label", "label": "Etiqueta del total", "default": "Precio" },
+    { "type": "text", "id": "paid_label", "label": "Etiqueta de los pagos recibidos", "default": "Recibido" },
+    { "type": "text", "id": "balance_label", "label": "Etiqueta del saldo", "default": "Saldo pendiente" },
+    { "type": "textarea", "id": "payments_note", "label": "Nota de pagos", "default": "Paga el saldo 24 horas antes de recoger. Cualquier ajuste requiere tu aceptación." },
+    { "type": "text", "id": "payment_sync_label", "label": "Botón para comprobar un pago", "default": "Actualizar estado del pago" },
+    { "type": "textarea", "id": "credit_note", "label": "Nota de saldo a favor", "default": "Dayana coordinará cómo resolver la diferencia a tu favor. No se genera un reembolso automático." },
+    { "type": "header", "content": "Ajuste pendiente" },
+    { "type": "text", "id": "pending_title", "label": "Título del ajuste", "default": "Hay un ajuste por revisar" },
+    { "type": "text", "id": "pending_total_label", "label": "Etiqueta del nuevo total", "default": "Nuevo precio" },
+    { "type": "text", "id": "pending_balance_label", "label": "Etiqueta del saldo propuesto", "default": "Si aceptas" },
+    { "type": "textarea", "id": "pending_note", "label": "Nota del ajuste", "default": "Tu anticipo y tu reserva se conservan." },
+    { "type": "text", "id": "accept_label", "label": "Botón de aceptación", "default": "Aceptar ajuste" },
+    { "type": "header", "content": "Diseño acordado" },
+    { "type": "text", "id": "accepted_title", "label": "Título del diseño", "default": "Diseño acordado" },
+    { "type": "text", "id": "request_title", "label": "Título de la solicitud", "default": "Lo que nos contaste" },
+    { "type": "text", "id": "can_title", "label": "Título de la preparación", "default": "Lo que podemos preparar" },
+    { "type": "text", "id": "changes_title", "label": "Título de los cambios", "default": "Lo que cambia respecto a tu foto" },
+    { "type": "text", "id": "reply_title", "label": "Título de la respuesta", "default": "Respuesta final de Dayana" },
+    { "type": "header", "content": "Conversación e historial" },
+    { "type": "text", "id": "comments_label", "label": "Etiqueta de conversación", "default": "Comentarios" },
+    { "type": "text", "id": "comments_title", "label": "Título de conversación", "default": "Conversemos sobre tu pastel" },
+    { "type": "textarea", "id": "comments_note", "label": "Nota de conversación", "default": "Puedes pedir ajustes hasta que el pastel esté listo. Dayana confirmará si son posibles y si cambia el precio." },
+    { "type": "text", "id": "comment_label", "label": "Etiqueta del comentario", "default": "Tu comentario" },
+    { "type": "text", "id": "comment_help", "label": "Ayuda del comentario", "default": "Máximo 2000 caracteres." },
+    { "type": "text", "id": "send_label", "label": "Botón de envío", "default": "Enviar comentario" },
+    { "type": "textarea", "id": "comments_closed", "label": "Conversación cerrada", "default": "Los comentarios de este pedido están cerrados." },
+    { "type": "text", "id": "history_title", "label": "Título del historial", "default": "Historial de propuestas" }
+  ],
+  "presets": [{ "name": "DS · Seguimiento pastel" }]
+}
+{% endschema %}

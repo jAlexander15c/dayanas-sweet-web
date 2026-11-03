@@ -1,0 +1,14 @@
+{
+  "name": "dayanas-celebraciones-service",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "dev:cloudflare": "wrangler dev",
+    "check:cloudflare": "wrangler deploy --dry-run --outdir .wrangler/dry-run"
+  },
+  "devDependencies": {
+    "@napi-rs/keyring": "1.3.0",
+    "wrangler": "4.157.0"
+  }
+}

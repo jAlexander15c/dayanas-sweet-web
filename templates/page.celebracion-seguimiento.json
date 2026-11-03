@@ -1,0 +1,9 @@
+{
+  "sections": {
+    "main": {
+      "type": "ds-celebracion-seguimiento",
+      "settings": { "service_enabled": true }
+    }
+  },
+  "order": ["main"]
+}

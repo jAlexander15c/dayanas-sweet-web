@@ -1,0 +1,88 @@
+:root{--ds-paper:#fff7fa;--ds-white:#fffcfd;--ds-rose:#fae5ed;--ds-pink:#b72956;--ds-ink:#3a2430;--ds-soft:#705361;--ds-line:#e8c9d6;color-scheme:light;background:var(--ds-paper);color:var(--ds-ink);font:400 15px/1.6 'Montserrat',Arial,sans-serif;overflow-wrap:anywhere}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0}
+h1,h2,h3,h4,p{margin:0}
+h1,h2,h3{font-family:'DM Serif Display',Georgia,serif;font-weight:400;line-height:1.18}
+h1{font-size:clamp(32px,4.5vw,48px);margin-bottom:12px}
+h1 em,.ds-brand em{color:var(--ds-pink);font-weight:400}
+h2{font-size:28px;margin-bottom:12px}
+h3{font-size:25px;margin-bottom:18px}
+h4{font-size:14px;margin:20px 0 5px}
+button,input,select,textarea{font:inherit}
+button{min-height:44px;max-width:100%;border-radius:25px;padding:10px 20px;border:1px solid var(--ds-line);background:var(--ds-white);color:var(--ds-ink);cursor:pointer}
+button:hover{border-color:var(--ds-pink)}
+button.ds-primary{background:var(--ds-pink);border-color:var(--ds-pink);color:#fff}
+button:disabled,fieldset:disabled button{opacity:.55;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--ds-pink);outline-offset:4px}
+input,select,textarea{width:100%;min-width:0;min-height:46px;padding:10px 12px;border:1px solid var(--ds-line);border-radius:10px;background:var(--ds-white);color:var(--ds-ink);font-size:16px}
+textarea{resize:vertical;min-height:130px}
+label{display:block;font-weight:600}
+label>input,label>select,label>textarea{margin-top:7px;font-weight:400}
+.ds-calendar{margin:26px 0 0;padding:18px}
+.ds-calendar h2{font-size:25px}
+.ds-calendar form,.ds-calendar details{margin-top:18px}
+.ds-calendar button{width:100%;padding-inline:12px}
+.ds-calendar>p{margin-top:12px}
+.ds-calendar summary{font-size:13px}
+#ds-calendar-days{padding-left:20px;font-size:13px}
+fieldset{min-width:0;padding:0;margin:0;border:0}
+.ds-head{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:22px 32px;border-bottom:1px solid var(--ds-line);background:var(--ds-white)}
+.ds-head>span:last-child{font-size:13px;font-weight:600}
+.ds-brand{font:400 28px/1.2 Georgia,serif;color:var(--ds-ink);text-decoration:none}
+main{max-width:1440px;margin:auto;padding:32px}
+.ds-eyebrow{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ds-soft);margin-bottom:10px}
+.ds-sub{color:var(--ds-soft);margin-bottom:24px}
+#ds-feedback{margin:0 0 22px;padding:12px 16px;background:var(--ds-rose);border-radius:10px;min-height:48px}
+.ds-error{color:#a02645;font-weight:600}
+.ds-workspace{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);align-items:start;gap:30px}
+.ds-sidebar{min-width:0;padding-right:24px;border-right:1px solid var(--ds-line)}
+.ds-list-head{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px}
+.ds-list-head h2{font-size:25px;margin:0}
+.ds-list-head button{padding:8px 15px;font-size:13px}
+#ds-list-message{margin-bottom:16px}
+#ds-requests{display:grid;gap:12px}
+.ds-request{display:grid;gap:7px;width:100%;text-align:left;border-radius:14px;padding:16px}
+.ds-request[aria-pressed=true]{border:2px solid var(--ds-pink);background:var(--ds-rose);padding:15px}
+.ds-request>span{font-size:12px}
+.ds-request strong{font-size:14px;font-weight:600}
+.ds-request:only-child{grid-column:1/-1}
+.ds-card{padding:26px;background:var(--ds-white);border:1px solid var(--ds-line);border-radius:16px;margin-bottom:22px;min-width:0}
+.ds-card>p+p{margin-top:12px}
+.ds-detail-head{display:flex;align-items:start;justify-content:space-between;gap:20px;margin-bottom:22px}
+.ds-badge{display:inline-block;padding:6px 13px;background:var(--ds-rose);border-radius:20px;font-size:12px;flex:none;max-width:50%;text-align:center}
+.ds-finances{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.ds-finances>div{display:grid;gap:5px;align-content:start}
+.ds-money{font:400 clamp(23px,3vw,31px)/1.3 Georgia,serif;font-variant-numeric:tabular-nums}
+.ds-money-pending{font-size:18px}
+#ds-billing-note{margin-top:18px}
+.ds-tax-note{margin-bottom:18px}
+.ds-finances>div:last-child .ds-money{color:var(--ds-pink)}
+.ds-note{padding:14px 16px;background:var(--ds-rose);border-radius:10px;font-size:13px}
+#ds-credit{margin-top:18px}
+.ds-muted{color:var(--ds-soft);font-size:13px}
+.ds-copy{white-space:pre-wrap}
+.ds-photos{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}
+.ds-photos figure{width:150px;margin:0}
+.ds-photos img{width:150px;height:130px;object-fit:cover;border-radius:10px}
+.ds-photos figcaption{font-size:11px;line-height:1.4;margin-top:6px}
+.ds-pending{border:2px solid var(--ds-pink)}
+.ds-proposal-price{font:400 24px/1.3 Georgia,serif;color:var(--ds-pink);margin-bottom:10px}
+.ds-stack{display:grid;gap:18px}
+.ds-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+#ds-proposal-note{margin-bottom:20px}
+form button{justify-self:start}
+.ds-message{padding:16px 18px;background:var(--ds-paper);border-radius:12px}
+.ds-message strong{font-size:13px;color:var(--ds-soft)}
+.ds-message p{margin-top:7px}
+#ds-comment-form{margin-top:20px}
+#ds-comment-note{margin-top:16px}
+.ds-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}
+details summary{font-weight:600;cursor:pointer;min-height:30px}
+#ds-history{margin-top:20px}
+#ds-history h4{margin-top:0}
+#ds-request-title:focus{outline:0}
+@media(max-width:900px){main{padding:26px 22px}.ds-workspace{grid-template-columns:minmax(180px,230px) minmax(0,1fr);gap:22px}.ds-sidebar{padding-right:18px}.ds-two{grid-template-columns:1fr}.ds-card{padding:22px}.ds-detail-head{flex-direction:column;gap:12px}.ds-badge{max-width:100%}.ds-finances{gap:12px}}
+@media(max-width:680px){.ds-head{padding:20px 18px;align-items:start}.ds-brand{font-size:24px}.ds-head>span:last-child{max-width:110px;text-align:right;font-size:12px}main{padding:24px 18px}.ds-workspace{grid-template-columns:1fr;gap:24px}.ds-sidebar{padding:0 0 24px;border-right:0;border-bottom:1px solid var(--ds-line)}#ds-requests{grid-template-columns:repeat(2,minmax(0,1fr));max-height:330px;overflow:auto;padding:4px}.ds-card{padding:22px 16px}.ds-finances{gap:10px}.ds-finances .ds-muted{font-size:12px}.ds-money{font-size:25px}.ds-actions{flex-direction:column}.ds-actions button{width:100%}form button{width:100%}}
+@media(max-width:380px){#ds-requests{grid-template-columns:1fr}.ds-finances{grid-template-columns:1fr}.ds-finances>div{display:flex;justify-content:space-between;align-items:center;gap:12px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
