@@ -2,18 +2,18 @@
 {%- assign heading_id = 'ds-category-title-' | append: section.id -%}
 <section class="ds-r-menu-section" aria-labelledby="{{ heading_id }}">
   <div class="ds-r-menu-heading"><h1 class="ds-category-page-title" id="{{ heading_id }}">{{ section.settings.title | escape }}</h1></div>
-  {% render 'ds-category-grid', blocks: section.blocks, hide_empty: section.settings.hide_empty, show_count: section.settings.show_count, heading_id: heading_id %}
+  {% render 'ds-category-grid', blocks: section.blocks, hide_empty: section.settings.hide_empty, show_count: section.settings.show_count, heading_id: heading_id, heading_tag: 'h2' %}
 </section>
 {% schema %}
 {
-  "name": "DS ? Categor?as",
+  "name": "DS · Categorías",
   "class": "ds-r-home",
   "settings": [
     {
       "type": "text",
       "id": "title",
-      "label": "T?tulo",
-      "default": "Nuestras categor?as"
+      "label": "Título",
+      "default": "Nuestras categorías"
     },
     {
       "type": "checkbox",
@@ -24,7 +24,7 @@
     {
       "type": "checkbox",
       "id": "hide_empty",
-      "label": "Ocultar categor?as sin productos disponibles",
+      "label": "Ocultar categorías sin productos disponibles",
       "default": false
     }
   ],

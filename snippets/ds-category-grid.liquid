@@ -1,12 +1,13 @@
 {% comment %}
   Shared storefront categories. Parameters: blocks, hide_empty, show_count, heading_id.
-  Metafield presence is independent of visibility: hiding every category must not
-  reactivate the legacy blocks. A padded natural-title rank breaks order ties.
+  home_only limits ds.en_inicio to the homepage; heading_tag defaults to h3.
+  A padded natural-title rank breaks order ties.
 {% endcomment %}
 {%- paginate collections by 250 -%}
   {%- liquid
     assign configured = false
     assign category_count = 0
+    assign heading_tag = heading_tag | default: 'h3'
     assign sorted_collections = collections | sort_natural: 'title'
   -%}
   {%- capture category_keys -%}
@@ -16,10 +17,13 @@
           assign configured = true
         endif
         assign visible = false
-        if category.metafields.ds.categoria.value == true and category.metafields.ds.en_inicio.value == true
+        if category.metafields.ds.categoria.value == true
           assign visible = true
+          if home_only and category.metafields.ds.en_inicio.value != true
+            assign visible = false
+          endif
         endif
-        if hide_empty
+        if visible and hide_empty
           assign available_products = category.products | where: 'available', true
           if available_products.size == 0
             assign visible = false
@@ -27,7 +31,7 @@
         endif
       -%}
       {%- if visible -%}
-        {%- assign order = category.metafields.ds.orden.value | default: 9999999999 | prepend: '00000000000000000000' | slice: -20, 20 -%}
+        {%- assign order = category.metafields.ds.orden.value | default: 9999999999 | at_least: 0 | prepend: '00000000000000000000' | slice: -20, 20 -%}
         {%- assign title_rank = forloop.index | prepend: '000000' | slice: -6, 6 -%}
         {{- order -}}::{{- title_rank -}}::{{- category.handle -}}|
         {%- assign category_count = category_count | plus: 1 -%}
@@ -35,26 +39,28 @@
     {%- endfor -%}
   {%- endcapture -%}
   {%- capture cards -%}
-    {%- if configured -%}
+    {%- if category_count > 0 -%}
+      {%- assign automatic = true -%}
       {%- assign category_keys = category_keys | split: '|' | sort -%}
       {%- for key in category_keys -%}
         {%- assign handle = key | split: '::' | last -%}
         {%- assign category = collections[handle] -%}
-        <li class="ds-category-item">
-          <a class="ds-r-category" href="{{ category.url }}" aria-label="{{ category.title | escape }}">
+        <li class="ds-r-category-item">
+          <a class="ds-r-category ds-r-category-auto" href="{{ category.url }}" aria-label="{{ category.title | escape }}">
             {%- if category.image != blank -%}
               {%- assign image_alt = category.image.alt -%}
               {%- if image_alt == category.title -%}{%- assign image_alt = '' -%}{%- endif -%}
-              <img class="ds-r-category-photo" src="{{ category.image | image_url: width: 1200 }}" width="{{ category.image.width }}" height="{{ category.image.height }}" alt="{{ image_alt | escape }}" loading="lazy" sizes="(min-width: 990px) 50vw, (min-width: 601px) 50vw, 100vw">
+              {{ category.image | image_url: width: 1600 | image_tag: class: 'ds-r-category-photo', widths: '400, 600, 800, 1200, 1600', sizes: '(min-width: 990px) 50vw, (min-width: 601px) 50vw, 100vw', alt: image_alt, loading: 'lazy' }}
             {%- endif -%}
             <div class="ds-r-category-caption">
-              <h3>{{ category.title | escape }}</h3>
-              {%- if show_count -%}<span class="ds-category-count">{{ 'sections.collection_list.product_count' | t: count: category.all_products_count }}</span>{%- endif -%}
+              <{{ heading_tag }}>{{ category.title | escape }}</{{ heading_tag }}>
+              <span>Ver {{ category.title | escape }}<img class="ds-r-light-icon" src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="21" height="21"></span>
+              {%- if show_count -%}<span class="ds-r-category-count">{{ 'sections.collection_list.product_count' | t: count: category.all_products_count }}</span>{%- endif -%}
             </div>
           </a>
         </li>
       {%- endfor -%}
-    {%- else -%}
+    {%- elsif configured == false or home_only -%}
       {%- for block in blocks -%}
         {%- if block.type == 'category' -%}
           {%- liquid
@@ -68,22 +74,31 @@
             endif
             assign category_title = category.title | default: block.settings.title
             assign category_url = category.url | default: routes.all_products_collection_url
-            assign category_image = category.image | default: block.settings.image
-            assign image_alt = category_image.alt | default: block.settings.image_alt
+            assign category_image = block.settings.image
+            assign category_style = 'ds-r-cookies'
+            assign category_asset = 'ds-r-cookies-category.png'
+            if block.settings.fallback_image == 'brownies'
+              assign category_style = 'ds-r-brownies'
+              assign category_asset = 'ds-r-brownie-category.png'
+            endif
+            assign image_alt = block.settings.image_alt | default: category_image.alt
             if image_alt == category_title
               assign image_alt = ''
             endif
           -%}
           {%- if visible -%}
             {%- assign category_count = category_count | plus: 1 -%}
-            <li class="ds-category-item" {{ block.shopify_attributes }}>
-              <a class="ds-r-category" href="{{ category_url }}" aria-label="{{ category_title | escape }}">
+            <li class="ds-r-category-item" {{ block.shopify_attributes }}>
+              <a class="ds-r-category {{ category_style }}" href="{{ category_url }}" aria-label="{{ category_title | escape }}">
                 {%- if category_image != blank -%}
-                  <img class="ds-r-category-photo" src="{{ category_image | image_url: width: 1200 }}" width="{{ category_image.width }}" height="{{ category_image.height }}" alt="{{ image_alt | escape }}" loading="lazy">
+                  {{ category_image | image_url: width: 1600 | image_tag: class: 'ds-r-category-photo', widths: '400, 600, 800, 1200, 1600', sizes: '(min-width: 990px) 50vw, (min-width: 601px) 50vw, 100vw', alt: image_alt, loading: 'lazy' }}
+                {%- else -%}
+                  <img class="ds-r-category-photo" src="{{ category_asset | asset_url }}" width="1200" height="1200" alt="{{ block.settings.image_alt | escape }}" loading="lazy">
                 {%- endif -%}
                 <div class="ds-r-category-caption">
-                  <h3>{{ category_title | escape }}</h3>
-                  {%- if show_count and category != blank -%}<span class="ds-category-count">{{ 'sections.collection_list.product_count' | t: count: category.all_products_count }}</span>{%- endif -%}
+                  <{{ heading_tag }}>{{ category_title | escape }}</{{ heading_tag }}>
+                  <span>{{ block.settings.link_label | escape }}<img src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="21" height="21"></span>
+                  {%- if show_count and category != blank -%}<span class="ds-r-category-count">{{ 'sections.collection_list.product_count' | t: count: category.all_products_count }}</span>{%- endif -%}
                 </div>
               </a>
             </li>
@@ -92,6 +107,10 @@
       {%- endfor -%}
     {%- endif -%}
   {%- endcapture -%}
-  <ul class="ds-r-category-grid ds-category-grid" data-category-count="{{ category_count }}" role="list" aria-labelledby="{{ heading_id }}">{{ cards }}</ul>
+  {%- if category_count > 0 -%}
+    <ul class="ds-r-category-grid{% if automatic %} ds-r-category-auto-grid{% else %} ds-r-category-manual{% endif %}" data-category-count="{{ category_count }}" role="list" aria-labelledby="{{ heading_id }}">{{ cards }}</ul>
+  {%- else -%}
+    <p class="ds-r-category-empty">No hay categorías disponibles. <a href="{{ routes.all_products_collection_url }}">Ver todo el menú</a></p>
+  {%- endif -%}
   {%- if paginate.pages > 1 -%}{% render 'pagination', paginate: paginate %}{%- endif -%}
 {%- endpaginate -%}

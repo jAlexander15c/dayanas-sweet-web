@@ -12,13 +12,14 @@ metafields de colección, con lectura en storefront, son:
 | Metafield | Tipo | Uso |
 | --- | --- | --- |
 | `ds.categoria` | boolean | Debe valer `true`. |
-| `ds.en_inicio` | boolean | Debe valer `true` en ambas páginas. |
+| `ds.en_inicio` | boolean | Debe valer `true` solo para aparecer en portada. |
 | `ds.orden` | number_integer | Ascendente: 1, 2, 3…; empate por título. |
 
-Las colecciones sin ambas banderas verdaderas no se muestran. Los órdenes se
+`/collections` muestra todas las colecciones con `ds.categoria = true`, aunque
+`ds.en_inicio = false`; la portada exige ambas banderas. Los órdenes se
 convierten a claves de 20 posiciones; un rango de título natural, sin distinguir
 mayúsculas, resuelve empates. Un orden ausente se coloca al final
-(`9999999999`). El panel debe utilizar enteros positivos.
+(`9999999999`). Un orden negativo se trata como 0; el panel valida enteros ≥ 1.
 
 La imagen sale de `collection.image` y conserva su descripción alternativa.
 Si el alt coincide exactamente con el nombre, se deja vacío para evitar
@@ -30,8 +31,16 @@ Si ninguna colección consultada tiene ninguno de estos tres metafields, se
 activan los bloques manuales existentes. Ambas secciones admiten hasta 12;
 `/collections` parte de los mismos dos bloques actuales de portada. Estos bloques
 de respaldo se editan por sección y no se sincronizan entre editores. En cuanto
-existe configuración de metafields, ocultar todas las categorías deja la lista
-vacía y no reactiva los bloques.
+existe configuración de metafields pero ninguna categoría visible, la portada
+vuelve a los bloques manuales; `/collections` muestra un mensaje corto con enlace
+«Ver todo el menú» a `routes.all_products_collection_url`.
+
+Los bloques conservan la prioridad de foto del diseño original: primero
+`block.settings.image`, después el asset indicado por `fallback_image`
+(`ds-r-cookies-category.png` o `ds-r-brownie-category.png`), sin usar la imagen de
+la colección. `link_label`, su flecha y las clases `ds-r-cookies`/`ds-r-brownies`
+siguen controlando el enlace y la posición de la foto. Sin categorías automáticas,
+la portada mantiene sus estilos originales y el título de sección sin salto en escritorio.
 
 ## Ajustes del editor
 
@@ -43,6 +52,9 @@ por lo que también oculta colecciones con todos sus productos agotados.
 
 ## Distribución y accesibilidad
 
+La siguiente distribución corresponde al camino automático; los bloques manuales
+conservan la grilla y los estilos originales de la portada.
+
 | Categorías | Escritorio (≥990 px) | Tableta (601–989 px) | Móvil (≤600 px) |
 | --- | --- | --- | --- |
 | 1 | Una tarjeta de ancho completo | Una tarjeta de ancho completo | Una columna |
@@ -53,8 +65,13 @@ por lo que también oculta colecciones con todos sus productos agotados.
 Entre 6 y 12 continúa la misma grilla. Las columnas usan `minmax(0, 1fr)` y los
 nombres largos pueden partirse, evitando que el contenido ensanche la grilla a
 360 px. Las tarjetas mantienen las dimensiones grandes y esquinas redondeadas
-del diseño actual. El texto blanco aparece sobre una franja opaca `#3a2430`
-(contraste superior a 14:1), independiente de la foto. Hay lista `ul/li`, foco
+del diseño actual. En las tarjetas automáticas, el texto blanco aparece sobre
+la foto con un degradado inferior: negro al 65% detrás de todo el texto, incluso
+cuando el nombre ocupa varias líneas. Sobre una foto blanca el contraste mínimo
+es 6.98:1, superior a 4.5:1; no hay barra opaca. El enlace dice «Ver [título]»
+con flecha. Las imágenes usan `image_tag` con `widths`, `srcset` y `sizes`.
+Los títulos de tarjeta son `h2` en `/collections` y `h3` bajo el `h2` en portada.
+Hay lista `ul/li`, foco
 visible, enlaces de al menos 44 px y desactivación del movimiento al solicitarlo
 el sistema.
 
@@ -62,7 +79,8 @@ el sistema.
 
 ```powershell
 node tests/check-theme.mjs
-node --test tests/categories.test.mjs
+$env:DS_QA_ROOT = "$env:TEMP/ds-category-liquid-tests"
+node --test tests/redesign-home.test.mjs tests/redesign-navigation.test.mjs tests/orders-settings.test.mjs tests/redesign-integration.test.mjs tests/categories.test.mjs
 ```
 
 La segunda prueba hace análisis estático y renderiza el snippet real con LiquidJS
@@ -71,12 +89,14 @@ del tema:
 
 ```powershell
 npm install --prefix "$env:TEMP/ds-category-liquid-tests" liquidjs --no-save --package-lock=false
+$env:DS_QA_ROOT = "$env:TEMP/ds-category-liquid-tests"
 node --test tests/categories.test.mjs
 ```
 
 Sin LiquidJS se indican explícitamente los casos de render omitidos. Para el
-render local solo se sustituyen el envoltorio Shopify `paginate` por una página
-de fixture y los filtros Shopify de imagen/traducción; los filtros de categorías,
+render local se registra un tag Shopify `paginate` compartido con la suite de
+portada, que renderiza su contenido sobre una página de fixture, además de los
+filtros Shopify de imagen/traducción; los filtros de categorías,
 ordenación, bloques y markup ejecutan el Liquid original.
 
 En la vista previa de Shopify, crear desde el panel 1, 2, 3 y 5 categorías
@@ -85,7 +105,8 @@ Cambiar órdenes (2 y 10), empatar dos títulos, quitar una imagen, cambiar
 `ds.en_inicio`, probar categorías vacías y agotadas, activar ambos ajustes y
 recorrer las tarjetas con Tab. Con metadatos ausentes, comprobar los bloques
 Galletas/Brownies y añadir un tercer bloque. Con categorías configuradas pero
-ocultas, comprobar que no vuelven los bloques manuales.
+ocultas, comprobar el respaldo manual de portada y el mensaje de `/collections`
+cuando `hide_empty` deja todas sus categorías sin disponibilidad.
 
 ## Límites de verificación y de Liquid
 

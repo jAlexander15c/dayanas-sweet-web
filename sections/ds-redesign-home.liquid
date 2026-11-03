@@ -68,7 +68,7 @@
     <p>{{ section.settings.menu_text | escape }}</p>
     <a class="ds-r-button ds-r-menu-all" href="{{ routes.all_products_collection_url }}">{{ section.settings.menu_cta | escape }}<img src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="22" height="22"></a>
   </div>
-  {% render 'ds-category-grid', blocks: section.blocks, hide_empty: section.settings.hide_empty, show_count: section.settings.show_count, heading_id: menu_title_id %}
+  {% render 'ds-category-grid', blocks: section.blocks, hide_empty: section.settings.hide_empty, show_count: section.settings.show_count, heading_id: menu_title_id, home_only: true %}
 </section>
 
 {% schema %}
@@ -96,7 +96,7 @@
     {"type":"text","id":"signup_label","label":"Botón de suscripción","default":"Quiero enterarme"},
     {"type":"textarea","id":"signup_success","label":"Suscripción confirmada","default":"¡Ya estás en la lista! Te avisaremos cuando abramos los pedidos y anunciemos la próxima fecha de envío."},
     {"type":"checkbox","id":"show_count","label":"Mostrar contador de productos","default":false},
-    {"type":"checkbox","id":"hide_empty","label":"Ocultar categor?as sin productos disponibles","default":false},
+    {"type":"checkbox","id":"hide_empty","label":"Ocultar categorías sin productos disponibles","default":false},
     {"type":"text","id":"menu_title","label":"Título del menú","default":"Elige tu antojo"},
     {"type":"textarea","id":"menu_text","label":"Presentación del menú","default":"Sabores de Cuba y Estados Unidos, con nuestro toque, desde Houston."},
     {"type":"text","id":"menu_cta","label":"Botón del catálogo","default":"Ver todo el menú"}
