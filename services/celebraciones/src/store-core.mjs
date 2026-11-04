@@ -148,6 +148,13 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
           part INTEGER NOT NULL, bytes BLOB NOT NULL,
           PRIMARY KEY (shop,request_id,photo_id,part)
         );
+        CREATE TABLE IF NOT EXISTS notification_jobs (
+          shop TEXT NOT NULL,id TEXT NOT NULL,request_id TEXT NOT NULL,event TEXT NOT NULL,
+          contact TEXT,capability_hash TEXT,status TEXT NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,due_at INTEGER,
+          PRIMARY KEY(shop,id),FOREIGN KEY(shop,request_id) REFERENCES requests(shop,id)
+        );
+        CREATE INDEX IF NOT EXISTS notification_jobs_due ON notification_jobs(shop,status,due_at);
+        CREATE INDEX IF NOT EXISTS notification_jobs_access ON notification_jobs(shop,request_id,capability_hash);
         CREATE TABLE IF NOT EXISTS calendar_days (shop TEXT NOT NULL,date TEXT NOT NULL,closed INTEGER NOT NULL,PRIMARY KEY(shop,date));
         CREATE TABLE IF NOT EXISTS calendar_operations (shop TEXT NOT NULL,principal TEXT NOT NULL,operation_id TEXT NOT NULL,payload_hash TEXT NOT NULL,PRIMARY KEY(shop,principal,operation_id));
         CREATE TABLE IF NOT EXISTS payment_states (
@@ -235,6 +242,14 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
       return {id,reference:snapshot.reference,contact:snapshot.contact,encryptedAccess:row.encrypted_access,attempts:row.attempts};
     }
     function recoverEmailClaims(shop,now){db.prepare("UPDATE guest_email_jobs SET status='unknown',due_at=NULL,encrypted_access='' WHERE shop=? AND status='sending' AND due_at<=?").run(shop,now);}
+    function recoverNotificationClaims(shop,now){db.prepare("UPDATE notification_jobs SET status='unknown',due_at=NULL WHERE shop=? AND status='sending' AND due_at<=?").run(shop,now);}
+    function notificationJob(shop,id){
+      const row=db.prepare('SELECT * FROM notification_jobs WHERE shop=? AND id=?').get(shop,id);
+      const owner=selectRequest.get(shop,row.request_id);
+      const guest=db.prepare('SELECT reference,revoked_at FROM guest_access WHERE shop=? AND request_id=?').get(shop,row.request_id);
+      return {id,requestId:row.request_id,event:JSON.parse(row.event),contact:row.contact?JSON.parse(row.contact):null,
+        reference:guest?.reference??null,isGuest:!!guest,revoked:guest?.revoked_at!=null,customerId:guest?null:owner.customer_id,attempts:row.attempts};
+    }
 
     function paymentState(actor, id) {
       const row = db.prepare('SELECT state FROM payment_states WHERE shop=? AND request_id=?').get(actor.shop, id);
@@ -279,6 +294,11 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
           db.prepare('UPDATE requests SET version=?, snapshot=? WHERE shop=? AND id=?')
             .run(snapshot.version, JSON.stringify(snapshot), actor.shop, id);
           insertOperation.run(actor.shop, actor.principal, id, operationId, hash, id);
+          if(actor.isStaff&&['propose','comment','setStatus'].includes(action)){
+            const event={kind:action,status:snapshot.status,version:snapshot.version};
+            db.prepare("INSERT INTO notification_jobs(shop,id,request_id,event,contact,status,due_at) VALUES(?,?,?,?,?,'pending',?)")
+              .run(actor.shop,randomUUID(),id,JSON.stringify(event),snapshot.contact?JSON.stringify(snapshot.contact):null,Date.now());
+          }
           return view(actor, snapshot);
         });
       });
@@ -316,7 +336,9 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
         return guarded(()=>{
           shopKey(shop);requestId(id);let digest;try{digest=hashCapability(capability);}catch{fail('NOT_FOUND');}
           const row=db.prepare('SELECT capability_hash,revoked_at FROM guest_access WHERE shop=? AND request_id=?').get(shop,id);
-          if(!row||row.revoked_at!==null||!timingSafeEqual(Buffer.from(row.capability_hash,'hex'),Buffer.from(digest,'hex')))fail('NOT_FOUND');
+          if(!row||row.revoked_at!==null)fail('NOT_FOUND');
+          const original=timingSafeEqual(Buffer.from(row.capability_hash,'hex'),Buffer.from(digest,'hex'));
+          if(!original&&!db.prepare('SELECT 1 FROM notification_jobs WHERE shop=? AND request_id=? AND capability_hash=?').get(shop,id,digest))fail('NOT_FOUND');
           return guestActor(shop,id);
         });
       },
@@ -324,6 +346,37 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
       claimGuestEmail(shop,id,now){return guarded(()=>{shopKey(shop);requestId(id);epoch(now);return transaction(()=>{recoverEmailClaims(shop,now);const row=db.prepare('SELECT status,due_at,attempts FROM guest_email_jobs WHERE shop=? AND request_id=?').get(shop,id);if(!row||row.status!=='pending'||row.due_at>now||row.attempts>=3)return null;db.prepare("UPDATE guest_email_jobs SET status='sending',attempts=attempts+1,due_at=? WHERE shop=? AND request_id=?").run(now+60000,shop,id);return emailJob(shop,id);});});},
       finishGuestEmail(shop,id,{status,nextAttemptAt,now}){return guarded(()=>{shopKey(shop);requestId(id);epoch(now);if(!['pending','sent','failed','unknown'].includes(status))fail('VALIDATION');return transaction(()=>{const row=db.prepare('SELECT status,attempts,due_at FROM guest_email_jobs WHERE shop=? AND request_id=?').get(shop,id);if(!row||row.status!=='sending')return;if(row.due_at<=now){recoverEmailClaims(shop,now);return;}if(status==='pending'){epoch(nextAttemptAt);if(nextAttemptAt<=now)fail('VALIDATION');if(row.attempts>=3)status='failed';}db.prepare('UPDATE guest_email_jobs SET status=?,due_at=?,encrypted_access=CASE WHEN ? THEN encrypted_access ELSE ? END WHERE shop=? AND request_id=?').run(status,status==='pending'?nextAttemptAt:null,status==='pending'?1:0,'',shop,id);});});},
       nextGuestEmailDue(shop){return guarded(()=>{shopKey(shop);return db.prepare("SELECT MIN(due_at) AS due FROM guest_email_jobs WHERE shop=? AND status IN ('pending','sending')").get(shop)?.due??null;});},
+      getNotificationJobs(shop,now){return guarded(()=>{shopKey(shop);epoch(now);return transaction(()=>{
+        recoverNotificationClaims(shop,now);
+        return db.prepare("SELECT id FROM notification_jobs WHERE shop=? AND status='pending' AND due_at<=? ORDER BY due_at,rowid LIMIT 2").all(shop,now).map(({id})=>notificationJob(shop,id));
+      });});},
+      claimNotification(shop,id,now){return guarded(()=>{shopKey(shop);requestId(id);epoch(now);return transaction(()=>{
+        recoverNotificationClaims(shop,now);
+        const row=db.prepare('SELECT status,due_at,attempts FROM notification_jobs WHERE shop=? AND id=?').get(shop,id);
+        if(!row||row.status!=='pending'||row.due_at>now||row.attempts>=3)return null;
+        db.prepare("UPDATE notification_jobs SET status='sending',attempts=attempts+1,due_at=? WHERE shop=? AND id=?").run(now+60000,shop,id);
+        return notificationJob(shop,id);
+      });});},
+      prepareNotification(shop,id,{contact,capability},now){return guarded(()=>{shopKey(shop);requestId(id);epoch(now);return transaction(()=>{
+        const row=db.prepare('SELECT status,due_at FROM notification_jobs WHERE shop=? AND id=?').get(shop,id);
+        if(!row||row.status!=='sending'||row.due_at<=now)fail('CONFLICT');
+        const job=notificationJob(shop,id);if(job.revoked)fail('NOT_FOUND');
+        const recipient=job.contact??validateGuestContact({...contact,phone:'0000000000'});
+        const digest=job.isGuest?hashCapability(capability):null;
+        db.prepare('UPDATE notification_jobs SET contact=?,capability_hash=? WHERE shop=? AND id=?').run(JSON.stringify(recipient),digest,shop,id);
+        return {...job,contact:recipient};
+      });});},
+      finishNotification(shop,id,{status,nextAttemptAt,now}){return guarded(()=>{shopKey(shop);requestId(id);epoch(now);
+        if(!['pending','sent','failed','unknown'].includes(status))fail('VALIDATION');
+        return transaction(()=>{
+          const row=db.prepare('SELECT status,due_at,attempts FROM notification_jobs WHERE shop=? AND id=?').get(shop,id);
+          if(!row||row.status!=='sending')return;
+          if(row.due_at<=now){recoverNotificationClaims(shop,now);return;}
+          if(status==='pending'){epoch(nextAttemptAt);if(nextAttemptAt<=now)fail('VALIDATION');if(row.attempts>=3)status='failed';}
+          db.prepare('UPDATE notification_jobs SET status=?,due_at=? WHERE shop=? AND id=?').run(status,status==='pending'?nextAttemptAt:null,shop,id);
+        });
+      });},
+      nextNotificationDue(shop){return guarded(()=>{shopKey(shop);return db.prepare("SELECT MIN(due_at) AS due FROM notification_jobs WHERE shop=? AND status IN ('pending','sending')").get(shop)?.due??null;});},
       createRequest(actorInput, input, operationId) {
         return guarded(() => {
           const actor = identity(actorInput);

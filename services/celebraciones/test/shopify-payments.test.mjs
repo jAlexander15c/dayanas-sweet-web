@@ -45,6 +45,16 @@ function harness(handler, extra = {}) {
   };
   return { calls, client: createShopifyPaymentClient({ shop, clientId: 'test-client', secret: 'test-secret', fetchImpl, ...extra }) };
 }
+test('notification recipient lookup uses only the stored customer ID and validates returned identity',async()=>{
+ const {client,calls}=harness(({query,variables})=>{
+  assert.match(query,/defaultEmailAddress/);assert.deepEqual(variables,{id:gid('Customer',2)});
+  return Response.json({data:{customer:{id:gid('Customer',2),firstName:'Ana',defaultEmailAddress:{emailAddress:'ana@example.test'}}}});
+ });
+ assert.deepEqual(await client.getCustomerContact('2'),{name:'Ana',email:'ana@example.test'});assert.equal(calls.length,2);
+ const wrong=harness(()=>Response.json({data:{customer:{id:gid('Customer',3),defaultEmailAddress:{emailAddress:'wrong@example.test'}}}}));
+ await assert.rejects(wrong.client.getCustomerContact('2'));
+ await assert.rejects(client.getCustomerContact('ana@example.test'));
+});
 test('Workers-compatible transport uses manual redirects and never forwards credentials to a redirect', async () => {
   let calls = 0;
   const client = createShopifyPaymentClient({ shop, clientId: 'test-client', secret: 'test-secret', fetchImpl: async (_url, init) => {

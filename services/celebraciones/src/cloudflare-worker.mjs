@@ -6,6 +6,7 @@ import { createShopifyPaymentClient } from './shopify-payments.mjs';
 import { createPaymentService } from './payment-service.mjs';
 import { createPaymentScheduler } from './payment-scheduler.mjs';
 import { createQuoteEmail, runQuoteEmailJobs } from './quote-email.mjs';
+import { runNotificationJobs } from './notification-email.mjs';
 import { createResendTransport } from './resend-email.mjs';
 import { createAdminMailTest } from './admin-mail-test.mjs';
 import adminJavaScript from './admin-ui.js';
@@ -26,11 +27,18 @@ export class CelebrationStore extends DurableObject {
     super(ctx, env);
     this.env = env;
     this.store = createDurableStore(ctx.storage);
-    const paymentService=env.PAYMENTS_ENABLED==='true'?createPaymentService({store:this.store,mode:env.PAYMENTS_MODE||'TEST',storefrontOrigin:env.STOREFRONT_ORIGIN,onDiagnostic:diagnostic=>console.warn('payment-diagnostic '+JSON.stringify(diagnostic)),client:createShopifyPaymentClient({shop:env.SHOPIFY_SHOP,clientId:env.SHOPIFY_CLIENT_ID,secret:env.SHOPIFY_APP_SECRET,storefrontOrigin:env.STOREFRONT_ORIGIN})}):undefined;
+    const shopifyClient=createShopifyPaymentClient({shop:env.SHOPIFY_SHOP,clientId:env.SHOPIFY_CLIENT_ID,secret:env.SHOPIFY_APP_SECRET,storefrontOrigin:env.STOREFRONT_ORIGIN});
+    const paymentService=env.PAYMENTS_ENABLED==='true'?createPaymentService({store:this.store,mode:env.PAYMENTS_MODE||'TEST',storefrontOrigin:env.STOREFRONT_ORIGIN,onDiagnostic:diagnostic=>console.warn('payment-diagnostic '+JSON.stringify(diagnostic)),client:shopifyClient}):undefined;
     let email=null,sendEmail=null;
     try {sendEmail=createResendTransport({apiKey:env.RESEND_API_KEY});email=createQuoteEmail({key:env.GUEST_ACCESS_KEY,storefrontOrigin:env.STOREFRONT_ORIGIN,send:sendEmail});} catch { /* Guest creation stays disabled until configured. */ }
     this.scheduler=paymentService||email?createPaymentScheduler({store:this.store,service:paymentService,storage:ctx.storage,shop:env.SHOPIFY_SHOP,
-      ...(email?{additionalDue:()=>this.store.nextGuestEmailDue(env.SHOPIFY_SHOP),additionalRun:()=>runQuoteEmailJobs({store:this.store,shop:env.SHOPIFY_SHOP,email})}:{})}):null;
+      ...(email?{additionalDue:()=>{
+        const due=[this.store.nextGuestEmailDue(env.SHOPIFY_SHOP),this.store.nextNotificationDue(env.SHOPIFY_SHOP)].filter(value=>value!==null);
+        return due.length?Math.min(...due):null;
+      },additionalRun:async()=>{
+        await runQuoteEmailJobs({store:this.store,shop:env.SHOPIFY_SHOP,email});
+        await runNotificationJobs({store:this.store,shop:env.SHOPIFY_SHOP,email,resolveCustomer:id=>shopifyClient.getCustomerContact(id)});
+      }}:{})}):null;
     if(this.scheduler)ctx.blockConcurrencyWhile(()=>this.scheduler.ensure());
     this.handler = createHandler({ store: this.store, paymentService,
       mailTest:env.GUEST_QA_ENABLED==='true'&&email?createAdminMailTest({storage:ctx.storage,lock:fn=>ctx.blockConcurrencyWhile(fn),send:sendEmail,transport:'resend'}):undefined,
@@ -49,7 +57,7 @@ export class CelebrationStore extends DurableObject {
     if (!configured(this.env)) return unavailable();
     if(new URL(request.url).pathname.startsWith('/proxy/') && this.env.SERVICE_ENABLED!=='true')return unavailable();
     const path=new URL(request.url).pathname;
-    const financialRequest=request.method==='POST'&&/\/requests\/[^/]+\/(payment|payment-sync|accept|status)$/.test(path);
+    const financialRequest=request.method==='POST'&&/\/requests\/[^/]+\/(payment|payment-sync|accept|status|proposals|comments)$/.test(path);
     const guestCreation=request.method==='POST'&&path==='/proxy/guest/requests';
     if(!this.scheduler||(!financialRequest&&!guestCreation))return this.handler(request);
     // Persist a recovery wake-up before the handler can send any mutation.

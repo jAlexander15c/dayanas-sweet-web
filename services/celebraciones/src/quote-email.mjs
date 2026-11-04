@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 // No server reply, credentials, recipient or private link is ever logged.
 const sender = 'info@dayanassweet.com';
 const encoder = new TextEncoder();
@@ -5,6 +6,23 @@ const capabilityPattern = /^[a-f0-9]{64}$/;
 const emailPattern = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,63}$/;
 const failure = () => Object.assign(new Error('UNAVAILABLE'), {code:'UNAVAILABLE'});
 const b64 = bytes => Buffer.from(bytes).toString('base64');
+
+export function buildNotificationMessage(job,capability,storefrontOrigin){
+  const subjects={propose:'Nueva propuesta para tu pastel',comment:'Nuevo mensaje de la pastelera',preparing:'Tu pastel está en preparación',ready:'Tu pastel está listo'};
+  const kind=job.event?.kind==='setStatus'?job.event.status:job.event?.kind;
+  if(!subjects[kind]||!/^[a-f0-9-]{36}$/.test(job.id)||!/^[a-f0-9-]{36}$/.test(job.requestId)
+    ||typeof job.contact?.email!=='string'||job.contact.email.length>254||!emailPattern.test(job.contact.email)
+    ||(job.isGuest&&!capabilityPattern.test(capability)))throw failure();
+  const origin=new URL(storefrontOrigin);if(origin.protocol!=='https:'||origin.origin!==storefrontOrigin)throw failure();
+  const suffix=job.reference&&/^DS-\d{6,12}$/.test(job.reference)?` — ${job.reference}`:'';
+  const subject=subjects[kind]+suffix;
+  const link=`${origin.origin}/pages/seguimiento-de-tu-pastel?solicitud=${job.requestId}${job.isGuest?`#acceso=${capability}`:''}`;
+  const content=`Hola,\n\n${subject}.\n\nConsulta los detalles y responde desde el seguimiento de tu pastel:\n${link}\n\n${job.isGuest?'Este enlace es privado. Consérvalo y no lo compartas.':'Ingresa con la cuenta con la que hiciste tu solicitud.'}${kind==='propose'?'\nLa propuesta no confirma una reserva: revisa las condiciones y el pago correspondiente en el seguimiento.':''}\n\nDayana’s Sweet\n`;
+  return [`From: Dayana's Sweet <${sender}>`,`To: <${job.contact.email}>`,`Reply-To: <${sender}>`,
+    `Subject: ${subject}`,`Message-ID: <notice-${job.id}@dayanassweet.com>`,
+    'MIME-Version: 1.0','Content-Type: text/plain; charset=UTF-8','Content-Transfer-Encoding: base64','',
+    b64(encoder.encode(content)).match(/.{1,76}/g).join('\r\n')].join('\r\n');
+}
 
 export function buildQuoteMessage(job, capability, storefrontOrigin) {
   if (!capabilityPattern.test(capability) || !/^[a-f0-9-]{36}$/.test(job.id) || !/^DS-\d{6,12}$/.test(job.reference)
@@ -103,7 +121,15 @@ export function createQuoteEmail({key,password,storefrontOrigin,connect,send}) {
       const result=new TextDecoder().decode(plain);if(!capabilityPattern.test(result))throw failure();return result;
     }catch{throw failure();}
   }
-  return {seal,unseal,async deliver(job) {
+  return {seal,unseal,
+  notificationCapability(shop,id,requestId){
+    // Domain-separated, stable per event and unguessable; only its hash is saved.
+    return createHmac('sha256',Buffer.from(key,'base64')).update(JSON.stringify(['dayanas-notification-v1',shop,id,requestId])).digest('hex');
+  },
+  async deliverNotification(job,capability){
+    try{return await transport({recipient:job.contact.email,message:buildNotificationMessage(job,capability,storefrontOrigin)});}
+    catch{return {status:'unknown'};}
+  },async deliver(job) {
     try {const capability=await unseal(job.encryptedAccess);return await transport({recipient:job.contact.email,message:buildQuoteMessage(job,capability,storefrontOrigin)});}
     catch {return {status:'failed'};}
   }};

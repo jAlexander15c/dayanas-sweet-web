@@ -13,7 +13,7 @@ export function createResendTransport({apiKey,fetchImpl=fetch,timeoutMs=12000}) 
   const subject=header('Subject'),messageId=header('Message-ID');
   if(header('From')!==`Dayana's Sweet <${sender}>`||header('To')!==`<${recipient}>`||
    header('Content-Transfer-Encoding')!=='base64'||header('Content-Type')!=='text/plain; charset=UTF-8'||
-   !subject||subject.length>200||!/^<(?:quote-[a-f0-9-]{36}|smtp-test-[a-zA-Z0-9_-]{1,80})@dayanassweet\.com>$/.test(messageId||'')||
+   !subject||subject.length>200||!/^<(?:(?:quote|notice)-[a-f0-9-]{36}|smtp-test-[a-zA-Z0-9_-]{1,80})@dayanassweet\.com>$/.test(messageId||'')||
    !/^[A-Za-z0-9+/=\r\n]+$/.test(parts[1]))return {status:'failed'};
   const payload={from:`Dayana's Sweet <${sender}>`,to:[recipient],reply_to:sender,subject,
    text:Buffer.from(parts[1].replace(/\r\n/g,''),'base64').toString('utf8')};

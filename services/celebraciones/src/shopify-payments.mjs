@@ -236,6 +236,14 @@ export function createShopifyPaymentClient({ shop, clientId, secret, storefrontO
   }
 
   return Object.freeze({
+    async getCustomerContact(customerId) {
+      const id=customerGid(customerId);
+      const customer=await graphql('query NotificationCustomer($id: ID!) { customer(id: $id) { id firstName defaultEmailAddress { emailAddress } } }',{id},'customer');
+      requireValue(customer?.id===id,'SHOPIFY_UNAVAILABLE');
+      const email=customer.defaultEmailAddress?.emailAddress;
+      if(!email)return null;
+      return {name:typeof customer.firstName==='string'&&customer.firstName.trim()?customer.firstName.slice(0,120):'Cliente',email};
+    },
     async checkConfiguration() {
       const installation=await graphql('query PaymentScopes { currentAppInstallation { accessScopes { handle } } }',{},'currentAppInstallation');
       requireValue(Array.isArray(installation.accessScopes)&&installation.accessScopes.every(scope=>typeof scope.handle==='string'),'SHOPIFY_UNAVAILABLE');
