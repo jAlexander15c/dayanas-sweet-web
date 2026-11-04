@@ -1,0 +1,64 @@
+.ds-topping-picker {
+  display: block;
+  margin: 2rem 0;
+}
+
+.ds-topping-picker__fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.ds-topping-picker__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.ds-topping-picker__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.ds-topping-picker__pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 1rem 2rem;
+  border: var(--variant-pills-border-width) solid rgba(var(--color-foreground), var(--variant-pills-border-opacity));
+  border-radius: var(--variant-pills-radius);
+  background: rgb(var(--color-background));
+  color: rgb(var(--color-foreground));
+  cursor: pointer;
+  line-height: 1.2;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.ds-topping-picker__input:checked + .ds-topping-picker__pill {
+  background: rgb(var(--color-foreground));
+  color: rgb(var(--color-background));
+}
+
+.ds-topping-picker__input:focus-visible + .ds-topping-picker__pill {
+  outline: 2px solid rgb(var(--color-foreground));
+  outline-offset: 4px;
+}
+
+.ds-topping-picker__error {
+  margin: 1rem 0 0;
+  color: rgb(var(--color-foreground));
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-topping-picker__pill {
+    transition: none;
+  }
+}

@@ -1,0 +1,53 @@
+{%- comment -%}
+  mode: 'requires' returns 1 for cards requiring a product-page choice.
+  Keep the legacy handle fallback here only; the configurable product tag is
+  requiere-opcion. This mode never renders controls or loads assets.
+  Default mode renders only for the exact product selected in the block.
+{%- endcomment -%}
+{%- if mode == 'requires' -%}
+  {%- if product.tags contains 'requiere-opcion' or product.handle == 'brownie-box-almendras-chocolate' -%}1{%- endif -%}
+{%- elsif block.settings.product != blank and block.settings.product.id == product.id -%}
+  {{ 'ds-topping-picker.css' | asset_url | stylesheet_tag }}
+  <script src="{{ 'ds-topping-picker.js' | asset_url }}" defer="defer"></script>
+  {%- liquid
+    assign property_name = block.settings.property_name | default: 'Topping' | remove: '[' | remove: ']' | strip
+    assign property_name_length = property_name.size
+    for index in (1..property_name_length)
+      assign first_character = property_name | slice: 0
+      if first_character != '_'
+        break
+      endif
+      assign property_name = property_name | remove_first: '_' | strip
+    endfor
+    assign property_name = property_name | default: 'Topping'
+    assign picker_id = 'DSTopping-' | append: section.id | append: '-' | append: block.id
+    assign topping_options = block.settings.options | newline_to_br | split: '<br />'
+  -%}
+  <ds-topping-picker class="ds-topping-picker" {{ block.shopify_attributes }}>
+    <fieldset class="ds-topping-picker__fieldset" aria-describedby="{{ picker_id }}-error">
+      <legend class="form__label">{{ block.settings.label | escape }}</legend>
+      <div class="ds-topping-picker__options">
+        {%- for option in topping_options -%}
+          {%- assign topping = option | strip -%}
+          {%- if topping != blank -%}
+            <input
+              type="radio"
+              id="{{ picker_id }}-{{ forloop.index }}"
+              name="properties[{{ property_name | escape }}]"
+              form="{{ product_form_id }}"
+              value="{{ topping | escape }}"
+              class="ds-topping-picker__input"
+              data-ds-topping-option
+              aria-describedby="{{ picker_id }}-error"
+              required
+            >
+            <label class="ds-topping-picker__pill" for="{{ picker_id }}-{{ forloop.index }}">{{ topping | escape }}</label>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+      <p id="{{ picker_id }}-error" class="ds-topping-picker__error" role="alert" hidden>
+        {{- block.settings.error_text | escape -}}
+      </p>
+    </fieldset>
+  </ds-topping-picker>
+{%- endif -%}
