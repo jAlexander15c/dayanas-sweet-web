@@ -1,3 +1,12 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
 {
   "sections": {
     "hero": {
@@ -38,27 +47,27 @@
         "slide-brownie",
         "slide-box"
       ],
+      "disabled": true,
       "settings": {
         "interval": 6,
         "tag_label": "",
         "tag_value": ""
-      },
-      "disabled": true
+      }
     },
     "bestsellers": {
       "type": "ds-product-rail",
+      "disabled": true,
       "settings": {
         "title": "Los más pedidos",
-        "limit": 8,
-        "link_label": "Ver todo el menú",
-        "empty_text": "El menú se publica muy pronto. Pedidos de la [tanda] hasta el [cierre].",
-        "color_scheme": "scheme-2",
         "collection": "mas-vendidos",
+        "limit": 8,
         "auto_badge": false,
         "badge_count": 3,
-        "badge_label": "Más pedido"
-      },
-      "disabled": true
+        "badge_label": "Más pedido",
+        "link_label": "Ver todo el menú",
+        "empty_text": "El menú se publica muy pronto. Pedidos de la [tanda] hasta el [cierre].",
+        "color_scheme": "scheme-2"
+      }
     },
     "batch": {
       "type": "ds-batch",
@@ -93,12 +102,12 @@
         "step-bake",
         "step-ship"
       ],
+      "disabled": true,
       "settings": {
         "title": "Horneamos por tandas, no para una vitrina.",
         "text": "<p>Abrimos el menú unos días, reunimos todos los pedidos y los horneamos juntos para una misma fecha de despacho. No horneamos en el minuto en que pides, pero nada sale del horno para quedarse esperando en un mostrador: se hace para tu tanda.</p>",
         "color_scheme": "scheme-3"
-      },
-      "disabled": true
+      }
     },
     "categories": {
       "type": "ds-categories",
@@ -106,51 +115,51 @@
         "tile-cookies": {
           "type": "tile",
           "settings": {
+            "collection": "galletas",
             "title": "Galletas",
             "text": "",
             "style": "photo",
-            "fallback": "ds-editorial-cookies.png",
-            "collection": "galletas"
+            "fallback": "ds-editorial-cookies.png"
           }
         },
         "tile-brownies": {
           "type": "tile",
           "settings": {
+            "collection": "brownies",
             "title": "Brownies",
             "text": "",
             "style": "photo",
-            "fallback": "ds-brownie.png",
-            "collection": "brownies"
+            "fallback": "ds-brownie.png"
           }
         },
         "tile-boxes": {
           "type": "tile",
           "settings": {
+            "collection": "cajas-para-regalar",
             "title": "Cajas para regalar",
             "text": "Varios sabores en una caja rosa; deja tu nota en el carrito y va adentro.",
             "style": "pink",
-            "fallback": "none",
-            "collection": "cajas-para-regalar"
+            "fallback": "none"
           }
         },
         "tile-desserts": {
           "type": "tile",
           "settings": {
+            "collection": "postres",
             "title": "Postres",
             "text": "Horneados en la misma tanda que las galletas. Cada uno indica en su ficha cómo conservarlo.",
             "style": "orange",
-            "fallback": "none",
-            "collection": "postres"
+            "fallback": "none"
           }
         },
         "tile-canned": {
           "type": "tile",
           "settings": {
+            "collection": "conservas-saladas",
             "title": "Enlatados",
             "text": "Conservas artesanales, como el tomate confitado. Cada frasco indica su conservación.",
             "style": "pink",
-            "fallback": "none",
-            "collection": "enlatados"
+            "fallback": "none"
           }
         }
       },
@@ -161,30 +170,30 @@
         "tile-desserts",
         "tile-canned"
       ],
+      "disabled": true,
       "settings": {
         "title": "¿Qué se te antoja hoy?"
-      },
-      "disabled": true
+      }
     },
     "season": {
       "type": "ds-season",
+      "disabled": true,
       "settings": {
         "title": "",
         "text": "Recetas que solo salen del horno mientras dura la temporada. Cuando termina la edición, vuelven al cuaderno hasta el próximo año.",
         "dates": "",
         "button_label": "Ver la edición",
         "color_scheme": "scheme-6"
-      },
-      "disabled": true
+      }
     },
     "story": {
       "type": "ds-story",
+      "disabled": true,
       "settings": {
         "title": "Recetas con memoria cubana, horneadas en Texas.",
         "text": "<p>Dayana’s Sweet nace de más de 15 años de experiencia en la pastelería y de una historia que comenzó en Cuba. Hoy, desde Fulshear, Texas, unimos nuestras raíces con sabores e ingredientes de Estados Unidos para crear galletas y postres con personalidad propia.</p><p>Trabajamos por tandas porque así cada caja sale del horno para su fecha de despacho, y los cupos dependen de lo que podemos hornear bien en un día. Cuando algo se acaba, esperamos a la próxima tanda en lugar de apurar el horno.</p>",
         "facts": "Más de 15 años de oficio\nHorneado para tu fecha de despacho\nCupos según lo que sale del horno"
-      },
-      "disabled": true
+      }
     },
     "social": {
       "type": "ds-social",
@@ -220,12 +229,12 @@
         "photo-cookies",
         "handle"
       ],
+      "disabled": true,
       "settings": {
         "title": "Lo más dulce, primero en tu correo.",
         "text": "Cada producto tiene cupos limitados, solo lo que podemos hornear bien en un día, y los favoritos se agotan primero. Te escribimos el día que abre el menú, antes de anunciarlo en redes.",
         "color_scheme": "scheme-5"
-      },
-      "disabled": true
+      }
     },
     "faq": {
       "type": "ds-faq",
@@ -274,11 +283,11 @@
         "q-storage",
         "q-ingredients"
       ],
+      "disabled": true,
       "settings": {
         "title": "Antes de pedir",
         "text": "Lo que conviene saber antes de elegir, para que tu caja llegue justo cuando la esperas."
-      },
-      "disabled": true
+      }
     },
     "redesign": {
       "type": "ds-redesign-home",
@@ -288,9 +297,9 @@
           "settings": {
             "collection": "galletas",
             "title": "Galletas",
-            "fallback_image": "cookies",
             "link_label": "Ver galletas",
-            "image_alt": "Caja rosa con galletas de chocolate"
+            "image_alt": "Caja rosa con galletas de chocolate",
+            "fallback_image": "cookies"
           }
         },
         "brownies": {
@@ -298,9 +307,9 @@
           "settings": {
             "collection": "brownies",
             "title": "Brownies",
-            "fallback_image": "brownies",
             "link_label": "Ver brownies",
-            "image_alt": "Brownie de chocolate de corteza crujiente"
+            "image_alt": "Brownie de chocolate de corteza crujiente",
+            "fallback_image": "brownies"
           }
         }
       },
