@@ -56,3 +56,15 @@ test('only authenticated staff can inspect the payment preflight',async()=>{
   const response=await handler(staffRequest('/payment-status'));assert.equal(response.status,200);assert.deepEqual(await response.json(),result);assert.equal(calls,1);
  }finally{store.close();}
 });
+
+test('mail test is private to staff, requires POST and operation only, and is disabled without runner',async()=>{
+ const store=createStore(':memory:');try{
+  let calls=0;const handler=createHandler({store,config,mailTest:async id=>{calls++;assert.equal(id,'qa');return {status:'sent'};}});
+  assert.equal((await handler(new Request('https://backend.test/admin/email-test',{method:'POST'}))).status,401);
+  assert.equal((await handler(staffRequest('/email-test',{operationId:'qa'},'8'))).status,401);
+  assert.equal((await handler(staffRequest('/email-test'))).status,404);
+  assert.equal((await handler(staffRequest('/email-test',{operationId:'qa',recipient:'other@example.com'}))).status,422);
+  assert.equal((await handler(staffRequest('/email-test',{operationId:'qa'}))).status,200);assert.equal(calls,1);
+  assert.equal((await createHandler({store,config})(staffRequest('/email-test',{operationId:'qa'}))).status,503);
+ }finally{store.close();}
+});

@@ -4,13 +4,14 @@ import {randomUUID} from 'node:crypto';
  * Every invocation performs at most batchSize reconciliations. No browser is
  * needed after a customer pays and no alarm creates a new initial checkout.
  */
-export function createPaymentScheduler({store,service,storage,shop,now=Date.now,batchSize=2}={}) {
-  if(!store||!service||!storage||typeof shop!=='string'||!Number.isInteger(batchSize)||batchSize<1||batchSize>5)throw new Error('UNAVAILABLE');
+export function createPaymentScheduler({store,service,storage,shop,now=Date.now,batchSize=2,additionalDue,additionalRun}={}) {
+  if(!store||(!service&&typeof additionalRun!=='function')||!storage||typeof shop!=='string'||!Number.isInteger(batchSize)||batchSize<1||batchSize>5)throw new Error('UNAVAILABLE');
   const actor={shop,role:'staff',staffId:'__payment_reconciler__'};
   let activeRequests=0,tail=Promise.resolve();
   function serialized(fn){const result=tail.then(fn,fn);tail=result.catch(()=>{});return result;}
   async function ensureAlarm(){
-    const due=store.nextPaymentDue(actor);
+    const pending=[service?store.nextPaymentDue(actor):null,additionalDue?.()??null].filter(value=>value!==null);
+    const due=pending.length?Math.min(...pending):null;
     if(due===null){if(activeRequests===0)await storage.deleteAlarm();return;}
     const next=Math.max(now()+1000,due);
     if(await storage.getAlarm()!==next)await storage.setAlarm(next);
@@ -24,7 +25,7 @@ export function createPaymentScheduler({store,service,storage,shop,now=Date.now,
     },
     async end(){activeRequests=Math.max(0,activeRequests-1);await serialized(ensureAlarm);},
     async run(){
-      const jobs=store.getDuePaymentJobs(actor,now(),batchSize);
+      const jobs=service?store.getDuePaymentJobs(actor,now(),batchSize):[];
       for(const job of jobs){
         let failed=false;
         try{await service.sync(actor,job.id,`alarm-${randomUUID()}`);}
@@ -33,7 +34,8 @@ export function createPaymentScheduler({store,service,storage,shop,now=Date.now,
         // already rescheduled/deleted job is never resurrected by this step.
         store.deferPaymentJob(actor,job.id,now(),failed);
       }
-      await serialized(ensureAlarm);
+      try {await additionalRun?.();}
+      finally {await serialized(ensureAlarm);}
     },
   });
 }

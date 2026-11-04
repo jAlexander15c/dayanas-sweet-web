@@ -114,10 +114,36 @@
     };
   }
   const money = value => value === null ? 'Por cotizar' : new Intl.NumberFormat('es-US', { style: 'currency', currency: 'USD' }).format(value / 100);
+  function createPhotoGallery(container, service, id, urls = global.URL) {
+    let current = null, generation = 0, activeUrls = [];
+    function clear() {
+      generation++; current = null;
+      activeUrls.forEach(url => urls.revokeObjectURL(url)); activeUrls = [];
+      container.replaceChildren();
+    }
+    async function render(attachments = []) {
+      const photos = attachments.filter(p => p && /^[a-zA-Z0-9-]{1,100}$/.test(p.id) && typeof p.name === 'string' && ['image/jpeg', 'image/png', 'image/webp'].includes(p.mimeType)).slice(0, 3);
+      const key = JSON.stringify(photos);
+      if (key === current) return;
+      clear(); current = key; const version = generation;
+      for (const photo of photos) {
+        const figure = container.ownerDocument.createElement('figure'), caption = container.ownerDocument.createElement('figcaption');
+        caption.textContent = photo.name; figure.append(caption); container.append(figure);
+        try {
+          const blob = await service.getPhoto(id, photo.id);
+          if (version !== generation) return;
+          const url = urls.createObjectURL(blob), img = container.ownerDocument.createElement('img');
+          activeUrls.push(url); img.src = url; img.alt = `Referencia: ${photo.name}`; img.loading = 'lazy'; figure.prepend(img);
+        } catch (_) { if (version === generation) { caption.textContent = `${photo.name} · No pudimos cargar esta foto. Actualiza el seguimiento para reintentar.`; current = null; } }
+      }
+    }
+    return { render, clear };
+  }
   function mountTracking(root, service, id = root.dataset.trackingId) {
     if (root.dsTrackingController) return root.dsTrackingController;
     const q = key => root.querySelector(`[data-${key}]`);
     const put = (key, value) => { q(key).textContent = value; };
+    const gallery = q('photos') && typeof service.getPhoto === 'function' ? createPhotoGallery(q('photos'), service, id) : null;
     const list = (key, items, heading, body) => {
       const container = q(key); container.replaceChildren();
       if (!items.length) { const p = root.ownerDocument.createElement('p'); p.textContent = key === 'comments' ? 'Todavía no hay comentarios.' : 'Todavía no hay propuestas anteriores.'; container.append(p); }
@@ -129,7 +155,14 @@
       q('retry').hidden = !state.error || state.busy;
       put('status-message', state.busy && !s ? 'Cargando tu solicitud…' : !s ? (state.error?.message || 'El seguimiento todavía no está disponible.') : '');
       put('action-message', s && state.error ? state.error.message : state.busy ? state.action === 'syncPayment' ? 'Comprobando el pago con Shopify…' : state.action === 'startPayment' ? 'Preparando el enlace seguro de pago…' : 'Guardando…' : '');
-      if (!s) return;
+      if (!s) { gallery?.clear(); return; }
+      if (q('reference')) { q('reference').hidden = !s.reference; put('reference', s.reference || ''); }
+      if (q('guest-access')) q('guest-access').hidden = !service.guest;
+      if (q('email-status') && service.guest) {
+        const statuses = { pending: 'Estamos preparando tu correo de seguimiento.', sent: 'El servidor de correo aceptó tu enlace de seguimiento. Revisa también el correo no deseado.', failed: 'No pudimos enviar el correo. Tu solicitud está guardada; conserva tu enlace privado.', unknown: 'No pudimos confirmar el envío del correo. Tu solicitud está guardada; conserva tu enlace privado.' };
+        put('email-status', statuses[s.emailStatus] || statuses.unknown);
+      }
+      if (gallery) { q('photos-section').hidden = !s.attachments?.length; void gallery.render(s.attachments || []); }
       put('order-status', statuses[s.status]); put('pickup', s.pickup.label);
       const amounts = balance(s), accepted = s.acceptedProposal;
       q('payments-note').hidden = !accepted || !['reserved', 'preparing'].includes(s.status) || amounts.dueCents === 0;
@@ -183,6 +216,14 @@
     const controller = createController(id, service, render, { shop: root.dataset.shop });
     root.dsTrackingController = controller;
     q('retry').addEventListener('click', () => controller.load());
+    if (q('copy-link')) q('copy-link').addEventListener('click', async () => {
+      if (!service.guest || !service.privateLink) return;
+      const link = service.privateLink(id);
+      try { await global.navigator.clipboard.writeText(link); put('copy-status', 'Enlace privado copiado. Guárdalo y no lo compartas.'); }
+      catch (_) { q('private-link').hidden = false; q('private-link').value = link; q('private-link').select(); put('copy-status', 'Copia y guarda este enlace privado.'); }
+    });
+    global.addEventListener?.('pagehide', () => gallery?.clear());
+    root.ownerDocument.addEventListener('shopify:section:unload', event => { if (event.target.contains(root)) gallery?.clear(); });
     q('accept').addEventListener('click', async () => { if (await controller.accept()) put('action-message', 'Propuesta aceptada. No se ha realizado ningún cobro.'); });
     q('comment-form').addEventListener('submit', async event => {
       event.preventDefault();
@@ -191,13 +232,13 @@
     if (q('pay')) q('pay').addEventListener('click', () => controller.startPayment());
     if (q('payment-sync')) q('payment-sync').addEventListener('click', () => controller.syncPayment());
     const syncOnReturn = () => { if (root.isConnected && controller.state.snapshot?.payment) void controller.syncPayment(); };
-    global.addEventListener?.('pageshow', event => { if (event.persisted) syncOnReturn(); });
+    global.addEventListener?.('pageshow', event => { if (event.persisted) void controller.load().then(ok => { if (ok) syncOnReturn(); }); });
     let leftForPayment = false;
     if (q('payment-link')) q('payment-link').addEventListener('click', () => { leftForPayment = true; });
     root.ownerDocument.addEventListener('visibilitychange', () => { if (root.ownerDocument.visibilityState === 'visible' && leftForPayment) { leftForPayment = false; syncOnReturn(); } });
     void controller.load().then(ok => { if (ok && controller.state.snapshot?.payment && controller.state.snapshot.payment.stage !== 'unavailable') void controller.syncPayment(); });
     return controller;
   }
-  global.DSTracking = { balance, createController, mountTracking, paymentUrl };
+  global.DSTracking = { balance, createController, mountTracking, paymentUrl, createPhotoGallery };
   // Deliberately no endpoint or automatic fake service. The authenticated integration mounts this API.
 })(globalThis);

@@ -61,3 +61,17 @@ test('an ambiguous order-open remains eligible for hourly read reconciliation',a
  assert.equal(f.store.nextPaymentDue(system),f.now+3600000);
  f.advance(3600000);await createPaymentScheduler(f.options).run();assert.deepEqual(f.calls.map(call=>call.id),[id]);
 });
+
+test('email queue shares the alarm with payments without deleting an earlier wakeup',async t=>{
+ const f=fixture(t);f.seed();let emailDue=f.now+10000,runs=0;
+ const scheduler=createPaymentScheduler({...f.options,additionalDue:()=>emailDue,additionalRun:async()=>{runs++;emailDue=null;}});
+ await scheduler.ensure();assert.equal(f.alarm,f.now+10000);
+ f.advance(10000);await scheduler.run();assert.equal(runs,1);assert.equal(f.calls.length,0);assert.equal(f.alarm,f.now+290000);
+});
+
+test('email-only mode works while payments disabled and keeps the pre-mutation alarm',async t=>{
+ const f=fixture(t);let due=null;
+ const scheduler=createPaymentScheduler({...f.options,service:null,additionalDue:()=>due,additionalRun:async()=>{due=null;}});
+ await scheduler.begin();due=f.now;await scheduler.ensure();assert.equal(f.alarm,f.now+1000);
+ await scheduler.end();await scheduler.run();assert.equal(f.alarm,null);assert.equal(f.calls.length,0);
+});

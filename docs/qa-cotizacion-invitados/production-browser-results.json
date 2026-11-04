@@ -1,0 +1,15 @@
+{
+  "requestId": "ca119af4-6e2c-4f17-aa04-c1ec226f35a9",
+  "reference": "DS-000001",
+  "photo": true,
+  "reload": true,
+  "privateAccess": true,
+  "emailStatus": "sent",
+  "paymentStage": "deposit",
+  "status": "quoted",
+  "checkoutHasPayment": true,
+  "checkoutHasDeposit": true,
+  "checkoutOpened": true,
+  "charged": false,
+  "pageErrors": []
+}

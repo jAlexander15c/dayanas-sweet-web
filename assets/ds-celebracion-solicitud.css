@@ -65,3 +65,10 @@
 .ds-request [data-recovery] input,.ds-request [data-recovery] button{margin-bottom:14px}
 @media(max-width:680px){.ds-request__wrap{padding:28px 18px}.ds-request__layout{grid-template-columns:1fr;gap:24px}.ds-request__aside{padding:22px 0 0;border-left:0;border-top:1px solid var(--ds-line)}.ds-request__steps li{padding-inline:1px;font-size:11px}.ds-request__steps{gap:4px}.ds-request__two{grid-template-columns:1fr}.ds-request__actions{align-items:stretch}.ds-request__actions .ds-request__button{flex:1}.ds-request__requests li{align-items:flex-start;flex-direction:column;gap:0}}
 @media(prefers-reduced-motion:reduce){.ds-request *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+.ds-request__contact{max-width:600px}
+.ds-request__contact label{margin:16px 0}
+.ds-request__honeypot{position:absolute!important;left:-10000px!important;width:1px!important;height:1px!important;overflow:hidden!important}
+.ds-request__receipt{padding:20px;border:1px solid var(--ds-line);border-radius:12px;background:var(--ds-white);margin:22px 0}
+.ds-request .ds-request__reference{font-size:25px;font-weight:600;letter-spacing:.04em}
+.ds-request [data-copy-link]{margin:10px 0}

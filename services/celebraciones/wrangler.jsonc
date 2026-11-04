@@ -9,6 +9,8 @@
   "observability": { "enabled": false },
   "rules": [{ "type": "Text", "globs": ["**/admin-ui.js", "**/admin-ui.css"], "fallthrough": false }],
   "vars": {
+    "GUEST_ENABLED": "true",
+    "GUEST_QA_ENABLED": "false",
     "SERVICE_ENABLED": "true",
     "PAYMENTS_ENABLED": "true",
     "PAYMENTS_MODE": "REAL",

@@ -168,3 +168,19 @@ test('Durable SQL adapter retains confirmed payments and closes fresh mutations 
   ]) assert.throws(action, code('CONFLICT'));
   assert.equal(store.getTracking(customer, id).version, ready.version);
 });
+
+test('Durable SQL guest creation, quota, access and email claims persist across adapter recreation',async t=>{
+ const {store,open,db}=await fixture(t),shop=customer.shop,capability='ab'.repeat(32),now=1800000000000;
+ const contact={name:'Ana',email:'ana@example.test',phone:'5551234567'},options={encryptedAccess:'sealed',now};
+ const a=store.createGuestRequest({shop},input,contact,capability,'create',options);
+ const reopened=open();assert.equal(reopened.createGuestRequest({shop},input,contact,capability,'create',options).id,a.id);
+ assert.equal(reopened.getTracking(reopened.authenticateGuest(shop,a.id,capability),a.id).reference,'DS-000001');
+ assert.equal(reopened.claimGuestEmail(shop,a.id,now).attempts,1);
+ assert.equal(open().claimGuestEmail(shop,a.id,now),null);
+ assert.equal(open().getGuestEmailJobs(shop,now+60001,2).length,0);
+ assert.equal(open().getTracking(open().authenticateGuest(shop,a.id,capability),a.id).emailStatus,'unknown');
+ db.exec("CREATE TRIGGER fail_guest_outbox BEFORE INSERT ON guest_email_jobs BEGIN SELECT RAISE(ABORT,'failed'); END");
+ assert.throws(()=>reopened.createGuestRequest({shop},input,contact,capability,'second',options),code('UNAVAILABLE'));
+ db.exec('DROP TRIGGER fail_guest_outbox');
+ assert.equal(open().createGuestRequest({shop},input,contact,capability,'second',options).reference,'DS-000002');
+});

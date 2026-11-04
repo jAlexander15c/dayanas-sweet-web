@@ -1,7 +1,7 @@
 {{ 'ds-celebracion-solicitud.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'ds-celebracion-solicitud.js' | asset_url }}" defer="defer"></script>
 
-<section class="ds-request" data-ds-request data-enabled="{{ section.settings.service_enabled }}" data-customer="{% if customer %}true{% else %}false{% endif %}" data-customer-key="{{ customer.id }}" data-proxy="{{ section.settings.proxy_path | escape }}" data-tracking-url="{{ section.settings.tracking_page.url | escape }}" aria-labelledby="DSRequestTitle-{{ section.id }}">
+<section class="ds-request" data-ds-request data-enabled="{{ section.settings.service_enabled }}" data-guest-enabled="{{ section.settings.guest_enabled }}" data-customer="{% if customer %}true{% else %}false{% endif %}" data-customer-key="{{ customer.id }}" data-proxy="{{ section.settings.proxy_path | escape }}" data-tracking-url="{{ section.settings.tracking_page.url | escape }}" aria-labelledby="DSRequestTitle-{{ section.id }}">
   <div class="ds-request__wrap">
     <header>
       <p class="ds-request__eyebrow">{{ section.settings.eyebrow | escape }}</p>
@@ -11,14 +11,14 @@
     <div class="ds-request__note" data-gate role="status">
       {% if section.settings.service_enabled == false %}
         {{ section.settings.unavailable_message | escape }}
-      {% elsif customer == blank %}
+      {% elsif customer == blank and section.settings.guest_enabled == false %}
         <p>Inicia sesión en tu cuenta de Shopify para enviar una solicitud y continuar la conversación con Dayana.</p>
         <a class="ds-request__button" href="{{ routes.storefront_login_url | escape }}">Iniciar sesión</a>
       {% else %}
         Preparando tu solicitud…
       {% endif %}
     </div>
-    {% if customer %}
+    {% if customer or section.settings.guest_enabled %}
       <p class="ds-request__muted" data-js-note>Necesitas JavaScript para completar la solicitud y adjuntar fotos.</p>
       <div data-live hidden>
         <ol class="ds-request__steps" aria-label="Pasos de tu solicitud">
@@ -83,9 +83,20 @@
               <button type="button" data-calendar-retry>Actualizar fechas disponibles</button>
               <p class="ds-request__note" data-date-status aria-live="polite">Indica la fecha y hora que te gustaría. Dayana confirmará los horarios y la disponibilidad.</p>
               <p class="ds-request__muted">Personalizados normales: desde 7 días. Entre 24 horas y menos de 7 días: solicitud urgente, sujeta a aprobación y recargo. No se aceptan solicitudes con menos de 24 horas. Dayana debe confirmar la disponibilidad.</p>
-              <h3>Tu contacto</h3>
+              <h3>¿Cómo te contactamos?</h3>
+              {% if customer %}
               <p>Usaremos tu cuenta de Shopify: <strong>{{ customer.name | escape }}</strong> · {{ customer.email | escape }}</p>
               <p class="ds-request__muted">Podrás leer la cotización y responder a Dayana desde el seguimiento de tu solicitud.</p>
+              {% else %}
+              <div data-guest-contact class="ds-request__contact">
+                <p>Te enviaremos el número de tu cotización y su enlace de seguimiento. No necesitas crear una cuenta.</p>
+                <label>Nombre<input data-contact-name name="name" autocomplete="name" maxlength="120" required></label>
+                <label>Correo electrónico<input data-contact-email name="email" type="email" autocomplete="email" maxlength="254" required></label>
+                <label>Teléfono<input data-contact-phone name="phone" type="tel" autocomplete="tel" maxlength="40" required></label>
+                <label class="ds-request__honeypot" aria-hidden="true">Sitio web<input data-website name="website" tabindex="-1" autocomplete="off"></label>
+                <p class="ds-request__muted">Continuarás a la revisión de tu pastel, fotos y fecha antes de enviar la solicitud.</p>
+              </div>
+              {% endif %}
               <p class="ds-request__note">{{ section.settings.payment_policy | escape }}</p>
             </section>
             <section data-step="3" hidden aria-labelledby="DSRequestStep3-{{ section.id }}">
@@ -125,16 +136,30 @@
           <a data-created-link hidden>Ver seguimiento de esta solicitud</a>
         </div>
         <section class="ds-request__success" data-success hidden>
-          <h2 tabindex="-1" data-success-title>{{ section.settings.success_title | escape }}</h2>
+          <h2 tabindex="-1" data-success-title>{% if customer %}{{ section.settings.success_title | escape }}{% else %}Tu pastel empieza aquí.{% endif %}</h2>
           <p>{{ section.settings.success_message | escape }}</p>
-          <a class="ds-request__button" data-success-link hidden>Ver mi solicitud</a>
+          <div class="ds-request__receipt" data-guest-receipt hidden>
+            <p class="ds-request__eyebrow">Número de cotización</p>
+            <p class="ds-request__reference" data-reference></p>
+            <p data-email-status role="status"></p>
+            <p class="ds-request__muted">Conserva tu enlace privado. Desde allí podrás ver la propuesta, conversar con Dayana y pagar, sin crear una cuenta. No compartas el enlace.</p>
+          </div>
+          <a class="ds-request__button" data-success-link hidden>Ver mi cotización</a>
+          {% unless customer %}
+          <button type="button" data-copy-link>Copiar enlace</button>
+          <label class="ds-request__muted" hidden>Enlace privado<input data-private-link readonly hidden aria-label="Enlace privado de seguimiento"></label>
+          <p class="ds-request__muted" data-copy-status role="status"></p>
+          <p class="ds-request__muted">La solicitud todavía no reserva la fecha.</p>
+          {% endunless %}
         </section>
+        {% if customer %}
         <section class="ds-request__requests" aria-labelledby="DSRequestList-{{ section.id }}">
           <h2 id="DSRequestList-{{ section.id }}">Tus solicitudes</h2>
           <p class="ds-request__muted" data-list-status role="status"></p>
           <ul data-requests></ul>
           <button type="button" data-list-retry>Actualizar mis solicitudes</button>
         </section>
+        {% endif %}
       </div>
     {% endif %}
   </div>
@@ -151,6 +176,7 @@
     { "type": "text", "id": "title_accent", "label": "Título destacado", "default": "tu celebración." },
     { "type": "textarea", "id": "intro", "label": "Introducción", "default": "Cuéntanos la idea que tienes en mente. Dayana preparará una propuesta para tu pastel personalizado." },
     { "type": "checkbox", "id": "service_enabled", "label": "Activar solicitudes", "default": false, "info": "Activar solo después de configurar y validar el servicio, la agenda y el acceso de clientes." },
+    { "type": "checkbox", "id": "guest_enabled", "label": "Permitir solicitudes sin cuenta", "default": false, "info": "Activar solo tras validar acceso privado, correo y pagos de invitados. Desactivar no elimina las solicitudes existentes." },
     { "type": "text", "id": "proxy_path", "label": "Ruta del servicio", "default": "/apps/celebraciones", "info": "Ruta local del app proxy de Shopify, sin barra final." },
     { "type": "page", "id": "tracking_page", "label": "Página de seguimiento", "info": "Página con la plantilla celebracion-seguimiento." },
     { "type": "text", "id": "pickup_address", "label": "Dirección de recogida", "default": "4319 Freya Point Dr, Fulshear, TX 77441" },

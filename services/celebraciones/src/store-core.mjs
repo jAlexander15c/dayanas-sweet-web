@@ -1,6 +1,8 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
+import { hashCapability, validateGuestContact, guestRecipientKey } from './guest-access.mjs';
 
-const ERROR_CODES = new Set(['AUTH_REQUIRED', 'NOT_FOUND', 'CONFLICT', 'VALIDATION', 'UNAVAILABLE']);
+const ERROR_CODES = new Set(['AUTH_REQUIRED', 'NOT_FOUND', 'CONFLICT', 'VALIDATION', 'UNAVAILABLE', 'RATE_LIMITED']);
+const guestActors = new WeakMap();
 const MAX_CENTS = 100000000;
 const CREATE_SCOPE = '__create__';
 
@@ -28,6 +30,7 @@ function object(value, keys) {
 }
 
 function identity(actor) {
+  if(actor&&guestActors.has(actor))return guestActors.get(actor);
   if (!actor || typeof actor.shop !== 'string' || !actor.shop.trim() || actor.shop.length > 255) fail('AUTH_REQUIRED');
   const isStaff = actor.role === 'staff';
   const id = isStaff ? actor.staffId : actor.customerId;
@@ -126,6 +129,20 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
           PRIMARY KEY (shop, principal, request_id, operation_id),
           FOREIGN KEY (shop, result_request_id) REFERENCES requests(shop, id)
         );
+        CREATE TABLE IF NOT EXISTS guest_access (
+          shop TEXT NOT NULL, request_id TEXT NOT NULL, capability_hash TEXT NOT NULL,
+          reference TEXT NOT NULL, revoked_at INTEGER,
+          PRIMARY KEY(shop,request_id), UNIQUE(shop,reference),
+          FOREIGN KEY(shop,request_id) REFERENCES requests(shop,id)
+        );
+        CREATE TABLE IF NOT EXISTS guest_sequences (shop TEXT PRIMARY KEY, value INTEGER NOT NULL);
+        CREATE TABLE IF NOT EXISTS guest_creations (shop TEXT NOT NULL,request_id TEXT NOT NULL,rate_key TEXT NOT NULL,created_at INTEGER NOT NULL,PRIMARY KEY(shop,request_id));
+        CREATE INDEX IF NOT EXISTS guest_creations_rate ON guest_creations(rate_key,created_at);
+        CREATE TABLE IF NOT EXISTS guest_email_jobs (
+          shop TEXT NOT NULL,request_id TEXT NOT NULL,encrypted_access TEXT NOT NULL,
+          status TEXT NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,due_at INTEGER,
+          PRIMARY KEY(shop,request_id),FOREIGN KEY(shop,request_id) REFERENCES requests(shop,id)
+        );
         CREATE TABLE IF NOT EXISTS photo_chunks (
           shop TEXT NOT NULL, request_id TEXT NOT NULL, photo_id TEXT NOT NULL,
           part INTEGER NOT NULL, bytes BLOB NOT NULL,
@@ -188,7 +205,8 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
 
     function load(actor, id) {
       const row = selectRequest.get(actor.shop, id);
-      if (!row || (!actor.isStaff && row.customer_id !== actor.id)) fail('NOT_FOUND');
+      const guest=db.prepare('SELECT revoked_at FROM guest_access WHERE shop=? AND request_id=?').get(actor.shop,id);
+      if (!row || (!actor.isStaff && (actor.isGuest ? actor.requestId!==id || !guest || guest.revoked_at!==null : guest || row.customer_id !== actor.id))) fail('NOT_FOUND');
       const snapshot = JSON.parse(row.snapshot);
       snapshot.version = row.version;
       return snapshot;
@@ -198,6 +216,7 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
       // Permissions belong to the current authenticated actor, never to saved JSON.
       return {
         ...snapshot,
+        ...(snapshot.reference?{emailStatus:emailStatus(actor.shop,snapshot.id)}:{}),
         ...(snapshot.acceptedProposal && !snapshot.payment ? {payment:{url:null,stage:'deposit',reviewRequired:false}} : {}),
         permissions: {
           canComment: snapshot.status !== 'ready',
@@ -205,6 +224,17 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
         },
       };
     }
+
+    function emailStatus(shop,id){const status=db.prepare('SELECT status FROM guest_email_jobs WHERE shop=? AND request_id=?').get(shop,id)?.status;return status==='sending'?'pending':status;}
+    function shopKey(shop){if(typeof shop!=='string'||!shop.trim()||shop.length>255)fail('VALIDATION');return shop;}
+    function epoch(now){if(!Number.isSafeInteger(now)||now<0)fail('VALIDATION');}
+    function guestActor(shop,id){const actor=Object.freeze({shop,role:'guest',requestId:id});guestActors.set(actor,{shop,id:`guest:${id}`,isStaff:false,isGuest:true,requestId:id,principal:`guest:${id}`});return actor;}
+    function emailJob(shop,id){
+      const row=db.prepare('SELECT encrypted_access,attempts FROM guest_email_jobs WHERE shop=? AND request_id=?').get(shop,id);
+      const snapshot=JSON.parse(selectRequest.get(shop,id).snapshot);
+      return {id,reference:snapshot.reference,contact:snapshot.contact,encryptedAccess:row.encrypted_access,attempts:row.attempts};
+    }
+    function recoverEmailClaims(shop,now){db.prepare("UPDATE guest_email_jobs SET status='unknown',due_at=NULL,encrypted_access='' WHERE shop=? AND status='sending' AND due_at<=?").run(shop,now);}
 
     function paymentState(actor, id) {
       const row = db.prepare('SELECT state FROM payment_states WHERE shop=? AND request_id=?').get(actor.shop, id);
@@ -255,6 +285,45 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
     }
 
     return {
+      createGuestRequest({shop}, input, contactInput, capability, operationId, {encryptedAccess,now}={}) {
+        return guarded(()=>{
+          shopKey(shop);operationKey(operationId);epoch(now);
+          const digest=hashCapability(capability),contact=validateGuestContact(contactInput);
+          const rateKey=guestRecipientKey(contact.email);
+          text(encryptedAccess,{limit:8192});
+          object(input,Object.hasOwn(input||{},'details')?['requestText','pickup','details']:['requestText','pickup']);object(input.pickup,['label']);
+          const requestText=text(input.requestText,{limit:6000}),pickup={label:text(input.pickup.label)};
+          const hash=payloadHash('createGuestRequest',{input,contact});
+          return transaction(()=>{
+            const principal=`guest-create:${digest}`,previous=selectOperation.get(shop,principal,CREATE_SCOPE,operationId);
+            if(previous){if(previous.payload_hash!==hash)fail('CONFLICT');const actor=identity(guestActor(shop,previous.result_request_id));return view(actor,load(actor,previous.result_request_id));}
+            if(db.prepare('SELECT COUNT(*) AS n FROM guest_creations WHERE rate_key=? AND created_at>?').get(rateKey,now-3600000).n>=5||db.prepare('SELECT COUNT(*) AS n FROM guest_creations WHERE created_at>?').get(now-86400000).n>=100)fail('RATE_LIMITED');
+            const details=input.details===undefined?undefined:detailsInput(input.details);
+            if(details){const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(details.pickupAt));if(db.prepare('SELECT closed FROM calendar_days WHERE shop=? AND date=?').get(shop,date)?.closed===1)fail('VALIDATION');}
+            db.prepare('INSERT INTO guest_sequences(shop,value) VALUES(?,1) ON CONFLICT(shop) DO UPDATE SET value=value+1').run(shop);
+            const reference=`DS-${String(db.prepare('SELECT value FROM guest_sequences WHERE shop=?').get(shop).value).padStart(6,'0')}`;
+            const id=randomUUID(),snapshot={id,reference,contact,version:1,status:'requested',pickup,requestText,acceptedProposal:null,pendingProposal:null,payments:[],comments:[],history:[],...(details?{details}:{})};
+            db.prepare('INSERT INTO requests(shop,id,customer_id,version,snapshot) VALUES(?,?,?,?,?)').run(shop,id,`guest:${id}`,1,JSON.stringify(snapshot));
+            db.prepare('INSERT INTO guest_access(shop,request_id,capability_hash,reference) VALUES(?,?,?,?)').run(shop,id,digest,reference);
+            db.prepare("INSERT INTO guest_email_jobs(shop,request_id,encrypted_access,status,due_at) VALUES(?,?,?,'pending',?)").run(shop,id,encryptedAccess,now);
+            db.prepare('INSERT INTO guest_creations(shop,request_id,rate_key,created_at) VALUES(?,?,?,?)').run(shop,id,rateKey,now);
+            insertOperation.run(shop,principal,CREATE_SCOPE,operationId,hash,id);
+            return view(identity(guestActor(shop,id)),snapshot);
+          });
+        });
+      },
+      authenticateGuest(shop,id,capability){
+        return guarded(()=>{
+          shopKey(shop);requestId(id);let digest;try{digest=hashCapability(capability);}catch{fail('NOT_FOUND');}
+          const row=db.prepare('SELECT capability_hash,revoked_at FROM guest_access WHERE shop=? AND request_id=?').get(shop,id);
+          if(!row||row.revoked_at!==null||!timingSafeEqual(Buffer.from(row.capability_hash,'hex'),Buffer.from(digest,'hex')))fail('NOT_FOUND');
+          return guestActor(shop,id);
+        });
+      },
+      getGuestEmailJobs(shop,now,limit=2){return guarded(()=>{shopKey(shop);epoch(now);if(!Number.isSafeInteger(limit)||limit<1||limit>10)fail('VALIDATION');return transaction(()=>{recoverEmailClaims(shop,now);return db.prepare("SELECT request_id AS id FROM guest_email_jobs WHERE shop=? AND status='pending' AND due_at<=? ORDER BY due_at,request_id LIMIT ?").all(shop,now,limit).map(({id})=>emailJob(shop,id));});});},
+      claimGuestEmail(shop,id,now){return guarded(()=>{shopKey(shop);requestId(id);epoch(now);return transaction(()=>{recoverEmailClaims(shop,now);const row=db.prepare('SELECT status,due_at,attempts FROM guest_email_jobs WHERE shop=? AND request_id=?').get(shop,id);if(!row||row.status!=='pending'||row.due_at>now||row.attempts>=3)return null;db.prepare("UPDATE guest_email_jobs SET status='sending',attempts=attempts+1,due_at=? WHERE shop=? AND request_id=?").run(now+60000,shop,id);return emailJob(shop,id);});});},
+      finishGuestEmail(shop,id,{status,nextAttemptAt,now}){return guarded(()=>{shopKey(shop);requestId(id);epoch(now);if(!['pending','sent','failed','unknown'].includes(status))fail('VALIDATION');return transaction(()=>{const row=db.prepare('SELECT status,attempts,due_at FROM guest_email_jobs WHERE shop=? AND request_id=?').get(shop,id);if(!row||row.status!=='sending')return;if(row.due_at<=now){recoverEmailClaims(shop,now);return;}if(status==='pending'){epoch(nextAttemptAt);if(nextAttemptAt<=now)fail('VALIDATION');if(row.attempts>=3)status='failed';}db.prepare('UPDATE guest_email_jobs SET status=?,due_at=?,encrypted_access=CASE WHEN ? THEN encrypted_access ELSE ? END WHERE shop=? AND request_id=?').run(status,status==='pending'?nextAttemptAt:null,status==='pending'?1:0,'',shop,id);});});},
+      nextGuestEmailDue(shop){return guarded(()=>{shopKey(shop);return db.prepare("SELECT MIN(due_at) AS due FROM guest_email_jobs WHERE shop=? AND status IN ('pending','sending')").get(shop)?.due??null;});},
       createRequest(actorInput, input, operationId) {
         return guarded(() => {
           const actor = identity(actorInput);
@@ -271,7 +340,7 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
               if (previous.payload_hash !== hash) fail('CONFLICT');
               return view(actor, snapshot);
             }
-            if (actor.isStaff) fail('CONFLICT');
+            if (actor.isStaff || actor.isGuest) fail('CONFLICT');
             const details = input.details === undefined ? undefined : detailsInput(input.details);
             if(details){
               const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(details.pickupAt));
@@ -306,7 +375,8 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
           const actor = identity(actorInput); requestId(id);
           const snapshot = load(actor,id);
           const owner = selectRequest.get(actor.shop,id).customer_id;
-          return { snapshot: view(actor,snapshot), customerId: owner, shop: actor.shop, state: paymentState(actor,id) };
+          const guest=!!db.prepare('SELECT request_id FROM guest_access WHERE shop=? AND request_id=?').get(actor.shop,id);
+          return { snapshot: view(actor,snapshot), customerId: guest?null:owner, ...(guest?{ownerType:'guest'}:{}), shop: actor.shop, state: paymentState(actor,id) };
         });
       },
 
@@ -331,7 +401,8 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
             snapshot.payment = { url:null, stage:'syncing', reviewRequired:!!state.uncertainPhase };
             if (!previous) db.prepare('INSERT INTO payment_operations(shop,request_id,operation_id,action,proposal_version,status) VALUES(?,?,?,?,?,?)').run(actor.shop,id,operationId,action,snapshot.acceptedProposal.version,'pending');
             savePayment(actor,snapshot,state);
-            return { claimed:true, token:state.activeToken, context:{ snapshot:view(actor,snapshot), customerId:selectRequest.get(actor.shop,id).customer_id, shop:actor.shop, state } };
+            const guest=!!db.prepare('SELECT request_id FROM guest_access WHERE shop=? AND request_id=?').get(actor.shop,id);
+            return { claimed:true, token:state.activeToken, context:{ snapshot:view(actor,snapshot), customerId:guest?null:selectRequest.get(actor.shop,id).customer_id, ...(guest?{ownerType:'guest'}:{}), shop:actor.shop, state } };
           });
         });
       },
@@ -389,9 +460,10 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
       listRequests(actorInput) {
         return guarded(() => {
           const actor = identity(actorInput);
+          if(actor.isGuest)fail('AUTH_REQUIRED');
           const rows = actor.isStaff
             ? db.prepare('SELECT snapshot,version FROM requests WHERE shop=? ORDER BY rowid DESC LIMIT 100').all(actor.shop)
-            : db.prepare('SELECT snapshot,version FROM requests WHERE shop=? AND customer_id=? ORDER BY rowid DESC LIMIT 100').all(actor.shop,actor.id);
+            : db.prepare('SELECT snapshot,version FROM requests r WHERE shop=? AND customer_id=? AND NOT EXISTS(SELECT 1 FROM guest_access g WHERE g.shop=r.shop AND g.request_id=r.id) ORDER BY rowid DESC LIMIT 100').all(actor.shop,actor.id);
           return rows.map(row => view(actor, {...JSON.parse(row.snapshot), version:row.version}));
         });
       },

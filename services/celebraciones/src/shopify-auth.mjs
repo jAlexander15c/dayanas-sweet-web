@@ -48,7 +48,7 @@ function decodeBase64Url(value) {
  */
 export async function verifyAppProxy(url, options) {
   try {
-    const { secret, shop, nowSeconds = Math.floor(Date.now() / 1000), maxAgeSeconds = 300 } = options;
+    const { secret, shop, nowSeconds = Math.floor(Date.now() / 1000), maxAgeSeconds = 300, allowAnonymous = false } = options;
     validateConfig(secret, shop, nowSeconds);
     if (!validSeconds(maxAgeSeconds) || !(typeof url === 'string' || url instanceof URL)) throw authRequired();
     const parameters = new URL(url instanceof URL ? url.href : url).searchParams;
@@ -59,7 +59,7 @@ export async function verifyAppProxy(url, options) {
     const customerId = parameters.get('logged_in_customer_id');
     const timestampText = parameters.get('timestamp');
     const signatureHex = parameters.get('signature');
-    if (parameters.get('shop') !== shop || !/^\d+$/.test(customerId ?? '') ||
+    if (parameters.get('shop') !== shop || !(/^\d+$/.test(customerId ?? '') || (allowAnonymous === true && !customerId)) ||
         !/^\d+$/.test(timestampText ?? '') || !/^[a-f\d]{64}$/i.test(signatureHex ?? '')) {
       throw authRequired();
     }
@@ -79,7 +79,7 @@ export async function verifyAppProxy(url, options) {
     const message = [...grouped].map(([key, values]) => `${key}=${values.join(',')}`).sort().join('');
     const signature = Uint8Array.from(signatureHex.match(/../g), pair => Number.parseInt(pair, 16));
     if (!await verifyHmac(encoder.encode(message), signature, secret)) throw authRequired();
-    return { shop, customerId };
+    return { shop, customerId: customerId || null };
   } catch {
     throw authRequired();
   }

@@ -18,6 +18,16 @@ const order = () => ({ id: gid('Order'), customer: { id: gid('Customer', 2) }, t
 const calculated = () => ({ id: gid('CalculatedOrder'), subtotalPriceSet: money('150.01'), totalPriceSet: money('160.51'), totalOutstandingSet: money('70.51'), taxLines: [{ title: 'ITBMS', priceSet: money('10.50') }], lineItems: connection([{ ...line, id: gid('CalculatedLineItem'), editableQuantity: 1 }]), addedLineItems: connection([]) });
 const deposit = { requestId: 'req-1', proposalVersion: 1, operationId: 'op-1', customerId: '2', baseCents: 15001, urgent: false, locationId: gid('Location', 3) };
 
+test('guest draft omits purchasingEntity and never resolves a customer from email',async()=>{
+ const {client,calls}=harness(({variables})=>{
+   assert.equal(Object.hasOwn(variables.input,'purchasingEntity'),false);
+   const value=draft();value.customer=null;
+   return Response.json({data:{draftOrderCreate:{draftOrder:value,userErrors:[]}}});
+ });
+ const result=await client.createDepositDraft({...deposit,customerId:null});assert.equal(result.customerId,null);
+ assert.equal(calls.length,2,'only OAuth and draft create; no customer lookup');
+});
+
 test('adding a staged custom balance accepts Shopify opaque calculated line IDs',async()=>{
   const id='gid://shopify/CalculatedLineItem/new-7b5f9a12';
   const {client}=harness(()=>Response.json({data:{orderEditAddCustomItem:{calculatedOrder:calculated(),calculatedLineItem:{id},userErrors:[]}}}));

@@ -124,12 +124,16 @@ test('transporte usa proxy mismo origen y sube binario con nombre codificado', a
 
 // Render only the assigned section in memory. This exercises its real DOM/CSS/JS,
 // with an isolated service stub, and does not replace Shopify's Liquid renderer.
-export function renderFixture() {
+export function renderFixture({ guest = false } = {}) {
   const source = readFileSync('sections/ds-celebracion-solicitud.liquid', 'utf8');
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*?){% endschema %}/)[1]);
   const settings = Object.fromEntries(schema.settings.filter(s => s.id).map(s => [s.id, s.default ?? '']));
   let markup = source.slice(source.indexOf('<section'), source.indexOf('{% schema %}'));
-  markup = markup.replace(/data-customer="[\s\S]*?" data-customer-key/, 'data-customer="true" data-customer-key');
+  markup = markup.replace(/data-customer="[\s\S]*?" data-customer-key/, `data-customer="${!guest}" data-customer-key`);
+  markup = markup.replace(/{% if customer %}([\s\S]*?){% else %}([\s\S]*?){% endif %}/g, (_, account, visitor) => guest ? visitor : account);
+  markup = markup.replace(/{% if customer %}([\s\S]*?){% endif %}/g, (_, account) => guest ? '' : account);
+  markup = markup.replace(/{% unless customer %}([\s\S]*?){% endunless %}/g, (_, visitor) => guest ? visitor : '');
+  markup = markup.replace(/{{ section.settings.guest_enabled }}/g, String(guest));
   markup = markup.replace(/<div class="ds-request__note" data-gate[\s\S]*?<\/div>/, '<div data-gate></div>');
   markup = markup.replace(/{% assign ds_diameters[\s\S]*?{% endfor %}/, [6, 8, 10, 12, 14, 16].map(d => `<button type="button" data-diameter="${d}" aria-pressed="${d === 8}">${d}″</button>`).join(''));
   markup = markup.replace(/{{ section.settings.tracking_page.url \| escape }}/g, '/pages/seguimiento');
@@ -146,7 +150,7 @@ export function renderFixture() {
       if (url.endsWith('/calendar')) { if(window.failCalendar)throw Error('Calendar offline'); return {ok:true, json:async()=>({days:window.calendarDays})}; }
       if (!options.method) return {ok:true, json:async()=>({requests:[]})};
       if (url.endsWith('/photos') && window.failPhoto) { window.failPhoto=false; throw Error('Offline'); }
-      return {ok:true, json:async()=>({id:'browser-request-1'})};
+      return {ok:true, json:async()=>({id:'browser-request-1',reference:'DS-000123',emailStatus:'failed',contact:{name:'Sofia',email:'sofia@example.test',phone:'2815550123'}})};
     };
   </script><script>${readFileSync('assets/ds-celebracion-solicitud.js', 'utf8')}</script></body></html>`;
 }
@@ -213,5 +217,64 @@ test('navegador: wizard, sabores por piso, fotos/reintento, bloqueo al enviar y 
     assert.deepEqual(result, { preserved: true, safe: true, partial: true, hoursBlocked: true, closedBlocked: true, calendarFailureBlocked: true, success: true, creates: 1, uploads: 2, samePhotoOp: true, diameters: [null, null], tracking: '/pages/seguimiento?solicitud=browser-request-1', recoveryCleared: true });
     await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
     assert.equal(await evaluate('getComputedStyle(document.querySelector("[data-next]")).animationName'), 'none');
+  } finally { socket?.close(); child.kill(); server.close(); }
+});
+
+test('navegador invitado: contacto, referencia, correo honesto, fotos recuperadas al recargar y enlace privado', { skip: !browserPath, timeout: 30000 }, async () => {
+  const fixture = renderFixture({ guest: true });
+  const server = createServer((_, response) => { response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); response.end(fixture); });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const profile = mkdtempSync(join(tmpdir(), 'ds-request-tests-'));
+  const child = spawn(browserPath, ['--headless=new', '--no-first-run', '--no-default-browser-check', '--disable-background-networking', '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank'], { stdio: 'ignore', windowsHide: true });
+  let socket;
+  try {
+    const portFile = join(profile, 'DevToolsActivePort');
+    for (let i = 0; i < 100 && !existsSync(portFile); i++) await delay(100);
+    assert.ok(existsSync(portFile), 'Chrome no inició');
+    const port = readFileSync(portFile, 'utf8').split('\n')[0];
+    const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then(r => r.json());
+    socket = new WebSocket(targets.find(t => t.type === 'page').webSocketDebuggerUrl);
+    await new Promise(resolve => socket.addEventListener('open', resolve, { once: true }));
+    let sequence = 0;
+    const pending = new Map();
+    socket.addEventListener('message', ({ data }) => { const message = JSON.parse(data); if (pending.has(message.id)) { pending.get(message.id)(message); pending.delete(message.id); } });
+    const cdp = (method, params = {}) => new Promise((resolve, reject) => { const id = ++sequence; pending.set(id, r => r.error ? reject(Error(JSON.stringify(r.error))) : resolve(r.result)); socket.send(JSON.stringify({ id, method, params })); });
+    const evaluate = async expression => { const result = await cdp('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true }); if (result.exceptionDetails) throw Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value; };
+    await cdp('Page.navigate', { url: `http://127.0.0.1:${server.address().port}` });
+    for (let i = 0; i < 100; i++) { if (await evaluate('!!window.DSCelebracionSolicitud && !!document.querySelector("[data-ds-request]").dataset.mounted')) break; await delay(30); }
+    assert.equal(await evaluate('document.querySelector("[data-live]").hidden'), false);
+    for (const width of [1180, 390, 320]) {
+      await cdp('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 500 });
+      assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth'), true, `guest overflow ${width}`);
+    }
+    const partial = await evaluate(`(async () => {
+      const q = s => document.querySelector(s), click = s => q(s).click();
+      click('[data-next]');
+      const transfer = new DataTransfer(); transfer.items.add(new File([new Uint8Array([137,80,78,71])], 'guest.png', {type:'image/png',lastModified:123}));
+      q('[data-files]').files=transfer.files; q('[data-files]').dispatchEvent(new Event('change',{bubbles:true}));
+      click('[data-next]');
+      q('[data-date]').value=new Date(Date.now()+10*86400000).toISOString().slice(0,10); q('[data-time]').value='10:00';
+      click('[data-next]'); const missingContactBlocked=!q('[data-step="2"]').hidden;
+      q('[data-contact-name]').value='Sofia'; q('[data-contact-email]').value='sofia@example.test'; q('[data-contact-phone]').value='2815550123'; click('[data-next]');
+      q('[data-confirm]').checked=true; click('[data-next]'); await new Promise(r=>setTimeout(r,40));
+      const creates=serviceCalls.filter(c=>c.url.endsWith('/guest/requests'));
+      const uploads=serviceCalls.filter(c=>c.url.endsWith('/photos'));
+      const body=JSON.parse(creates[0].options.body);
+      return {missingContactBlocked,reference:q('[data-created-id]').textContent,capability:body.capability,photoOp:JSON.parse(uploads[0].options.body).operationId,guestOnly:serviceCalls.every(c=>c.url.includes('/guest/')&&c.options.method==='POST'),partial:!q('[data-created]').hidden&&!q('[data-retry]').hidden};
+    })()`);
+    assert.equal(partial.missingContactBlocked,true); assert.equal(partial.partial,true); assert.equal(partial.reference,'DS-000123'); assert.equal(partial.guestOnly,true); assert.match(partial.capability,/^[a-f0-9]{64}$/);
+    await cdp('Page.reload');
+    for (let i = 0; i < 100; i++) { if (await evaluate('!!document.querySelector("[data-ds-request]")?.dataset.mounted && !document.querySelector("[data-recovery]").hidden')) break; await delay(30); }
+    const complete = await evaluate(`(async () => {
+      const q=s=>document.querySelector(s); window.failPhoto=false;
+      const transfer=new DataTransfer(); transfer.items.add(new File([new Uint8Array([137,80,78,71])], 'guest.png', {type:'image/png',lastModified:123})); q('[data-recover-files]').files=transfer.files;
+      q('[data-recover-submit]').click(); await new Promise(r=>setTimeout(r,40));
+      Object.defineProperty(navigator,'clipboard',{value:{writeText:async()=>{throw Error('denied');}},configurable:true}); q('[data-copy-link]').click(); await new Promise(r=>setTimeout(r,10));
+      const uploads=serviceCalls.filter(c=>c.url.endsWith('/photos'));
+      return {success:!q('[data-success]').hidden,reference:q('[data-reference]').textContent,email:q('[data-email-status]').textContent,tracking:q('[data-success-link]').getAttribute('href'),copy:q('[data-private-link]').value,copyFallback:!q('[data-private-link]').hidden,creates:serviceCalls.filter(c=>c.url.endsWith('/guest/requests')).length,photoOp:JSON.parse(uploads[0].options.body).operationId};
+    })()`);
+    assert.equal(complete.success,true); assert.equal(complete.reference,'DS-000123'); assert.match(complete.email,/no pudimos enviar/i); assert.equal(complete.creates,0); assert.equal(complete.photoOp,partial.photoOp); assert.ok(complete.tracking.endsWith('#acceso='+partial.capability)); assert.ok(complete.copy.endsWith(complete.tracking)); assert.equal(complete.copyFallback,true);
+    await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+    assert.equal(await evaluate('getComputedStyle(document.querySelector("[data-copy-link]")).animationName'), 'none');
   } finally { socket?.close(); child.kill(); server.close(); }
 });

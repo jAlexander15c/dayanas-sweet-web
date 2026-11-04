@@ -189,6 +189,7 @@ function startPanel() {
     for (const snapshot of snapshots.values()) {
       const button = node('button', undefined, 'ds-request'); button.type = 'button'; button.setAttribute('aria-pressed', String(snapshot.id === selected));
       button.append(node('strong', snapshot.pickup.label), node('span', states[snapshot.status] || 'Solicitud'), node('span', snapshot.requestText.slice(0, 100), 'ds-muted'));
+      if(snapshot.reference)button.append(node('span',`${snapshot.reference} · ${snapshot.contact?.name || 'Invitado'}`,'ds-muted'));
       button.addEventListener('click', () => locked(async () => {
         const fresh = await api(pathFor(snapshot.id)); remember(fresh); selected = snapshot.id;
         renderList(); renderDetail(true); feedback('Solicitud actualizada.'); q('#ds-request-title').focus();
@@ -247,11 +248,13 @@ function startPanel() {
   function renderDetail(loadPhotos = false) {
     const snapshot = current(); if (!snapshot) return;
     q('#ds-empty').hidden = true; q('#ds-detail').hidden = false;
-    q('#ds-request-id').textContent = `Solicitud ${snapshot.id}`;
+    q('#ds-request-id').textContent = `Solicitud ${snapshot.reference || snapshot.id}`;
     q('#ds-pickup').textContent = `Recogida · ${snapshot.pickup.label}`;
     q('#ds-urgency').textContent = snapshot.details?.urgent === true ? 'Solicitud urgente' : snapshot.details?.urgent === false ? 'Solicitud normal' : 'Urgencia no indicada';
     q('#ds-status').textContent = states[snapshot.status] || 'Solicitud';
-    q('#ds-request-text').textContent = snapshot.requestText;
+    const emailStates={pending:'Correo pendiente de envío.',sent:'Correo aceptado por el servidor de envío.',failed:'No se pudo enviar el correo. El acceso web sigue disponible.',unknown:'No se pudo confirmar el envío del correo. Revisar antes de reenviar.'};
+    const contact=snapshot.contact?`${snapshot.contact.name}\n${snapshot.contact.email}\n${snapshot.contact.phone}\n${emailStates[snapshot.emailStatus]||''}\n\n`:'';
+    q('#ds-request-text').textContent = contact + snapshot.requestText;
     const finances = paymentSummary(snapshot), billed = billingIsCurrent(snapshot), staleBilling = !!snapshot.billing && !billed; q('#ds-finances').replaceChildren();
     for (const [label, value] of [[billed ? 'Total vigente' : 'Precio', finances.total], ['Recibido', finances.received], ['Saldo pendiente', finances.balance]]) {
       const item = node('div'); item.append(node('span', label, 'ds-muted'), node('strong', value === null ? staleBilling && label === 'Saldo pendiente' ? 'Pendiente de actualizar en Shopify' : 'Por acordar' : usd(value), value === null ? 'ds-money ds-money-pending' : 'ds-money')); q('#ds-finances').append(item);

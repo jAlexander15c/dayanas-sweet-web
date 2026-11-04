@@ -1,14 +1,15 @@
 import { verifyAppProxy, verifyAdminSession } from './shopify-auth.mjs';
 import { randomUUID } from 'node:crypto';
-const status = { AUTH_REQUIRED: 401, NOT_FOUND: 404, CONFLICT: 409, VALIDATION: 422, UNAVAILABLE: 503 };
+import { hashCapability, validateGuestContact, decodeGuestPhoto } from './guest-access.mjs';
+const status = { AUTH_REQUIRED: 401, NOT_FOUND: 404, CONFLICT: 409, VALIDATION: 422, UNAVAILABLE: 503, RATE_LIMITED: 429 };
 const error = code => Object.assign(new Error(code), { code });
 function json(body, code = 200) { return Response.json(body, { status: code, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } }); }
-async function readBody(request) {
+async function readBody(request, limit = 32768) {
   if (request.headers.get('content-type')?.split(';')[0].trim() !== 'application/json') throw error('VALIDATION');
-  if (Number(request.headers.get('content-length')) > 32768) throw Object.assign(error('VALIDATION'), { httpStatus: 413 });
+  if (Number(request.headers.get('content-length')) > limit) throw Object.assign(error('VALIDATION'), { httpStatus: 413 });
   const reader = request.body?.getReader(); if (!reader) throw error('VALIDATION');
   const chunks = []; let size = 0;
-  for (;;) { const { done, value } = await reader.read(); if (done) break; size += value.byteLength; if (size > 32768) { await reader.cancel(); throw Object.assign(error('VALIDATION'), { httpStatus: 413 }); } chunks.push(value); }
+  for (;;) { const { done, value } = await reader.read(); if (done) break; size += value.byteLength; if (size > limit) { await reader.cancel(); throw Object.assign(error('VALIDATION'), { httpStatus: 413 }); } chunks.push(value); }
   const bytes = new Uint8Array(size); let offset = 0; for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
   let body; try { body = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); } catch { throw error('VALIDATION'); }
   if (!body || Array.isArray(body) || typeof body !== 'object') throw error('VALIDATION');
@@ -27,9 +28,45 @@ async function readPhoto(request) {
   return {bytes,name,mimeType};
 }
 function shape(body, keys) { if (Object.keys(body).some(key => !keys.includes(key)) || keys.some(key => !(key in body))) throw error('VALIDATION'); }
-export function createHandler({ store, config, paymentService }) {
+export function createHandler({ store, config, paymentService, guestEmail, mailTest }) {
   return async request => {
     try {
+      const guestUrl=new URL(request.url);
+      if(guestUrl.pathname.startsWith('/proxy/guest/')){
+        const match=guestUrl.pathname.match(/^\/proxy\/guest\/(calendar|requests)(?:\/([a-zA-Z0-9-]{1,100})\/(tracking|comments|accept|payment|payment-sync|photos)(?:\/([a-zA-Z0-9-]{1,100}))?)?$/);
+        if(!match||request.method!=='POST')throw error('NOT_FOUND');
+        const [,resource,id,action,photoId]=match;
+        if(resource==='calendar'&&id||photoId&&action!=='photos')throw error('NOT_FOUND');
+        const signedFields=new Set(['signature','shop','logged_in_customer_id','path_prefix','timestamp']);
+        if([...guestUrl.searchParams.keys()].some(key=>!signedFields.has(key)))throw error('AUTH_REQUIRED');
+        await verifyAppProxy(guestUrl.href,{secret:config.secret,shop:config.shop,allowAnonymous:true});
+        if(request.headers.get('origin')!==config.storefrontOrigin)return json({code:'AUTH_REQUIRED'},403);
+        if(!id&&config.guestEnabled!==true)throw error('UNAVAILABLE');
+        const body=await readBody(request,action==='photos'&&!photoId?2797300:32768);
+        if(resource==='calendar'){shape(body,[]);return json(store.getCalendar({shop:config.shop,customerId:'guest-calendar'}));}
+        if(!id){
+          shape(body,['input','contact','capability','operationId','website']);
+          if(body.website!=='')throw error('VALIDATION');
+          hashCapability(body.capability);validateGuestContact(body.contact);
+          if(config.requireDetails&&!body.input?.details)throw error('VALIDATION');
+          if(typeof guestEmail?.seal!=='function'||typeof guestEmail?.wake!=='function')throw error('UNAVAILABLE');
+          const encryptedAccess=await guestEmail.seal(body.capability);
+          const snapshot=store.createGuestRequest({shop:config.shop},body.input,body.contact,body.capability,body.operationId,{encryptedAccess,now:Date.now()});
+          // The durable outbox remains authoritative if scheduling fails after save.
+          try{await guestEmail.wake();}catch{/* The next alarm can recover the queued email. */}
+          return json(snapshot);
+        }
+        const actor=store.authenticateGuest(config.shop,id,body.capability);
+        if(action==='tracking'){shape(body,['capability']);return json(store.getTracking(actor,id));}
+        if(action==='comments'){shape(body,['capability','text','operationId']);return json(store.comment(actor,id,body.text,body.operationId));}
+        if(action==='accept'){shape(body,['capability','proposalVersion','operationId']);return json(store.accept(actor,id,body.proposalVersion,body.operationId));}
+        if(['payment','payment-sync'].includes(action)){shape(body,['capability','operationId']);if(!paymentService)throw error('UNAVAILABLE');return json(await paymentService[action==='payment'?'pay':'sync'](actor,id,body.operationId));}
+        if(action==='photos'){
+          if(photoId){shape(body,['capability']);const photo=store.getPhoto(actor,id,photoId);return new Response(photo.bytes,{headers:{'Content-Type':photo.mimeType,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; sandbox",'Content-Disposition':'inline'}});}
+          shape(body,['capability','name','mimeType','base64','operationId']);return json(store.addPhoto(actor,id,decodeGuestPhoto(body),body.operationId));
+        }
+        throw error('NOT_FOUND');
+      }
       if(new URL(request.url).pathname==='/admin/session' && request.method==='GET') {
         const header=request.headers.get('authorization')||'';
         if(!header.startsWith('Bearer ')) throw error('AUTH_REQUIRED');
@@ -37,7 +74,8 @@ export function createHandler({ store, config, paymentService }) {
         return json({staffId:identity.staffId,authorized:config.staffIds?.includes(identity.staffId)===true});
       }
       const url = new URL(request.url), calendarMatch=url.pathname.match(/^\/(proxy|admin)\/calendar$/), paymentStatusMatch=url.pathname.match(/^\/(admin)\/payment-status$/);
-      const match = calendarMatch || paymentStatusMatch || url.pathname.match(/^\/(proxy|admin)\/requests(?:\/([a-zA-Z0-9-]{1,100}))?(?:\/(comments|accept|proposals|status|photos|payment|payment-sync)(?:\/([a-zA-Z0-9-]{1,100}))?)?$/);
+      const mailTestMatch=url.pathname.match(/^\/(admin)\/email-test$/);
+      const match = calendarMatch || paymentStatusMatch || mailTestMatch || url.pathname.match(/^\/(proxy|admin)\/requests(?:\/([a-zA-Z0-9-]{1,100}))?(?:\/(comments|accept|proposals|status|photos|payment|payment-sync)(?:\/([a-zA-Z0-9-]{1,100}))?)?$/);
       if (!match) return json({ code: 'NOT_FOUND' }, 404);
       const [, surface, id, action, photoId] = match;
       if(photoId && action!=='photos') throw error('NOT_FOUND');
@@ -59,6 +97,7 @@ export function createHandler({ store, config, paymentService }) {
         actor = { ...identity, role: 'staff' };
       }
       if(paymentStatusMatch){if(request.method!=='GET')throw error('NOT_FOUND');if(!paymentService)throw error('UNAVAILABLE');return json(await paymentService.checkConfiguration());}
+      if(mailTestMatch){if(request.method!=='POST')throw error('NOT_FOUND');const body=await readBody(request);shape(body,['operationId']);if(!mailTest)throw error('UNAVAILABLE');return json(await mailTest(body.operationId));}
       if(calendarMatch){
         if(request.method==='GET')return json(store.getCalendar(actor));
         if(request.method==='POST'){

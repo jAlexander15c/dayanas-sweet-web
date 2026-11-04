@@ -2,7 +2,7 @@
 <script src="{{ 'ds-celebracion-seguimiento.js' | asset_url }}" defer="defer"></script>
 <script src="{{ 'ds-celebracion-servicio.js' | asset_url }}" defer="defer"></script>
 
-<section class="ds-tracking" data-ds-tracking data-tracking-id="" data-service-enabled="{{ section.settings.service_enabled }}" data-proxy-path="{{ section.settings.proxy_path | escape }}" data-shop="{{ shop.permanent_domain | escape }}" data-payment-host="{{ shop.domain | escape }}" aria-labelledby="DSTrackingTitle-{{ section.id }}">
+<section class="ds-tracking" data-ds-tracking data-tracking-id="" data-service-enabled="{{ section.settings.service_enabled }}" data-guest-enabled="{{ section.settings.guest_enabled }}" data-proxy-path="{{ section.settings.proxy_path | escape }}" data-shop="{{ shop.permanent_domain | escape }}" data-payment-host="{{ shop.domain | escape }}" aria-labelledby="DSTrackingTitle-{{ section.id }}">
   <div class="ds-tracking__wrap">
     <header class="ds-tracking__header">
       <p class="ds-tracking__eyebrow">{{ section.settings.eyebrow | escape }}</p>
@@ -16,9 +16,18 @@
 
     <div data-content hidden>
       <div class="ds-tracking__order">
+        <p class="ds-tracking__reference" data-reference hidden></p>
         <p class="ds-tracking__pickup" data-pickup></p>
         <p class="ds-tracking__status" data-order-status></p>
       </div>
+
+      <section class="ds-tracking__card" data-guest-access hidden aria-label="Tu acceso privado">
+        <p data-email-status role="status"></p>
+        <p class="ds-tracking__muted">Guarda tu enlace privado para volver a tu cotización sin crear una cuenta. No lo compartas.</p>
+        <button class="ds-tracking__button ds-tracking__button--secondary" data-copy-link type="button">Copiar enlace privado</button>
+        <input class="ds-tracking__private-link" data-private-link readonly hidden aria-label="Enlace privado de seguimiento">
+        <p class="ds-tracking__muted" data-copy-status role="status"></p>
+      </section>
 
       <section class="ds-tracking__card ds-tracking__payments" aria-labelledby="DSTrackingPayments-{{ section.id }}">
         <h2 class="ds-tracking__eyebrow" id="DSTrackingPayments-{{ section.id }}">{{ section.settings.payments_title | escape }}</h2>
@@ -67,6 +76,11 @@
         <div class="ds-tracking__breakdown" data-pending-breakdown hidden></div>
         <p class="ds-tracking__muted" data-pending-note>{{ section.settings.pending_note | escape }}</p>
         <button class="ds-tracking__button" data-accept type="button">{{ section.settings.accept_label | escape }}</button>
+      </section>
+
+      <section class="ds-tracking__card" data-photos-section hidden aria-labelledby="DSTrackingPhotos-{{ section.id }}">
+        <h2 id="DSTrackingPhotos-{{ section.id }}">Tus fotos de referencia</h2>
+        <div class="ds-tracking__photos" data-photos></div>
       </section>
 
       <section class="ds-tracking__card" data-accepted aria-labelledby="DSTrackingAccepted-{{ section.id }}">
@@ -120,6 +134,7 @@
   "name": "DS · Seguimiento pastel",
   "settings": [
     { "type": "checkbox", "id": "service_enabled", "label": "Activar servicio conectado", "default": false, "info": "Activar solo después de configurar y verificar la app y su proxy." },
+    { "type": "checkbox", "id": "guest_enabled", "label": "Solicitudes sin cuenta", "default": false, "info": "La creación se activa en la sección de solicitud. Los enlaces privados existentes siguen funcionando aunque se desactive." },
     { "type": "text", "id": "proxy_path", "label": "Ruta del proxy de la app", "default": "/apps/celebraciones" },
     { "type": "text", "id": "eyebrow", "label": "Etiqueta superior", "default": "Tu celebración" },
     { "type": "text", "id": "title", "label": "Título", "default": "Tu pastel," },

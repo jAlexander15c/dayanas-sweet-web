@@ -257,7 +257,7 @@ export function createShopifyPaymentClient({ shop, clientId, secret, storefrontO
       const fullBase = centsInput(baseCents);
       const depositBase = urgent ? fullBase : (fullBase * 60n + 99n) / 100n;
       const input = {
-        purchasingEntity: { customerId: customerGid(customerId) }, presentmentCurrencyCode: 'USD',
+        ...(customerId===null?{}:{purchasingEntity:{customerId:customerGid(customerId)}}), presentmentCurrencyCode: 'USD',
         // Boxed cake exemption applies only to this integration's custom cake line.
         lineItems: [{ title: `${urgent ? 'Pago completo' : 'Anticipo'} pastel [${label}]`, quantity: 1, originalUnitPriceWithCurrency: { amount: decimal(depositBase), currencyCode: 'USD' }, taxable: false, requiresShipping: false }],
         tags: ['ds-celebraciones', `ds-request:${requestId}`, `ds-version:${proposalVersion}`, `ds-operation:${operationId}`],
@@ -265,7 +265,7 @@ export function createShopifyPaymentClient({ shop, clientId, secret, storefrontO
         customAttributes: [{ key: 'ds-operation', value: operationId }, { key: 'ds-logistics-validated', value: 'false' }, ...(locationId ? [{ key: 'ds-requested-location', value: locationId }] : [])],
       };
       const result = await graphql(`mutation CreateDepositDraft($input: DraftOrderInput!) { draftOrderCreate(input: $input) { draftOrder { ${draftFields} } userErrors { field message } } }`, { input }, 'draftOrderCreate', true);
-      requireValue(result.draftOrder?.customer?.id === input.purchasingEntity.customerId, 'PAYMENT_REVIEW');
+      requireValue(customerId===null?result.draftOrder?.customer==null:result.draftOrder?.customer?.id===input.purchasingEntity.customerId, 'PAYMENT_REVIEW');
       return draftSnapshot(result.draftOrder, locationId);
     },
 

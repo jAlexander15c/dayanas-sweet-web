@@ -51,7 +51,8 @@ export function createPaymentService({ store, client, mode='TEST', storefrontOri
   }
   function verifyDraft(value,context,id) {
     const {state,customerId}=context;
-    requireValue(value && value.customerId===`gid://shopify/Customer/${customerId}` && value.currency==='USD');
+    requireValue(value && (context.ownerType==='guest'&&customerId===null || value.customerId===`gid://shopify/Customer/${customerId}`) && value.currency==='USD');
+    if(state.draftId)requireValue(value.id===state.draftId);
     tags(value,state,id);
     requireValue(value.subtotalCents===state.initialDepositCents && value.totalCents===state.initialDepositCents && value.taxCents===0 && value.discountCents===0 && value.shippingCents===0);
     requireValue(Array.isArray(value.lineItems) && value.lineItems.length===1 && value.lineItems[0].baseCents===state.initialDepositCents && value.lineItems[0].quantity===1 && value.lineItems[0].title===`${state.urgent?'Pago completo':'Anticipo'} pastel [${id}/v${state.originProposalVersion}]`);
@@ -98,7 +99,7 @@ export function createPaymentService({ store, client, mode='TEST', storefrontOri
   }
   function ledger(order,context,id) {
     const {state,customerId}=context;
-    requireValue(order && order.id===state.orderId && order.customerId===`gid://shopify/Customer/${customerId}` && order.currency==='USD' && order.test===expectedTest);
+    requireValue(order && order.id===state.orderId && (context.ownerType==='guest'&&customerId===null || order.customerId===`gid://shopify/Customer/${customerId}`) && order.currency==='USD' && order.test===expectedTest);
     tags(order,state,id);
     for(const key of ['subtotalCents','taxCents','totalCents','netPaymentCents','receivedCents','refundedCents'])requireValue(cents(order[key]));
     requireValue(order.taxCents===0 && order.subtotalCents===order.totalCents && order.shippingCents===0 && Array.isArray(order.transactions));
@@ -197,6 +198,14 @@ export function createPaymentService({ store, client, mode='TEST', storefrontOri
           return finish('deposit',checkedPaymentUrl(draft.invoiceUrl));
         }
         checkpoint({orderId:draft.orderId});
+      }
+      if(context.ownerType==='guest'){
+        // A checkout can attach a Shopify customer without making them the quote
+        // owner. The durable draft/order relationship plus our tags is authority.
+        requireValue(context.customerId===null&&state.draftId);
+        executionPhase='read-draft';
+        const draft=await client.getDraft(state.draftId);verifyDraft(draft,context,id);
+        requireValue(draft.orderId===state.orderId&&draft.status==='COMPLETED');
       }
       executionPhase='read-order';
       let order=await client.getOrder(state.orderId);

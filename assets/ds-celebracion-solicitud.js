@@ -5,6 +5,7 @@
   const coatings = ['Merengue italiano', 'Whipped icing', 'Ganache de chocolate', 'Buttercream'];
   const decorations = ['Topper personalizado', 'Imagen comestible', 'Flores de fondant'];
   const messages = {
+    RATE_LIMITED: 'Se alcanzó el límite temporal de solicitudes. Inténtalo más tarde.',
     AUTH_REQUIRED: 'Tu sesión terminó. Inicia sesión de nuevo para continuar.',
     VALIDATION: 'Revisa los datos. La fecha y la disponibilidad se validan al enviar.',
     UNAVAILABLE: 'No pudimos completar el envío. Puedes reintentarlo sin duplicar la solicitud.',
@@ -69,51 +70,75 @@
       details: { pickupAt: date.pickupAt, urgent: date.urgent, tiers, coating: selection.coating, decorations: selection.decorations.slice() }
     };
   }
-  function createService(basePath) {
+  function createService(basePath, { guest = false } = {}) {
     if (!/^\/apps\/[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*$/.test(basePath)) throw fail('UNAVAILABLE');
     async function call(path, options = {}) {
-      const response = await global.fetch(`${basePath}${path}`, { credentials: 'same-origin', cache: 'no-store', ...options });
+      const response = await global.fetch(`${basePath}${guest ? '/guest' : ''}${path}`, { credentials: 'same-origin', cache: 'no-store', redirect: 'error', ...options });
       let body;
       try { body = await response.json(); } catch (_) { throw fail('UNAVAILABLE'); }
       if (!response.ok) throw fail(Object.hasOwn(messages, body?.code) ? body.code : 'UNAVAILABLE');
       return body;
     }
+    const post = body => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     return {
-      list: () => call('/requests'),
-      calendar: () => call('/calendar'),
+      ...(!guest ? { list: () => call('/requests') } : {}),
+      calendar: () => call('/calendar', guest ? post({}) : {}),
       create: body => call('/requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
-      upload: (id, file, operationId) => call(`/requests/${encodeURIComponent(id)}/photos`, { method: 'POST', headers: { 'Content-Type': file.type, 'X-File-Name': encodeURIComponent(file.name), 'X-Operation-Id': operationId }, body: file })
+      async upload(id, file, operationId, capability) {
+        if (!validId(id)) throw fail('VALIDATION');
+        if (!guest) return call(`/requests/${encodeURIComponent(id)}/photos`, { method: 'POST', headers: { 'Content-Type': file.type, 'X-File-Name': encodeURIComponent(file.name), 'X-Operation-Id': operationId }, body: file });
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        let binary = '';
+        for (let offset = 0; offset < bytes.length; offset += 8192) binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192));
+        return call(`/requests/${encodeURIComponent(id)}/photos`, post({ capability, name: file.name, mimeType: file.type, base64: global.btoa(binary), operationId }));
+      }
     };
   }
-  function createController(service, notify = () => {}, persist = () => {}, recovery = null) {
-    const state = { id: null, busy: false, error: null, errorCode: null, intent: null, photos: [], complete: false };
-    if (recovery && validId(recovery.id) && Array.isArray(recovery.photos) && recovery.photos.length <= 3 && recovery.photos.every(p => p && typeof p.operationId === 'string' && typeof p.done === 'boolean')) {
-      state.id = recovery.id;
+  function validContact(value) {
+    const contact = { name: String(value?.name || '').trim(), email: String(value?.email || '').trim(), phone: String(value?.phone || '').trim() };
+    if (!contact.name || contact.name.length > 120 || contact.email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email) || !contact.phone || contact.phone.length > 40 || contact.phone.replace(/\D/g, '').length < 7) throw fail('VALIDATION', 'Indica tu nombre, correo electrónico y teléfono válidos.');
+    return contact;
+  }
+  function createController(service, notify = () => {}, persist = () => {}, recovery = null, { guest = false } = {}) {
+    const state = { id: null, busy: false, error: null, errorCode: null, intent: null, photos: [], complete: false, capability: null, snapshot: null };
+    const recoveredIntent = recovery?.intent && typeof recovery.intent.operationId === 'string' && recovery.intent.input && (!guest || /^[a-f0-9]{64}$/.test(recovery.intent.capability || ''));
+    if (recovery && (validId(recovery.id) || recoveredIntent) && (!guest || recoveredIntent) && Array.isArray(recovery.photos) && recovery.photos.length <= 3 && recovery.photos.every(p => p && typeof p.operationId === 'string' && typeof p.done === 'boolean')) {
+      state.id = validId(recovery.id) ? recovery.id : null;
+      state.intent = recoveredIntent ? copy(recovery.intent) : null;
+      state.capability = guest ? state.intent.capability : null;
+      state.snapshot = recovery.snapshot || null;
       state.photos = recovery.photos.map(p => ({ ...p, file: null }));
     }
-    const save = () => persist(state.id ? { id: state.id, photos: state.photos.map(p => ({ ...photoMeta(p), operationId: p.operationId, done: p.done })) } : null);
+    const save = () => persist(state.intent || state.id ? { id: state.id, intent: state.intent, snapshot: state.snapshot, photos: state.photos.map(p => ({ ...photoMeta(p), operationId: p.operationId, done: p.done })) } : null);
     return { state, edit() {
       if (state.busy || state.id || state.errorCode !== 'VALIDATION') return false;
-      state.intent = null; state.photos = []; state.error = null; state.errorCode = null; notify(state); return true;
-    }, async submit(input, files) {
+      state.intent = null; state.capability = null; state.photos = []; state.error = null; state.errorCode = null; save(); notify(state); return true;
+    }, async submit(input, files, contact, website = '') {
       if (state.busy || state.complete) return false;
       state.busy = true; state.error = null; state.errorCode = null; notify(state);
       try {
         if (!state.intent && !state.id) {
           const selected = validatePhotos(files);
+          const guestContact = guest ? validContact(contact) : null;
+          if (guest && website) throw fail('VALIDATION');
           state.intent = { input: copy(input), operationId: uuid() };
+          if (guest) {
+            state.capability = Array.from(global.crypto.getRandomValues(new Uint8Array(32)), b => b.toString(16).padStart(2, '0')).join('');
+            Object.assign(state.intent, { contact: guestContact, capability: state.capability, website: '' });
+          }
           state.photos = selected.map(file => ({ ...photoMeta(file), file, operationId: uuid(), done: false }));
-          notify(state);
+          save(); notify(state);
         }
         if (!state.id) {
           const snapshot = await service.create(state.intent);
           if (!validId(snapshot?.id)) throw fail('UNAVAILABLE');
-          state.id = snapshot.id; save(); notify(state);
+          state.id = snapshot.id; state.snapshot = snapshot; save(); notify(state);
         }
         for (const photo of state.photos.filter(p => !p.done)) {
           if (!photo.file) photo.file = validatePhotos(files).find(f => sameFile(f, photo));
           if (!photo.file) throw fail('RECOVERY');
-          await service.upload(state.id, photo.file, photo.operationId);
+          const snapshot = await service.upload(state.id, photo.file, photo.operationId, state.capability);
+          if (snapshot?.id === state.id) state.snapshot = snapshot;
           photo.done = true; save(); notify(state);
         }
         state.complete = true; persist(null); return true;
@@ -126,12 +151,13 @@
   }
 
   function mount(root) {
-    if (root.dataset.mounted || root.dataset.enabled !== 'true' || root.dataset.customer !== 'true') return;
+    const guest = root.dataset.customer !== 'true';
+    if (root.dataset.mounted || root.dataset.enabled !== 'true' || (guest && root.dataset.guestEnabled !== 'true')) return;
     root.dataset.mounted = 'true';
     const q = s => root.querySelector(s), qa = s => Array.from(root.querySelectorAll(s));
     let service;
-    try { service = createService(root.dataset.proxy); } catch (_) { q('[data-gate]').textContent = messages.UNAVAILABLE; return; }
-    const storageKey = `ds-celebracion-photo-recovery:${root.dataset.customerKey}`;
+    try { service = createService(root.dataset.proxy, { guest }); } catch (_) { q('[data-gate]').textContent = messages.UNAVAILABLE; return; }
+    const storageKey = `ds-celebracion-photo-recovery:${guest ? 'guest' : root.dataset.customerKey}`;
     let recovery;
     try { recovery = JSON.parse(global.sessionStorage.getItem(storageKey)); } catch (_) { /* Storage may be unavailable. */ }
     const persist = record => { try { if (record) global.sessionStorage.setItem(storageKey, JSON.stringify(record)); else global.sessionStorage.removeItem(storageKey); } catch (_) { /* In-memory retry still works. */ } };
@@ -141,10 +167,12 @@
     const calendar = { ready: false, closed: [] };
     const form = q('[data-form]');
     const link = (anchor, id) => {
-      if (!root.dataset.trackingUrl || !validId(id)) { anchor.hidden = true; return; }
-      const url = new URL(root.dataset.trackingUrl, global.location.origin);
+      if (!(root.dataset.trackingUrl || guest) || !validId(id)) { anchor.hidden = true; return; }
+      const url = new URL(root.dataset.trackingUrl || '/pages/seguimiento-de-tu-pastel', global.location.origin);
       if (url.origin !== global.location.origin) { anchor.hidden = true; return; }
-      url.searchParams.set('solicitud', id); anchor.href = url.pathname + url.search; anchor.hidden = false;
+      url.searchParams.set('solicitud', id);
+      if (guest && controller.state.capability) url.hash = `acceso=${controller.state.capability}`;
+      anchor.href = url.pathname + url.search + url.hash; anchor.rel = 'noreferrer'; anchor.hidden = false;
     };
     const controller = createController(service, state => {
       form.setAttribute('aria-busy', String(state.busy));
@@ -158,7 +186,8 @@
       q('[data-login]').hidden = state.errorCode !== 'AUTH_REQUIRED';
       if (state.id) {
         q('[data-created]').hidden = false;
-        q('[data-created-id]').textContent = state.id;
+        q('[data-created-id]').textContent = state.snapshot?.reference || state.id;
+        if (guest && state.capability) { try { global.sessionStorage.setItem(`ds-guest-access:${state.id}`, state.capability); } catch (_) { /* The link still contains access. */ } }
         link(q('[data-created-link]'), state.id);
       }
       if (state.complete) {
@@ -166,14 +195,28 @@
         q('[data-success]').hidden = false;
         link(q('[data-success-link]'), state.id);
         q('[data-success-title]').focus();
-        loadRequests();
+        if (guest) renderReceipt(state); else loadRequests();
       }
-    }, persist, recovery);
-    if (!controller.state.id) recovery = null;
+    }, persist, recovery, { guest });
+    if (!controller.state.id && !controller.state.intent) recovery = null;
     q('[data-gate]').hidden = true;
     q('[data-live]').hidden = false;
     q('[data-js-note]').hidden = true;
 
+    function renderReceipt(state) {
+      q('[data-guest-receipt]').hidden = false;
+      q('[data-reference]').textContent = state.snapshot?.reference || 'Solicitud guardada';
+      const email = state.snapshot?.contact?.email || state.intent?.contact?.email || '';
+      const emailMessages = { pending: `Tu solicitud está guardada. Estamos preparando el correo de seguimiento para ${email}.`, sent: `El servidor de correo aceptó el enlace para ${email}. Revisa también tu carpeta de correo no deseado.`, failed: `Tu solicitud está guardada, pero no pudimos enviar el correo a ${email}. Conserva tu enlace privado.`, unknown: `Tu solicitud está guardada. No pudimos confirmar el envío del correo a ${email}. Conserva tu enlace privado.` };
+      q('[data-email-status]').textContent = emailMessages[state.snapshot?.emailStatus] || emailMessages.unknown;
+    }
+    async function copyTracking() {
+      const anchor = q('[data-success-link]');
+      try { await global.navigator.clipboard.writeText(anchor.href); q('[data-copy-status]').textContent = 'Enlace privado copiado. Guárdalo y no lo compartas.'; }
+      catch (_) { q('[data-private-link]').parentElement.hidden = false; q('[data-private-link]').hidden = false; q('[data-private-link]').value = anchor.href; q('[data-private-link]').select(); q('[data-copy-status]').textContent = 'Copia y guarda este enlace privado.'; }
+    }
+    if (guest) q('[data-copy-link]').addEventListener('click', copyTracking);
+    function contactInput() { return guest ? validContact({ name: q('[data-contact-name]').value, email: q('[data-contact-email]').value, phone: q('[data-contact-phone]').value }) : null; }
     function row(parent, title, content) {
       const wrap = document.createElement('div'), label = document.createElement('dt'), value = document.createElement('dd');
       label.textContent = title; value.textContent = content; wrap.append(label, value); parent.append(wrap);
@@ -296,6 +339,7 @@
       if (checkingCalendar) return;
       if (step < 3) {
         if (step === 2) {
+          if (guest) { try { contactInput(); } catch (error) { q('[data-error]').textContent = error.message; q('[data-error]').hidden = false; const invalid = qa('[data-guest-contact] input').find(el => !el.checkValidity()); (invalid || q('[data-contact-name]')).focus(); return; } }
           const date = dateStatus(); if (!date) { q('[data-date]').focus(); return; }
           lastSnapshot = buildInput(selection, date);
           summarize(q('[data-review]'));
@@ -303,6 +347,7 @@
           row(q('[data-review]'), 'Modalidad', date.urgent ? 'Urgente · requiere aprobación y recargo cotizado' : 'Normal');
           row(q('[data-review]'), 'Comentarios', selection.comments.trim() || 'Sin comentarios adicionales.');
           row(q('[data-review]'), 'Fotos de referencia', `${files.length} seleccionadas`);
+          if (guest) { const c = contactInput(); row(q('[data-review]'), 'Tu contacto', `${c.name} · ${c.email} · ${c.phone}`); }
         }
         showStep(step + 1); return;
       }
@@ -313,22 +358,26 @@
       if (!calendarReady) { showStep(2); return; }
       const date = dateStatus(); if (!date) { showStep(2); return; }
       lastSnapshot = buildInput(selection, date);
-      await controller.submit(lastSnapshot, files);
+      await controller.submit(lastSnapshot, files, guest ? contactInput() : null, guest ? q('[data-website]').value : '');
     });
     q('[data-retry]').addEventListener('click', () => controller.submit(lastSnapshot, files));
-    q('[data-edit]').addEventListener('click', () => { if (controller.edit()) showStep(0); });
-    q('[data-list-retry]').addEventListener('click', loadRequests);
+    q('[data-edit]').addEventListener('click', () => {
+      if (controller.edit()) { recovery = null; q('[data-recovery]').hidden = true; q('[data-layout]').hidden = false; showStep(0); }
+    });
+    if (!guest) q('[data-list-retry]').addEventListener('click', loadRequests);
     q('[data-calendar-retry]').addEventListener('click', loadCalendar);
-    if (controller.state.id) {
+    if (controller.state.id || controller.state.intent) {
       q('[data-layout]').hidden = true; q('[data-recovery]').hidden = false;
-      q('[data-recovery-id]').textContent = controller.state.id;
+      q('[data-recovery-id]').textContent = controller.state.snapshot?.reference || controller.state.id || 'Pendiente de confirmar; reintentaremos la misma solicitud.';
+      if (!controller.state.id) q('[data-recovery] h2').textContent = 'Completemos tu envío';
       link(q('[data-recovery-link]'), controller.state.id);
       q('[data-pending-photos]').textContent = controller.state.photos.filter(p => !p.done).map(p => p.name).join(', ') || 'No hay fotos pendientes.';
       q('[data-recover-submit]').addEventListener('click', () => controller.submit(null, q('[data-recover-files]').files));
     }
-    renderFlavors(); updateSummary(); loadRequests(); loadCalendar();
+    renderFlavors(); updateSummary(); if (!guest) loadRequests(); loadCalendar();
+    global.addEventListener?.('pagehide', () => { previewUrls.forEach(url => global.URL.revokeObjectURL(url)); previewUrls = []; });
   }
-  global.DSCelebracionSolicitud = { pickupInfo, validateCalendar, validatePhotos, buildInput, createService, createController, mount };
+  global.DSCelebracionSolicitud = { pickupInfo, validateCalendar, validatePhotos, validContact, buildInput, createService, createController, mount };
   if (global.document) {
     const init = () => global.document.querySelectorAll('[data-ds-request]').forEach(mount);
     if (global.document.readyState === 'loading') global.document.addEventListener('DOMContentLoaded', init); else init();

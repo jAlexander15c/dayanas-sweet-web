@@ -12,14 +12,17 @@ const customer = { shop, customerId: '7' }, staff = { shop, role: 'staff', staff
 const gid = (type, id = 1) => `gid://shopify/${type}/${id}`;
 const proposal = total => ({ baseCents: total, surchargeCents: 0, display: 'total', canPrepare: 'Pastel en caja', changes: '', reply: 'Listo' });
 
-function setup(t, { durable = false, mode = 'TEST', urgent = false, clock = Date.now, onDiagnostic, totalCents=15000 } = {}) {
+function setup(t, { durable = false, mode = 'TEST', urgent = false, clock = Date.now, onDiagnostic, totalCents=15000, guest=false } = {}) {
   let path = ':memory:', directory;
   if (durable) { directory = mkdtempSync(join(tmpdir(), 'sweet-payments-')); path = join(directory, 'db.sqlite'); }
   const stores = [], open = () => { const value = createStore(path); stores.push(value); return value; };
   const store = open(); t.after(() => { stores.forEach(value => value.close()); if(directory)rmSync(directory,{recursive:true,force:true}); });
   const details = { pickupAt: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10) + 'T16:00:00Z', urgent, tiers: [{ diameter: 6, sponges: ['Vainilla', 'Vainilla'], fillings: ['Fresa', 'Fresa'] }], coating: 'Crema', decorations: [] };
-  const request = store.createRequest(customer, { requestText: 'Pastel', pickup: { label: 'Recogida' }, details }, 'create');
-  store.propose(staff, request.id, proposal(totalCents), 'quote'); store.accept(customer, request.id, 1, 'accept');
+  const requestInput={requestText:'Pastel',pickup:{label:'Recogida'},details};
+  const capability='ab'.repeat(32);
+  const request = guest?store.createGuestRequest({shop},requestInput,{name:'Ana',email:'ana@example.test',phone:'5551234567'},capability,'create',{encryptedAccess:'sealed',now:Date.now()}):store.createRequest(customer,requestInput,'create');
+  const actor=guest?store.authenticateGuest(shop,request.id,capability):customer;
+  store.propose(staff, request.id, proposal(totalCents), 'quote'); store.accept(actor, request.id, 1, 'accept');
   const calls = [];
   let draft = null, order = null, calculated = null;
   function preview(){const total=calculated.lineItems.reduce((sum,line)=>sum+line.quantity*line.baseCents-(line.discountCents||0),0);return{id:gid('CalculatedOrder'),subtotalCents:total,totalCents:total,outstandingCents:total-order.netPaymentCents,taxLines:[],lineItems:calculated.lineItems.map(line=>({...line,id:line.id.replace('/LineItem/','/CalculatedLineItem/'),discounts:(line.discounts||[]).map(discount=>({...discount,kind:'CalculatedManualDiscountApplication',applicationId:`gid://shopify/CalculatedManualDiscountApplication/discount-${line.id.split('/').at(-1)}`}))}))};}
@@ -27,9 +30,9 @@ function setup(t, { durable = false, mode = 'TEST', urgent = false, clock = Date
     async checkConfiguration(){return {currency:'USD',scopes:['write_draft_orders','read_orders','write_order_edits','read_customers','write_orders'],locations:[]};},
     async createDepositDraft(input) {
       calls.push(['createDepositDraft', input]);
-      assert.ok(store.getPaymentContext(customer, request.id).state.phase === 'draft-create', 'attempt must be committed before remote create');
+      assert.ok(store.getPaymentContext(actor, request.id).state.phase === 'draft-create', 'attempt must be committed before remote create');
       const amount = urgent ? totalCents : Number((BigInt(totalCents)*60n+99n)/100n);
-      draft = { id: gid('DraftOrder'), customerId: gid('Customer', 7), orderId: null, status: 'OPEN', currency: 'USD', subtotalCents: amount, taxCents: 0, totalCents: amount, discountCents: 0, shippingCents: 0, taxesIncluded: false, tags: ['ds-celebraciones', `ds-request:${request.id}`, 'ds-version:1', `ds-operation:${input.operationId}`], invoiceUrl: `https://${shop}/invoice/one`, lineItems: [{ id: gid('DraftOrderLineItem'), title: `${urgent ? 'Pago completo' : 'Anticipo'} pastel [${request.id}/v1]`, quantity: 1, baseCents: amount }] };
+      draft = { id: gid('DraftOrder'), customerId: guest?null:gid('Customer', 7), orderId: null, status: 'OPEN', currency: 'USD', subtotalCents: amount, taxCents: 0, totalCents: amount, discountCents: 0, shippingCents: 0, taxesIncluded: false, tags: ['ds-celebraciones', `ds-request:${request.id}`, 'ds-version:1', `ds-operation:${input.operationId}`], invoiceUrl: `https://${shop}/invoice/one`, lineItems: [{ id: gid('DraftOrderLineItem'), title: `${urgent ? 'Pago completo' : 'Anticipo'} pastel [${request.id}/v1]`, quantity: 1, baseCents: amount }] };
       return structuredClone(draft);
     },
     async findDraftByOperation() { calls.push(['findDraftByOperation']); return draft ? [structuredClone(draft)] : []; },
@@ -49,8 +52,34 @@ function setup(t, { durable = false, mode = 'TEST', urgent = false, clock = Date
     draft.orderId = gid('Order'); draft.status = 'COMPLETED';
     order = { id: gid('Order'), customerId: gid('Customer', 7), test: true, currency: 'USD', tags: [...draft.tags], subtotalCents: amount, taxCents: 0, totalCents: amount, netPaymentCents: amount, receivedCents: amount, refundedCents: 0, outstandingCents: 0, fullyPaid: true, discountCents: 0, shippingCents: 0, closed: false, cancelledAt: null, taxesIncluded: false, lineItems: draft.lineItems.map(line => ({ ...line, id: gid('LineItem') })), transactions: [{ id: gid('OrderTransaction'), kind: 'SALE', status: 'SUCCESS', test: true, amountCents: amount, currency: 'USD', parentId: null }] };
   }
-  return { store, open, path, id: request.id, client, service, calls, paid, get draft() { return draft; }, get order() { return order; } };
+  return { store, open, path, actor, capability, id: request.id, client, service, calls, paid, get draft() { return draft; }, get order() { return order; } };
 }
+
+test('guest financial identity stays null and persisted draft relationship verifies full 60/40 payment',async t=>{
+ const f=setup(t,{guest:true,durable:true});
+ const checkout=await f.service.pay(f.actor,f.id,'guest-pay');assert.equal(checkout.payment.stage,'deposit');
+ assert.equal(f.calls.find(([name])=>name==='createDepositDraft')[1].customerId,null);
+ f.paid();
+ // Shopify may attach a customer during checkout. It never grants quote access.
+ f.order.customerId=gid('Customer',345);f.draft.customerId=gid('Customer',345);
+ const reopenedStore=f.open(),actor=reopenedStore.authenticateGuest(shop,f.id,f.capability);
+ const reopened=createPaymentService({store:reopenedStore,client:f.client,mode:'TEST'});
+ const deposit=await reopened.sync(actor,f.id,'guest-deposit');assert.equal(deposit.status,'reserved');assert.equal(deposit.billing.balanceDueCents,6000);
+ f.order.transactions.push({id:gid('OrderTransaction',2),kind:'SALE',status:'SUCCESS',test:true,amountCents:6000,currency:'USD',parentId:null});
+ f.order.netPaymentCents=f.order.receivedCents=15000;f.order.outstandingCents=0;f.order.fullyPaid=true;
+ const paid=await reopened.sync(actor,f.id,'guest-final');assert.equal(paid.payment.stage,'paid');assert.equal(paid.billing.balanceDueCents,0);
+ assert.throws(()=>f.store.getTracking({shop,customerId:'345'},f.id),{code:'NOT_FOUND'});
+});
+for(const [name,tamper]of [
+ ['wrong persisted draft id',f=>{f.draft.id=gid('DraftOrder',999);}],
+ ['order no longer belongs to persisted draft',f=>{f.draft.orderId=gid('Order',999);}],
+ ['missing own order tags',f=>{f.order.tags=[];}],
+ ['wrong financial amounts',f=>{f.order.netPaymentCents=9001;}],
+])test(`guest rejects ${name} even after an earlier confirmed reconciliation`,async t=>{
+ const f=setup(t,{guest:true});assert.equal((await f.service.pay(f.actor,f.id,'pay')).payment.stage,'deposit');f.paid();
+ const initial=await f.service.sync(f.actor,f.id,'sync');assert.equal(initial.payment.stage,'balance');
+ tamper(f);const result=await f.service.sync(f.actor,f.id,'tampered');assert.equal(result.payment.stage,'review');assert.equal(result.payment.url,null);
+});
 
 test('creates one durable deposit checkout and GET tracking never performs network mutations', async t => {
   assert.equal(typeof createPaymentService, 'function');
