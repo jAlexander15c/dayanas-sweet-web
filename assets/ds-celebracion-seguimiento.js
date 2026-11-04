@@ -14,7 +14,16 @@
   const initialPaymentExpired = (snapshot, now = Date.now()) => { const deadline = initialPaymentDeadline(snapshot); return deadline !== null && deadline <= now; };
   const fail = code => Object.assign(new Error(messages[code]), { code });
   const cents = value => { if (!Number.isSafeInteger(value) || value < 0) throw fail('VALIDATION'); return value; };
-  const paymentStages = new Set(['unavailable', 'deposit', 'syncing', 'balance', 'paid', 'review']);
+  const paymentStages = new Set(['unavailable', 'deposit', 'syncing', 'balance', 'paid', 'review', 'delivery']);
+  const paymentMode = (s,p=s.acceptedProposal) => p?.paymentMode ?? (s.details?.urgent === true ? 'full' : 'deposit');
+  function terms(s,p) {
+    const mode=paymentMode(s,p), paid=balance(s).paidCents;
+    if(mode==='delivery')return `Pago completo contra entrega. No pagas ahora; al recoger: ${money(Math.max(0,p.totalCents-paid))}.`;
+    if(mode==='full')return `Pago completo anticipado: ${money(Math.max(0,p.totalCents-paid))} en Shopify.${paid?' Tus pagos recibidos se conservan.':' El pago confirma la reserva.'}`;
+    if(paid)return `Anticipo del 60 %. Tus pagos recibidos se conservan; el saldo se actualizará en Shopify al aceptar.`;
+    const deposit=Math.ceil(p.totalCents*60/100);
+    return `Anticipo del 60 %: ${money(deposit)} para reservar y ${money(p.totalCents-deposit)} hasta 24 horas antes de recoger.`;
+  }
   function paymentUrl(value, configuredHosts = []) {
     if (typeof value !== 'string' || value.length > 4096) return null;
     try {
@@ -48,6 +57,7 @@
       if (p === null) continue;
       if (!p || !Number.isSafeInteger(p.version) || p.version < 1 || !['total', 'breakdown'].includes(p.display) || ['canPrepare', 'changes', 'reply'].some(k => typeof p[k] !== 'string')) throw fail('VALIDATION');
       if (p.expiresAt !== undefined && p.expiresAt !== null && (typeof p.expiresAt !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(p.expiresAt) || !Number.isFinite(Date.parse(p.expiresAt)))) throw fail('VALIDATION');
+      if(p.paymentMode!==undefined && !['deposit','full','delivery'].includes(p.paymentMode))throw fail('VALIDATION');
       if (cents(p.baseCents) + cents(p.surchargeCents) !== cents(p.totalCents)) throw fail('VALIDATION');
     }
     if (s.comments.some(c => !c || ['id', 'author', 'text'].some(k => typeof c[k] !== 'string'))) throw fail('VALIDATION');
@@ -97,6 +107,7 @@
       const s = state.snapshot;
       if (state.busy || !s?.payment || !s.acceptedProposal || typeof service[action] !== 'function') return false;
       if (action === 'startPayment' && initialPaymentExpired(s)) { state.error = { code: 'QUOTE_EXPIRED', message: messages.QUOTE_EXPIRED }; publish(); return false; }
+      if (paymentMode(s)==='delivery')return action==='syncPayment'?run('load',()=>service.getTracking(id)):false;
       if (action === 'startPayment' && (s.pendingProposal || s.payment.reviewRequired || !['deposit', 'balance'].includes(s.payment.stage))) return false;
       const key = `${action}:${s.acceptedProposal.version}:${s.payment.stage}`, operationId = operation(key, true);
       const ok = await run(action, () => service[action](id, operationId));
@@ -195,25 +206,28 @@
       if(q('total-label'))put('total-label',amounts.taxIncluded?'Total':'Precio');
       put('balance-label', amounts.creditCents ? 'A tu favor' : 'Saldo pendiente');
       put('balance', amounts.pendingTax?'Pendiente de actualizar en Shopify':money(amounts.creditCents || amounts.dueCents));
-      put('payments-note', 'Paga el saldo 24 horas antes de recoger. Cualquier ajuste requiere tu aceptación.');
+      put('payments-note', paymentMode(s)==='delivery' ? 'Paga el saldo al recoger. Tu reserva está confirmada sin anticipo.' : paymentMode(s)==='full' ? 'El pago completo se realiza antes de preparar. Cualquier ajuste requiere tu aceptación.' : 'Paga el saldo 24 horas antes de recoger. Cualquier ajuste requiere tu aceptación.');
       if (q('payment-note')) {
         const payment = s.payment, review = payment?.reviewRequired || payment?.stage === 'review', expiredPayment = initialPaymentExpired(s);
-        const canPay = !!accepted && !s.pendingProposal && !expiredPayment && !review && ['deposit', 'balance'].includes(payment?.stage);
+        const mode=paymentMode(s);
+        const canPay = mode!=='delivery' && !!accepted && !s.pendingProposal && !expiredPayment && !review && ['deposit', 'balance'].includes(payment?.stage);
         const url = canPay ? paymentUrl(payment.url, [root.dataset.shop, root.dataset.paymentHost]) : null;
         const unsafeLink = canPay && payment.url !== null && !url;
-        const label = payment?.stage === 'balance' ? 'Pagar saldo' : s.details?.urgent === true ? 'Pagar pedido' : 'Pagar anticipo';
+        const label = payment?.stage === 'balance' ? 'Pagar saldo' : mode==='full' ? 'Pagar pedido' : 'Pagar anticipo';
         q('pay').hidden = !canPay || !!url || unsafeLink; q('pay').disabled = state.busy || expiredPayment; put('pay', label);
         q('payment-link').hidden = !url || state.busy; put('payment-link', label);
         if (url && !state.busy) q('payment-link').setAttribute('href', url); else q('payment-link').removeAttribute('href');
         q('payment-sync').hidden = !payment || !accepted; q('payment-sync').disabled = state.busy;
+        put('payment-sync',mode==='delivery'?'Actualizar estado':'Comprobar pago');
         const note = expiredPayment ? 'Esta propuesta venció y su enlace de pago necesita revisión. No pagues con el enlace anterior. Escríbele a Dayana para acordar una nueva fecha y recibir una propuesta vigente.'
           : review && payment?.reason === 'CHECKOUT_PENDING' ? 'Hay un checkout anterior pendiente de comprobar para otra versión de tu propuesta. No pagues con el enlace anterior. Escríbele a Dayana para revisar el pago y continuar.'
           : review && payment?.reason === 'QUOTE_EXPIRED' ? 'Esta propuesta venció y su enlace de pago necesita revisión. No pagues con el enlace anterior. Escríbele a Dayana para acordar una nueva fecha y recibir una propuesta vigente.'
           : review || unsafeLink ? 'Este pago necesita revisión. No vuelvas a pagar; Dayana comprobará el pedido. Puedes actualizar el estado.'
           : s.pendingProposal ? 'Revisa y acepta la propuesta pendiente antes de continuar con el pago.'
           : payment?.stage === 'syncing' ? 'Estamos comprobando el pago con Shopify. No vuelvas a pagar; actualiza el estado en unos momentos.'
-          : payment?.stage === 'paid' ? 'Pago confirmado por Shopify. No tienes que volver a pagar.'
-          : canPay ? s.details?.urgent === true ? 'Pedido urgente: se paga el 100% para confirmar la reserva. El pago se realiza en Shopify.' : payment.stage === 'deposit' ? 'El anticipo es del 60%. La reserva se confirma cuando Shopify acredita el pago.' : 'El saldo y los pagos recibidos se comprueban en Shopify.'
+          : payment?.stage === 'paid' ? mode==='delivery' ? 'Pago contra entrega registrado por Dayana. No tienes que volver a pagar.' : 'Pago confirmado por Shopify. No tienes que volver a pagar.'
+          : mode==='delivery' && accepted ? `Reserva confirmada. Pagarás ${money(amounts.dueCents)} al recoger; no necesitas un anticipo.`
+          : canPay ? payment.stage==='balance' ? 'El saldo y los pagos recibidos se comprueban en Shopify.' : mode==='full' ? 'Pago completo del 100% para confirmar la reserva. El pago se realiza en Shopify.' : 'El anticipo es del 60%. La reserva se confirma cuando Shopify acredita el pago.'
           : 'El enlace de pago estará disponible cuando la propuesta aceptada esté lista para pagar.';
         put('payment-note', note);
       }
@@ -233,13 +247,13 @@
       }
       if (pending) {
         put('pending-title', accepted ? 'Hay un ajuste por revisar' : 'Tu cotización está lista');
-        put('pending-note', ['reserved', 'preparing'].includes(s.status) ? 'Tu reserva y los pagos recibidos se conservan. Aceptar no realiza ningún cobro.' : 'Aceptar esta propuesta no reserva cupo ni realiza un cobro. La reserva se confirma con el pago correspondiente.');
+        put('pending-note', ['reserved', 'preparing'].includes(s.status) ? 'Tu reserva y los pagos recibidos se conservan. Aceptar no realiza ningún cobro.' : paymentMode(s,pending)==='delivery' ? 'Al aceptar confirmas tu reserva, si la fecha sigue disponible. Pagarás al recoger; no se realiza ningún cobro ahora.' : 'Aceptar esta propuesta no reserva cupo ni realiza un cobro. La reserva se confirma con el pago correspondiente.');
         put('accept', accepted ? 'Aceptar ajuste' : 'Aceptar propuesta');
         q('pending-breakdown').hidden = pending.display !== 'breakdown';
         put('pending-breakdown', `Pastel y personalización: ${money(pending.baseCents)} · Urgencia: ${money(pending.surchargeCents)}`);
         put('pending-reply', pending.reply); put('pending-can', pending.canPrepare); put('pending-changes', pending.changes.trim() ? pending.changes : 'Sin cambios respecto a tu referencia.');
         put('pending-total', money(pending.totalCents));
-        put('pending-balance', 'El saldo final se actualizará en Shopify al aceptar. Tus pagos recibidos se conservan.');
+        put('pending-balance', terms(s,pending));
       }
       q('accept').disabled = state.busy || !s.permissions.canAccept || expired || s.status === 'ready';
       const canComment = s.permissions.canComment && s.status !== 'ready';
@@ -248,7 +262,7 @@
       list('comments', s.comments, c => c.author, c => c.text);
       const now = Date.now(), deadlines = [Date.parse(pending?.expiresAt), initialPaymentDeadline(s)].filter(at => Number.isFinite(at) && at > now);
       if (deadlines.length) expiryTimer = global.setTimeout?.(() => render(controller.state), Math.min(Math.min(...deadlines) - now + 1, 2147483647)) ?? null;
-      list('history', s.history, h => `Propuesta ${h.version} · ${h.status} · ${money(h.totalCents)}`, h => h.reply);
+      list('history', s.history, h => `Propuesta ${h.version} · ${h.status} · ${money(h.totalCents)}`, h => `${h.reply}${h.paymentMode ? ' · '+({deposit:'Anticipo del 60 %',full:'Pago completo anticipado',delivery:'Pago completo contra entrega'}[h.paymentMode] || '') : ''}`);
     }
     const controller = createController(id, service, render, { shop: root.dataset.shop });
     root.dsTrackingController = controller;
@@ -283,6 +297,6 @@
     void controller.load().then(ok => { if (ok && controller.state.snapshot?.payment && controller.state.snapshot.payment.stage !== 'unavailable') void controller.syncPayment(); });
     return controller;
   }
-  global.DSTracking = { balance, createController, mountTracking, paymentUrl, createPhotoGallery };
+  global.DSTracking = { balance, createController, mountTracking, paymentUrl, createPhotoGallery, paymentMode, terms };
   // Deliberately no endpoint or automatic fake service. The authenticated integration mounts this API.
 })(globalThis);

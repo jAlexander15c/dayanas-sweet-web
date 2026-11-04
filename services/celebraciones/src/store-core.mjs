@@ -53,7 +53,8 @@ function proposalExpired(snapshot,proposal){
 }
 function preparationAllowed(snapshot){
   const total=snapshot.acceptedProposal?.totalCents||0;
-  const required=snapshot.details?.urgent?total:Number((BigInt(total)*60n+99n)/100n);
+  if(paymentMode(snapshot)==='delivery')return !!snapshot.acceptedProposal&&!snapshot.pendingProposal&&snapshot.billing?.proposalVersion===snapshot.acceptedProposal.version&&['delivery','paid'].includes(snapshot.payment?.stage)&&!snapshot.payment.reviewRequired;
+  const required=paymentMode(snapshot)==='full'?total:Number((BigInt(total)*60n+99n)/100n);
   return !!snapshot.acceptedProposal&&!snapshot.pendingProposal&&required>0&&snapshot.billing?.proposalVersion===snapshot.acceptedProposal.version
     &&snapshot.billing.netPaidCents>=required&&['balance','paid'].includes(snapshot.payment?.stage)&&!snapshot.payment.reviewRequired;
 }
@@ -70,14 +71,28 @@ function payloadHash(action, payload) {
   return createHash('sha256').update(JSON.stringify([action, canonical(payload)])).digest('hex');
 }
 
-function proposalInput(input) {
-  object(input, ['baseCents', 'surchargeCents', 'display', 'canPrepare', 'changes', 'reply']);
+function paymentMode(snapshot, proposal = snapshot.acceptedProposal) {
+  return proposal?.paymentMode ?? (snapshot.details?.urgent === true ? 'full' : 'deposit');
+}
+
+function deliveryBilling(snapshot) {
+  const total = snapshot.acceptedProposal.totalCents;
+  const paid = snapshot.payments.reduce((sum, item) => sum + item.amountCents, 0);
+  snapshot.billing = { proposalVersion:snapshot.acceptedProposal.version, subtotalCents:total, taxCents:0,
+    totalCents:total, netPaidCents:paid, balanceDueCents:Math.max(total-paid,0), overpaymentCents:Math.max(paid-total,0), currency:'USD', source:'staff' };
+  snapshot.payment = {url:null, stage:paid>total?'review':paid===total?'paid':'delivery', reviewRequired:paid>total};
+}
+
+function proposalInput(input, defaultMode) {
+  object(input, ['baseCents', 'surchargeCents', 'display', 'canPrepare', 'changes', 'reply', ...(Object.hasOwn(input || {}, 'paymentMode') ? ['paymentMode'] : [])]);
+  const mode = input.paymentMode === undefined ? defaultMode : input.paymentMode;
+  if (!['deposit','full','delivery'].includes(mode)) fail('VALIDATION');
   for (const field of ['baseCents', 'surchargeCents']) {
     if (!Number.isSafeInteger(input[field]) || input[field] < 0 || input[field] > MAX_CENTS) fail('VALIDATION');
   }
   if (input.baseCents + input.surchargeCents > MAX_CENTS || !['total', 'breakdown'].includes(input.display)) fail('VALIDATION');
   return {
-    baseCents: input.baseCents, surchargeCents: input.surchargeCents,
+    baseCents: input.baseCents, surchargeCents: input.surchargeCents, paymentMode:mode,
     totalCents: input.baseCents + input.surchargeCents, display: input.display,
     canPrepare: text(input.canPrepare), changes: text(input.changes, { empty: true }), reply: text(input.reply),
   };
@@ -239,6 +254,7 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
         ...(snapshot.pendingProposal?{pendingProposal:{...snapshot.pendingProposal,...(snapshot.details?.pickupAt&&!snapshot.pendingProposal.expiresAt?{expiresAt:snapshot.details.pickupAt}:{})}}:{}),
         ...(actor.isStaff&&includeNotifications?{notifications:db.prepare('SELECT id,event,status,attempts FROM notification_jobs WHERE shop=? AND request_id=? ORDER BY rowid DESC').all(actor.shop,snapshot.id).map(row=>({id:row.id,...JSON.parse(row.event),eventStatus:JSON.parse(row.event).status,status:row.status==='sending'?'pending':row.status,attempts:row.attempts}))}:{}),
         ...(snapshot.reference?{emailStatus:emailStatus(actor.shop,snapshot.id)}:{}),
+        ...(snapshot.acceptedProposal ? {paymentModeLocked:!!paymentState(actor,snapshot.id) || paymentMode(snapshot)==='delivery' || snapshot.payments.length>0} : {}),
         ...(snapshot.acceptedProposal && !snapshot.payment ? {payment:{url:null,stage:'deposit',reviewRequired:false}} : {}),
         // Saved checkout URLs and completed operation replays must expire too.
         // Keep durable financial state intact so a later Shopify payment reconciles.
@@ -467,6 +483,7 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
           return transaction(() => {
             const snapshot = load(actor,id);
             if (!snapshot.acceptedProposal || snapshot.acceptedProposal.totalCents <= 0) fail('CONFLICT');
+            if (paymentMode(snapshot)==='delivery' || (action==='pay' && snapshot.pendingProposal)) fail('CONFLICT');
             let state = paymentState(actor,id);
             if(action==='pay'&&!state?.draftId&&!state?.orderId&&proposalExpired(snapshot,snapshot.acceptedProposal))fail('QUOTE_EXPIRED');
             if(action==='pay'&&snapshot.pendingProposal)fail('CONFLICT');
@@ -475,7 +492,9 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
             if (previous?.status === 'completed') return { claimed:false, snapshot:view(actor,snapshot) };
             if (state?.activeToken && state.leaseUntil > now) return { claimed:false, snapshot:view(actor,snapshot) };
             if (!state) state = { phase:'idle', originOperationId:operationId, originProposalVersion:snapshot.acceptedProposal.version,
-              initialBaseCents:snapshot.acceptedProposal.totalCents, initialDepositCents:snapshot.details?.urgent ? snapshot.acceptedProposal.totalCents : Number((BigInt(snapshot.acceptedProposal.totalCents)*60n+99n)/100n), urgent:snapshot.details?.urgent === true,
+              // `urgent` is the legacy adapter's full-payment flag. Keep its
+              // persisted value unchanged for existing drafts and order titles.
+              initialBaseCents:snapshot.acceptedProposal.totalCents, initialDepositCents:paymentMode(snapshot)==='full' ? snapshot.acceptedProposal.totalCents : Number((BigInt(snapshot.acceptedProposal.totalCents)*60n+99n)/100n), urgent:paymentMode(snapshot)==='full', paymentMode:paymentMode(snapshot),
               syncedProposalVersion:null, draftId:null, orderId:null, uncertainPhase:null, checkoutVersion:null };
             if (state.phase !== 'idle' && state.phase !== 'read') state.uncertainPhase = state.phase;
             if (state.editId && !state.editCommitted && !state.uncertainPhase) state.uncertainPhase='edit-incomplete';
@@ -622,10 +641,22 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
           const state=paymentState(actor,id);
           if(state?.draftId&&!state.orderId)fail('CHECKOUT_PENDING');
           if (state?.activeToken || (state && state.phase !== 'idle' && !state.uncertainPhase)) fail('CONFLICT');
+          const nextMode=paymentMode(snapshot,snapshot.pendingProposal);
+          if ((state || snapshot.payments.length || (snapshot.acceptedProposal && paymentMode(snapshot)==='delivery')) && nextMode!==paymentMode(snapshot)) fail('CONFLICT');
+          if (nextMode==='delivery' && !['reserved','preparing'].includes(snapshot.status)) {
+            if (snapshot.pendingProposal.totalCents<=0) fail('VALIDATION');
+            if (snapshot.details?.pickupAt) {
+              const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(snapshot.details.pickupAt));
+              if (Date.parse(snapshot.details.pickupAt)<=Date.now() || db.prepare('SELECT closed FROM calendar_days WHERE shop=? AND date=?').get(actor.shop,date)?.closed===1) fail('CONFLICT');
+            }
+          }
           snapshot.acceptedProposal = snapshot.pendingProposal;
           snapshot.pendingProposal = null;
-          if (snapshot.payment) snapshot.payment={url:null,stage:'syncing',reviewRequired:false};
-          // Acceptance alone never proves payment or reserves production capacity.
+          if (nextMode==='delivery') {
+            snapshot.status=['reserved','preparing'].includes(snapshot.status)?snapshot.status:'reserved';
+            deliveryBilling(snapshot);
+          } else if (snapshot.payment) snapshot.payment={url:null,stage:'syncing',reviewRequired:false};
+          // Only explicit delivery terms reserve on acceptance, never prove payment.
         });
       },
 
@@ -635,18 +666,32 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
           const state=paymentState(actor,id);
           if(state?.activeToken)fail('CONFLICT');
           if(state?.draftId&&!state.orderId)fail('CHECKOUT_PENDING');
-          const proposal = proposalInput(input);
+          const proposal = proposalInput(input, paymentMode(snapshot,snapshot.pendingProposal ?? snapshot.acceptedProposal));
+          if ((paymentState(actor,id) || snapshot.payments.length || (snapshot.acceptedProposal && paymentMode(snapshot)==='delivery')) && proposal.paymentMode!==paymentMode(snapshot)) fail('CONFLICT');
           const previous = snapshot.pendingProposal ?? snapshot.acceptedProposal;
           const versions = [snapshot.pendingProposal?.version ?? 0, snapshot.acceptedProposal?.version ?? 0,
             ...snapshot.history.map(entry => entry.version)];
           if (previous && !snapshot.history.some(entry => entry.version === previous.version)) {
             snapshot.history.push({
               version: previous.version, status: snapshot.status,
-              totalCents: previous.totalCents, reply: previous.reply,
+              totalCents: previous.totalCents, reply: previous.reply, paymentMode:paymentMode(snapshot,previous),
             });
           }
           snapshot.pendingProposal = { version: Math.max(...versions) + 1, ...proposal,...(snapshot.details?.pickupAt?{expiresAt:snapshot.details.pickupAt}:{}) };
           if (snapshot.status === 'requested') snapshot.status = 'quoted';
+        });
+      },
+
+      recordDeliveryPayment(actorInput,id,proposalVersion,operationId) {
+        return mutate(actorInput,id,operationId,'deliveryPayment',{proposalVersion},(actor,snapshot)=>{
+          if (!actor.isStaff) fail('AUTH_REQUIRED');
+          if (!Number.isSafeInteger(proposalVersion) || proposalVersion<=0) fail('VALIDATION');
+          if (!snapshot.acceptedProposal || paymentMode(snapshot)!=='delivery' || snapshot.acceptedProposal.version!==proposalVersion || snapshot.pendingProposal || paymentState(actor,id) || !['reserved','preparing','ready'].includes(snapshot.status)) fail('CONFLICT');
+          deliveryBilling(snapshot);
+          const amountCents=snapshot.billing.balanceDueCents;
+          if (amountCents<=0 || snapshot.payment.reviewRequired) fail('CONFLICT');
+          snapshot.payments.push({id:randomUUID(),amountCents,status:'confirmed',source:'staff',receivedAt:new Date().toISOString(),proposalVersion});
+          deliveryBilling(snapshot);
         });
       },
 
@@ -655,7 +700,8 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
           if (!['preparing', 'ready'].includes(status)) fail('VALIDATION');
           if (!actor.isStaff || !['reserved', 'preparing'].includes(snapshot.status) || status === snapshot.status) fail('CONFLICT');
           if(status==='preparing'&&!preparationAllowed(snapshot))fail('CONFLICT');
-          if (status === 'ready' && (!snapshot.billing || snapshot.billing.proposalVersion !== snapshot.acceptedProposal?.version || snapshot.billing.balanceDueCents !== 0 || snapshot.billing.netPaidCents < snapshot.billing.totalCents || snapshot.payment?.stage !== 'paid' || snapshot.payment.reviewRequired || snapshot.pendingProposal)) fail('CONFLICT');
+          const delivery=snapshot.acceptedProposal && paymentMode(snapshot)==='delivery';
+          if (status === 'ready' && (!snapshot.billing || snapshot.billing.proposalVersion !== snapshot.acceptedProposal?.version || (!delivery && (snapshot.billing.balanceDueCents !== 0 || snapshot.billing.netPaidCents < snapshot.billing.totalCents || snapshot.payment?.stage !== 'paid')) || (delivery && !['delivery','paid'].includes(snapshot.payment?.stage)) || snapshot.payment.reviewRequired || snapshot.pendingProposal)) fail('CONFLICT');
           snapshot.status = status;
         });
       },

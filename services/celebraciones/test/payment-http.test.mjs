@@ -38,6 +38,25 @@ function staffRequest(path,body,staffId='9'){
  const token=`${header}.${claims}.${createHmac('sha256',config.secret).update(`${header}.${claims}`).digest('base64url')}`;
  return new Request(`https://backend.test/admin${path}`,{method:body?'POST':'GET',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
 }
+
+test('delivery receipt is staff-only, server-priced, version-bound and works after ready without Shopify',async()=>{
+ const store=createStore(':memory:');try{
+  const owner={shop:config.shop,customerId:'7'},staff={shop:config.shop,role:'staff',staffId:'9'};
+  const {id}=store.createRequest(owner,{requestText:'Pastel',pickup:{label:'Recoger'}},'create');
+  store.propose(staff,id,{baseCents:15000,surchargeCents:0,display:'total',canPrepare:'Pastel',changes:'',reply:'Listo',paymentMode:'delivery'},'quote');
+  store.accept(owner,id,1,'accept');
+  const handler=createHandler({store,config});
+  assert.equal((await handler(staffRequest(`/requests/${id}/status`,{status:'ready',operationId:'ready'}))).status,200);
+  const body={proposalVersion:1,operationId:'received'};
+  assert.equal((await handler(signed(id,'delivery-payment',body))).status,401);
+  assert.equal((await handler(staffRequest(`/requests/${id}/delivery-payment`,body,'8'))).status,401);
+  assert.equal((await handler(staffRequest(`/requests/${id}/delivery-payment`,{...body,amountCents:1}))).status,422);
+  assert.equal((await handler(staffRequest(`/requests/${id}/delivery-payment`,{...body,proposalVersion:2}))).status,409);
+  const response=await handler(staffRequest(`/requests/${id}/delivery-payment`,body));
+  assert.equal(response.status,200);const s=await response.json();assert.equal(s.payments.length,1);assert.equal(s.billing.netPaidCents,15000);assert.equal(s.billing.source,'staff');
+  const retry=await handler(staffRequest(`/requests/${id}/delivery-payment`,body));assert.equal((await retry.json()).payments.length,1);
+ }finally{store.close();}
+});
 test('ready checks fresh financial state every attempt and refuses a newly refunded order',async()=>{
  const store=createStore(':memory:');try{
   const value=store.createRequest({shop:config.shop,customerId:'7'},{requestText:'Pastel',pickup:{label:'Recoger'}},'create');

@@ -106,7 +106,7 @@ test('proposal versions increase independently and stale acceptance never applie
   assert.equal(store.getTracking(customer, id).permissions.canAccept, true);
   const second = store.propose(staff, id, { ...proposal, baseCents: 16000 }, 'p2');
   assert.equal(second.pendingProposal.version, 2);
-  assert.deepEqual(second.history, [{ version: 1, status: 'quoted', totalCents: 17000, reply: proposal.reply }]);
+  assert.deepEqual(second.history, [{ version: 1, status: 'quoted', totalCents: 17000, reply: proposal.reply, paymentMode:'deposit' }]);
   assert.throws(() => store.accept(customer, id, 1, 'stale'), code('CONFLICT'));
   assert.equal(store.getTracking(customer, id).pendingProposal.totalCents, 18000);
   const accepted = store.accept(customer, id, 2, 'accept');

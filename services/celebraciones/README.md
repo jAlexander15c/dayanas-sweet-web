@@ -10,7 +10,7 @@ Backend con persistencia SQLite y autenticación Shopify. Instalado y probado co
 - Estado de pedido comprobado dentro de transacciones. Aceptar una cotización no marca la reserva como pagada.
 - Transporte del tema en `assets/ds-celebracion-servicio.js`, desactivado por defecto en la sección.
 - Fotos privadas, agenda abierta/cerrada por fecha y validación de recogida en America/Chicago.
-- Checkout Shopify con anticipo60/saldo40 en el mismo pedido; urgentes100. Conciliación mediante transacciones confirmadas y alarmas persistentes.
+- Modalidad por propuesta (`paymentMode`): `deposit` (60/40 en Shopify), `full` (100 % en Shopify), `delivery` (contra entrega registrado por staff en Celebraciones). Legacy sin campo: normales60/urgentes100; estados Shopify existentes mantienen su representación. Conciliación online mediante transacciones confirmadas y alarmas persistentes.
 - Desarchivo de pedidos propios antes de añadir el saldo, con `write_orders` autorizado. No modifica los ajustes generales de preparación/archivo.
 
 ## Ejecutar pruebas
@@ -61,7 +61,8 @@ Proxy de Shopify `/apps/celebraciones` → URL HTTPS del servicio con prefijo `/
 - `GET /admin/requests/:id`: requiere sesión Admin y personal autorizado.
 - `POST /admin/requests/:id/comments`: `{ text, operationId }`.
 - `POST /admin/requests/:id/proposals`: `{ proposal, operationId }`; el servidor asigna versión y total.
-- `POST /admin/requests/:id/status`: `{ status, operationId }`; no permite reservar un pedido impagado.
+- `POST /admin/requests/:id/status`: `{ status, operationId }`; contra entrega permite preparar y marcar listo con deuda pendiente, las demás modalidades requieren conciliación Shopify para listo.
+- `POST /admin/requests/:id/delivery-payment`: `{ proposalVersion, operationId }`; solo staff autorizado, saldo calculado en servidor, idempotencia y versión vigente sin propuesta pendiente. Registro local de recibido, sin transacción Shopify; disponible incluso después de listo. La aceptación contra entrega reserva si la fecha está disponible. El registro conserva fuente y fecha; `operations.principal` identifica al staff que confirmó.
 
 Las mutaciones usan JSON salvo la carga binaria de fotos. El navegador del cliente no envía identidad, precio aceptado ni pagos. El servidor verifica la firma de Shopify y la propiedad en cada llamada. Los cambios del cliente requieren `Origin` igual al configurado; el recorrido real del proxy ya se comprobó en el piloto.
 

@@ -17,7 +17,7 @@ export function buildNotificationMessage(job,capability,storefrontOrigin){
   const suffix=job.reference&&/^DS-\d{6,12}$/.test(job.reference)?` — ${job.reference}`:'';
   const subject=subjects[kind]+suffix;
   const link=`${origin.origin}/pages/seguimiento-de-tu-pastel?solicitud=${job.requestId}${job.isGuest?`#acceso=${capability}`:''}`;
-  const content=`Hola,\n\n${subject}.\n\nConsulta los detalles y responde desde el seguimiento de tu pastel:\n${link}\n\n${job.isGuest?'Este enlace es privado. Consérvalo y no lo compartas.':'Ingresa con la cuenta con la que hiciste tu solicitud.'}${kind==='propose'?'\nLa propuesta no confirma una reserva: revisa las condiciones y el pago correspondiente en el seguimiento.':''}\n\nDayana’s Sweet\n`;
+  const content=`Hola,\n\n${subject}.\n\nConsulta los detalles y responde desde el seguimiento de tu pastel:\n${link}\n\n${job.isGuest?'Este enlace es privado. Consérvalo y no lo compartas.':'Ingresa con la cuenta con la que hiciste tu solicitud.'}${kind==='propose'?'\nRevisa las condiciones en el seguimiento: la reserva se confirma con el pago acordado o al aceptar si Dayana ofrece pago contra entrega.':''}\n\nDayana’s Sweet\n`;
   return [`From: Dayana's Sweet <${sender}>`,`To: <${job.contact.email}>`,`Reply-To: <${sender}>`,
     `Subject: ${subject}`,`Message-ID: <notice-${job.id}@dayanassweet.com>`,
     'MIME-Version: 1.0','Content-Type: text/plain; charset=UTF-8','Content-Transfer-Encoding: base64','',
@@ -31,7 +31,7 @@ export function buildQuoteMessage(job, capability, storefrontOrigin) {
   const origin = new URL(storefrontOrigin);
   if (origin.protocol !== 'https:' || origin.origin !== storefrontOrigin) throw failure();
   const link = `${origin.origin}/pages/seguimiento-de-tu-pastel?solicitud=${job.id}#acceso=${capability}`;
-  const content = `Hola ${job.contact.name},\n\nRecibimos tu solicitud ${job.reference}.\n\nPuedes consultar la cotización y conversar con Dayana desde tu enlace privado:\n${link}\n\nConserva este enlace y no lo compartas. Tu solicitud todavía no reserva la fecha; la reserva se confirma con el pago correspondiente y la disponibilidad.\n\nDayana’s Sweet\n`;
+  const content = `Hola ${job.contact.name},\n\nRecibimos tu solicitud ${job.reference}.\n\nPuedes consultar la cotización y conversar con Dayana desde tu enlace privado:\n${link}\n\nConserva este enlace y no lo compartas. Tu solicitud todavía no reserva la fecha; la reserva se confirma seg?n las condiciones de la propuesta y la disponibilidad.\n\nDayana’s Sweet\n`;
   return [`From: Dayana's Sweet <${sender}>`, `To: <${job.contact.email}>`, `Reply-To: <${sender}>`,
     `Subject: Recibimos tu solicitud ${job.reference}`, `Message-ID: <quote-${job.id}@dayanassweet.com>`,
     'MIME-Version: 1.0', 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: base64',

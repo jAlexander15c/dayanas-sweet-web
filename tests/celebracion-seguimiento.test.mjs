@@ -11,6 +11,21 @@ const proposal = (totalCents = 15000, version = 1) => ({ version, totalCents, ba
 const snapshot = () => ({ id: 'cake-1', version: 1, status: 'reserved', pickup: { label: '14 noviembre' }, requestText: 'Rosa', acceptedProposal: proposal(), pendingProposal: proposal(17000, 2), payments: [{ id: 'p1', amountCents: 9000, status: 'confirmed' }], comments: [], history: [], permissions: { canComment: true, canAccept: true } });
 test('API de seguimiento disponible', () => assert.equal(typeof api?.createController, 'function'));
 
+test('contra entrega muestra la deuda sin checkout y actualiza mediante lectura',async()=>{
+  const s=snapshot();s.acceptedProposal.paymentMode='delivery';s.pendingProposal=null;s.payments=[];
+  s.payment={url:null,stage:'delivery',reviewRequired:false};let reads=0,pays=0;
+  const c=api.createController('cake-1',{getTracking:async()=>{reads++;return s},startPayment:async()=>{pays++},syncPayment:async()=>{throw Error('No Shopify sync')}});
+  assert.equal(await c.load(),true);assert.equal(await c.startPayment(),false);assert.equal(await c.syncPayment(),true);
+  assert.equal(reads,2);assert.equal(pays,0);assert.match(api.terms(s,s.acceptedProposal),/contra entrega/);assert.match(api.terms(s,s.acceptedProposal),/150/);
+});
+
+test('condiciones explícitas prevalecen sobre urgencia y rechazan modalidades desconocidas',async()=>{
+  const s=snapshot();s.details={urgent:true};s.payments=[];s.pendingProposal.paymentMode='deposit';
+  assert.equal(api.paymentMode(s,s.pendingProposal),'deposit');assert.match(api.terms(s,s.pendingProposal),/60 %/);
+  s.details.urgent=false;s.pendingProposal.paymentMode='full';assert.match(api.terms(s,s.pendingProposal),/completo anticipado/);
+  s.pendingProposal.paymentMode='invalid';const c=api.createController('cake-1',{getTracking:async()=>s});assert.equal(await c.load(),false);
+});
+
 test('saldo fiscal usa total Shopify y no resta pago con impuesto al precio base',()=>{
  const s=snapshot();s.payments=[{id:'p1',amountCents:9738,status:'confirmed'}];
  s.billing={proposalVersion:1,totalCents:16238,taxCents:1238,netPaidCents:9738,balanceDueCents:6500,currency:'USD'};

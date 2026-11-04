@@ -1,6 +1,22 @@
 const failure = code => Object.assign(new Error(code), { code });
 const states = { requested: 'Solicitud recibida', quoted: 'Cotización disponible', reserved: 'Reserva confirmada', preparing: 'En preparación', ready: 'Listo para recoger' };
 const usd = cents => new Intl.NumberFormat('es-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
+export const proposalPaymentMode = (snapshot, proposal = snapshot.acceptedProposal) => proposal?.paymentMode ?? (snapshot.details?.urgent === true ? 'full' : 'deposit');
+export function paymentTerms(mode, total, received=0) {
+  const due=Math.max(0,total-received);
+  if(received>total)return `Pagos recibidos: ${usd(received)}. Diferencia a favor del cliente: ${usd(received-total)}, pendiente de resolución.`;
+  if(received && due===0)return `Total cubierto por los pagos recibidos: ${usd(received)}. Sin saldo pendiente.`;
+  if (mode==='delivery') return `Pago completo contra entrega: ${usd(due)} ${received?'de saldo ':''}al recoger.${received?' Los pagos recibidos se conservan.':' No se pide anticipo. La reserva se confirma al aceptar.'}`;
+  if (mode==='full') return `Pago completo anticipado: ${usd(due)} ${received?'de saldo ':''}en Shopify.${received?' Los pagos recibidos se conservan.':' El pago confirma la reserva.'}`;
+  if(received)return `Anticipo del 60 %. Recibido: ${usd(received)}. Saldo de esta propuesta: ${usd(due)}; se actualizará en Shopify al aceptar.`;
+  const deposit=Math.ceil(total*60/100);
+  return `Anticipo del 60 %: ${usd(deposit)} para reservar y ${usd(total-deposit)} hasta 24 horas antes de recoger.`;
+}
+export function canRecordDeliveryPayment(snapshot) {
+  return !!snapshot?.acceptedProposal && proposalPaymentMode(snapshot)==='delivery' && !snapshot.pendingProposal
+    && ['reserved','preparing','ready'].includes(snapshot.status) && billingIsCurrent(snapshot)
+    && snapshot.payment?.stage==='delivery' && !snapshot.payment.reviewRequired && paymentSummary(snapshot).balance>0;
+}
 
 export function parseDollars(value) {
   if (!/^\d+(?:\.\d{1,2})?$/.test(value)) throw failure('VALIDATION');
@@ -43,6 +59,7 @@ function billingIsCurrent(snapshot) {
 }
 
 export function canMarkReady(snapshot) {
+  if (snapshot?.acceptedProposal && proposalPaymentMode(snapshot)==='delivery') return ['reserved','preparing'].includes(snapshot.status) && !snapshot.pendingProposal && billingIsCurrent(snapshot) && ['delivery','paid'].includes(snapshot.payment?.stage) && !snapshot.payment.reviewRequired;
   if (!snapshot || !['reserved', 'preparing'].includes(snapshot.status) || snapshot.pendingProposal || !billingIsCurrent(snapshot)
     || snapshot.payment?.stage !== 'paid' || snapshot.payment.reviewRequired) return false;
   return paymentSummary(snapshot).balance === 0;
@@ -126,8 +143,25 @@ function startPanel() {
   const feedback = (message, error = false) => { q('#ds-feedback').textContent = message; q('#ds-feedback').classList.toggle('ds-error', error); };
   const pathFor = id => `/admin/requests/${encodeURIComponent(id)}`;
   const current = () => snapshots.get(selected);
+  const photoDialog=q('#ds-photo-dialog');
+  let photoOpener=null;
+  function closePhoto() { if(photoDialog.open)photoDialog.close();q('#ds-photo-full').removeAttribute('src'); }
+  function openPhoto(url,name,opener) {
+    photoOpener=opener;
+    q('#ds-photo-title').textContent=name;
+    q('#ds-photo-full').alt=name;q('#ds-photo-full').src=url;
+    q('#ds-photo-view').classList.remove('is-zoomed');
+    q('#ds-photo-zoom').setAttribute('aria-pressed','false');q('#ds-photo-zoom').textContent='Ampliar';
+    photoDialog.showModal();
+  }
+  q('#ds-photo-close').addEventListener('click',closePhoto);
+  photoDialog.addEventListener('close',()=>{if(photoDialog.open)return;q('#ds-photo-full').removeAttribute('src');if(photoOpener?.isConnected)photoOpener.focus();photoOpener=null;});
+  q('#ds-photo-zoom').addEventListener('click',()=>{
+    const zoomed=q('#ds-photo-view').classList.toggle('is-zoomed');
+    q('#ds-photo-zoom').setAttribute('aria-pressed',String(zoomed));q('#ds-photo-zoom').textContent=zoomed?'Ajustar':'Ampliar';
+  });
 
-  function revokePhotos() { photoGeneration++; for (const url of photoUrls) URL.revokeObjectURL(url); photoUrls.clear(); q('#ds-photos').replaceChildren(); }
+  function revokePhotos() { closePhoto();photoGeneration++; for (const url of photoUrls) URL.revokeObjectURL(url); photoUrls.clear(); q('#ds-photos').replaceChildren(); }
   function remember(snapshot) {
     if (!snapshot || typeof snapshot.id !== 'string' || !Number.isSafeInteger(snapshot.version)) throw failure('UNAVAILABLE');
     paymentSummary(snapshot);
@@ -152,6 +186,9 @@ function startPanel() {
     q('#ds-ready').hidden = !['reserved', 'preparing'].includes(snapshot?.status);
     q('#ds-preparing').disabled = busy || denied || snapshot?.permissions.canPrepare===false;
     q('#ds-ready').disabled = busy || denied || !canMarkReady(snapshot);
+    proposalForm.elements.paymentMode.disabled = busy || denied || !!snapshot?.paymentModeLocked;
+    q('#ds-delivery-form').hidden = !canRecordDeliveryPayment(snapshot);
+    q('#ds-delivery-fields').disabled = busy || denied || !canRecordDeliveryPayment(snapshot);
     q('#ds-workspace').setAttribute('aria-busy', String(busy));
   }
   async function accessDenied() {
@@ -210,7 +247,8 @@ function startPanel() {
   function renderProposal(target, proposal) {
     const container = q(target); container.replaceChildren();
     container.append(node('p', `Propuesta ${proposal.version} · Precio: ${usd(proposal.totalCents)}`, 'ds-proposal-price'));
-    if (target === '#ds-pending-copy') container.append(node('p', 'Saldo final de esta propuesta: Se calculará en Shopify.', 'ds-muted'));
+    container.append(node('p', paymentTerms(proposalPaymentMode(current(),proposal),proposal.totalCents,paymentSummary(current()).received), 'ds-note'));
+    if (current()?.payments.length) container.append(node('p', 'Los pagos ya recibidos se descuentan del total. No se vuelven a cobrar.', 'ds-muted'));
     if (proposal.display === 'breakdown') container.append(node('p', `Pastel y personalización: ${usd(proposal.baseCents)} · Recargo por urgencia: ${usd(proposal.surchargeCents)}`, 'ds-muted'));
     for (const [label, value] of [['Lo que podemos preparar', proposal.canPrepare], ['Lo que cambia', proposal.changes || 'Sin cambios indicados.'], ['Respuesta de Dayana', proposal.reply]]) {
       container.append(node('h4', label), node('p', value, 'ds-copy'));
@@ -222,7 +260,7 @@ function startPanel() {
       drafts.set(snapshot.id, {
         canPrepare: source?.canPrepare || '', changes: source?.changes || '', reply: source?.reply || '',
         baseCents: source ? (source.baseCents / 100).toFixed(2) : '',
-        surchargeCents: source ? (source.surchargeCents / 100).toFixed(2) : '0', display: source?.display || 'total', text: '',
+        surchargeCents: source ? (source.surchargeCents / 100).toFixed(2) : '0', display: source?.display || 'total', paymentMode:proposalPaymentMode(snapshot,source), text: '',
       });
     }
     return drafts.get(snapshot.id);
@@ -231,7 +269,7 @@ function startPanel() {
     try {
       const total = parseDollars(proposalForm.elements.baseCents.value) + parseDollars(proposalForm.elements.surchargeCents.value);
       if (total > 100000000) throw failure('VALIDATION');
-      q('#ds-price-preview').textContent = `Precio de esta propuesta: ${usd(total)}. Se aplicará cuando el cliente la acepte.`;
+      q('#ds-price-preview').textContent = `Precio de esta propuesta: ${usd(total)}. ${paymentTerms(proposalForm.elements.paymentMode.value,total,current()?paymentSummary(current()).received:0)}`;
     } catch { q('#ds-price-preview').textContent = 'Completa un precio válido, con hasta dos decimales.'; }
   }
   async function renderPhotos(snapshot) {
@@ -246,7 +284,9 @@ function startPanel() {
         if (generation !== photoGeneration || denied) return;
         if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'].includes(blob.type)) throw failure('UNAVAILABLE');
         const url = URL.createObjectURL(blob); photoUrls.add(url);
-        const image = node('img'); image.alt = attachment.name; image.src = url; image.loading = 'lazy'; figure.prepend(image);
+        const image = node('img'); image.alt = attachment.name; image.src = url; image.loading = 'lazy';
+        const enlarge=node('button',undefined,'ds-photo-open');enlarge.type='button';enlarge.setAttribute('aria-label',`Ampliar foto: ${attachment.name}`);enlarge.setAttribute('aria-haspopup','dialog');
+        enlarge.append(image,node('span','Ampliar foto'));enlarge.addEventListener('click',()=>openPhoto(url,attachment.name,enlarge));figure.prepend(enlarge);
       } catch (error) {
         if (generation !== photoGeneration) return;
         if (error.code === 'AUTH_REQUIRED') { accessDenied(); return; }
@@ -280,30 +320,35 @@ function startPanel() {
     for (const [label, value] of [[billed ? 'Total vigente' : 'Precio', finances.total], ['Recibido', finances.received], ['Saldo pendiente', finances.balance]]) {
       const item = node('div'); item.append(node('span', label, 'ds-muted'), node('strong', value === null ? staleBilling && label === 'Saldo pendiente' ? 'Pendiente de actualizar en Shopify' : 'Por acordar' : usd(value), value === null ? 'ds-money ds-money-pending' : 'ds-money')); q('#ds-finances').append(item);
     }
-    q('#ds-billing-note').textContent = billed ? 'Importes confirmados por Shopify para la propuesta vigente.' : staleBilling ? 'El total y el saldo están pendientes de actualizar en Shopify.' : 'El precio vigente corresponde a la propuesta aceptada.';
+    q('#ds-billing-note').textContent = snapshot.acceptedProposal && proposalPaymentMode(snapshot)==='delivery' ? snapshot.payment?.reviewRequired ? 'Hay una diferencia a favor del cliente pendiente de revisión. No registres otro cobro.' : snapshot.payment?.stage==='paid' ? 'Pago contra entrega registrado por la pastelera en Celebraciones.' : 'Pago contra entrega: la reserva está confirmada y el cobro sigue pendiente. Los importes se registran en Celebraciones.' : billed ? 'Importes confirmados por Shopify para la propuesta vigente.' : staleBilling ? 'El total y el saldo están pendientes de actualizar en Shopify.' : 'El precio vigente corresponde a la propuesta aceptada.';
+    q('#ds-delivery-amount').textContent = `Importe recibido al entregar: ${usd(finances.balance || 0)}.`;
+    q('#ds-delivery-form').reset();
     q('#ds-credit').hidden = !finances.credit;
     q('#ds-credit').textContent = `Diferencia a favor del cliente: ${usd(finances.credit)}. Pendiente de resolución; no se ha realizado un reembolso.`;
     q('#ds-accepted').hidden = !snapshot.acceptedProposal; if (snapshot.acceptedProposal) renderProposal('#ds-accepted-copy', snapshot.acceptedProposal);
     q('#ds-pending').hidden = !snapshot.pendingProposal; if (snapshot.pendingProposal) renderProposal('#ds-pending-copy', snapshot.pendingProposal);
     const draft = draftFor(snapshot);
-    for (const key of ['canPrepare', 'changes', 'reply', 'baseCents', 'surchargeCents', 'display']) proposalForm.elements[key].value = draft[key];
+    if(snapshot.paymentModeLocked)draft.paymentMode=proposalPaymentMode(snapshot);
+    for (const key of ['canPrepare', 'changes', 'reply', 'baseCents', 'surchargeCents', 'display', 'paymentMode']) proposalForm.elements[key].value = draft[key];
+    q('#ds-payment-mode-note').textContent = snapshot.paymentModeLocked ? 'La modalidad está fijada porque ya se inició el cobro o se aceptó la reserva contra entrega.' : 'Solo la pastelera elige esta condición; el cliente la revisa al aceptar. También puedes elegirla en solicitudes urgentes.';
     commentForm.elements.text.value = draft.text; pricePreview();
     q('#ds-thread').replaceChildren();
     for (const comment of snapshot.comments) { const article = node('article', undefined, 'ds-message'); article.append(node('strong', comment.author), node('p', comment.text, 'ds-copy')); q('#ds-thread').append(article); }
     if (!snapshot.comments.length) q('#ds-thread').append(node('p', 'Todavía no hay comentarios.', 'ds-muted'));
     q('#ds-history').replaceChildren();
-    for (const entry of snapshot.history) { const article = node('article'); article.append(node('h4', `Propuesta ${entry.version} · ${states[entry.status] || entry.status} · ${usd(entry.totalCents)}`), node('p', entry.reply, 'ds-copy')); q('#ds-history').append(article); }
+    for (const entry of snapshot.history) { const article = node('article'); article.append(node('h4', `Propuesta ${entry.version} · ${states[entry.status] || entry.status} · ${usd(entry.totalCents)}`), node('p', paymentTerms(proposalPaymentMode(snapshot,entry),entry.totalCents)), node('p', entry.reply, 'ds-copy')); q('#ds-history').append(article); }
     if (!snapshot.history.length) q('#ds-history').append(node('p', 'Todavía no hay propuestas anteriores.', 'ds-muted'));
     q('#ds-proposal-note').textContent = snapshot.status === 'ready' ? 'El pastel está listo. Ya no se pueden enviar propuestas.' : snapshot.permissions.canPropose===false?'Hay un checkout inicial pendiente. El sistema comprobará si ya fue pagado antes de permitir otra propuesta; mientras siga pendiente, no se podrá cambiar.':'El cliente debe aceptar la propuesta para que cambie el diseño y precio vigentes.';
     q('#ds-comment-note').textContent = snapshot.permissions.canComment ? 'Un comentario no cambia la propuesta ni su precio.' : 'Esta solicitud ya no admite comentarios.';
     q('#ds-status-note').textContent = ['reserved', 'preparing'].includes(snapshot.status) ? !canMarkReady(snapshot) ? 'Para marcar listo, Shopify debe confirmar el pago completo, sin propuestas ni revisión de pago pendientes.' : 'Marca el avance cuando corresponda. Al marcar listo se cierran los comentarios y las propuestas.' : snapshot.status === 'ready' ? 'El pastel está listo para recoger.' : 'La preparación estará disponible cuando el servicio confirme la reserva. Aceptar una propuesta no confirma por sí solo pagos ni cupo.';
     if(snapshot.status==='reserved'&&snapshot.permissions.canPrepare===false)q('#ds-status-note').textContent='No se puede iniciar la preparación: falta confirmar el anticipo vigente o resolver una propuesta o revisión pendiente. Actualiza el pago antes de continuar.';
+    if(snapshot.acceptedProposal && proposalPaymentMode(snapshot)==='delivery')q('#ds-status-note').textContent = snapshot.pendingProposal || snapshot.payment?.reviewRequired ? 'Resuelve la propuesta o revisión pendiente antes de marcar listo.' : 'Con pago contra entrega puedes marcar listo antes de cobrar. Registra el pago recibido cuando el cliente pague.';
     updateControls(); if (loadPhotos) void renderPhotos(snapshot);
   }
   function saveDraft() {
     const snapshot = current(); if (!snapshot || denied) return;
     const draft = draftFor(snapshot);
-    for (const key of ['canPrepare', 'changes', 'reply', 'baseCents', 'surchargeCents', 'display']) draft[key] = proposalForm.elements[key].value;
+    for (const key of ['canPrepare', 'changes', 'reply', 'baseCents', 'surchargeCents', 'display', 'paymentMode']) draft[key] = proposalForm.elements[key].value;
     draft.text = commentForm.elements.text.value; pricePreview();
   }
   proposalForm.addEventListener('input', saveDraft); proposalForm.addEventListener('change', saveDraft); commentForm.addEventListener('input', saveDraft);
@@ -327,7 +372,7 @@ function startPanel() {
   proposalForm.addEventListener('submit', event => {
     event.preventDefault(); void locked(async () => {
       saveDraft(); const draft = draftFor(current());
-      const proposal = { canPrepare: draft.canPrepare.trim(), changes: draft.changes.trim(), reply: draft.reply.trim(), baseCents: parseDollars(draft.baseCents), surchargeCents: parseDollars(draft.surchargeCents), display: draft.display };
+      const proposal = { canPrepare: draft.canPrepare.trim(), changes: draft.changes.trim(), reply: draft.reply.trim(), baseCents: parseDollars(draft.baseCents), surchargeCents: parseDollars(draft.surchargeCents), display: draft.display, paymentMode:draft.paymentMode };
       if (!proposal.canPrepare || !proposal.reply || proposal.baseCents + proposal.surchargeCents > 100000000) throw failure('VALIDATION');
       await mutate('proposals', { proposal });
     });
@@ -335,6 +380,12 @@ function startPanel() {
   commentForm.addEventListener('submit', event => { event.preventDefault(); void locked(async () => { const text = commentForm.elements.text.value.trim(); if (!text) throw failure('VALIDATION'); await mutate('comments', { text }); }); });
   q('#ds-preparing').addEventListener('click', () => void locked(() => mutate('status', { status: 'preparing' })));
   q('#ds-ready').addEventListener('click', () => void locked(() => mutate('status', { status: 'ready' })));
+  q('#ds-delivery-form').addEventListener('submit', event => {
+    event.preventDefault();
+    if(!q('#ds-delivery-form').elements.received.checked || !canRecordDeliveryPayment(current()))return;
+    const proposalVersion=current().acceptedProposal.version;
+    void locked(()=>mutate('delivery-payment',{proposalVersion}));
+  });
   function renderCalendar() {
     const date = calendarForm.elements.date.value, closed = calendarDays.get(date);
     q('#ds-calendar-status').textContent = !calendarLoaded ? 'La agenda no se ha podido cargar. Usa Actualizar para reintentar.' : !date ? 'Selecciona una fecha.' : closed === true ? 'Fecha cerrada para nuevas solicitudes.' : closed === false ? 'Fecha abierta para nuevas solicitudes.' : 'Sin cierre registrado para esta fecha.';

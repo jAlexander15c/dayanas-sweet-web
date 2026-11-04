@@ -105,7 +105,7 @@
               <dl class="ds-request__summary ds-request__review" data-review></dl>
               <p class="ds-request__muted">Recogida: {{ section.settings.pickup_address | escape }}. {{ section.settings.pickup_hours | escape }}</p>
               <p class="ds-request__note">{{ section.settings.payment_policy | escape }}</p>
-              <p class="ds-request__note">Enviar la solicitud no reserva cupo ni realiza cobros. Dayana revisará tu idea y preparará una cotización con precio, detalles y vencimiento. Podrás pedir ajustes antes de aceptarla. Aceptar la cotización tampoco confirma una reserva: esta depende del pago correspondiente y de que siga habiendo disponibilidad.</p>
+              <p class="ds-request__note">Enviar la solicitud no reserva cupo ni realiza cobros. Dayana revisará tu idea y preparará una cotización con precio, detalles y condiciones de pago. Podrás pedir ajustes antes de aceptarla. La reserva se confirma con el pago acordado o, si Dayana ofrece pago contra entrega, al aceptar la propuesta, siempre que siga habiendo disponibilidad.</p>
               <label class="ds-request__check"><input type="checkbox" data-confirm required>Entiendo que la fecha está sujeta a confirmación y que enviar esta solicitud no confirma una reserva.</label>
             </section>
             <div class="ds-request__actions">
@@ -182,7 +182,7 @@
     { "type": "page", "id": "tracking_page", "label": "Página de seguimiento", "info": "Página con la plantilla celebracion-seguimiento." },
     { "type": "text", "id": "pickup_address", "label": "Dirección de recogida", "default": "4319 Freya Point Dr, Fulshear, TX 77441" },
     { "type": "text", "id": "pickup_hours", "label": "Horario de recogida", "default": "Todos los días, de 8:00 a. m. a 6:00 p. m. (horario de Houston). Última hora de recogida: 18:00." },
-    { "type": "textarea", "id": "payment_policy", "label": "Política de pagos", "default": "Personalizados normales: 60% de anticipo y 40% de saldo, que debe pagarse 24 horas antes de recoger. Urgentes: pago del 100% después de la aprobación. Los pasteles se entregan en su caja, sin impuesto de venta. No pagas al enviar la solicitud. La reserva se confirma con el pago correspondiente, siempre que siga habiendo disponibilidad." },
+    { "type": "textarea", "id": "payment_policy", "label": "Política de pagos", "default": "Dayana indicará en tu cotización si corresponde anticipo del 60% y saldo hasta 24 horas antes de recoger, pago completo anticipado o pago completo contra entrega. Los pasteles se entregan en su caja, sin impuesto de venta. No pagas al enviar la solicitud. La reserva se confirma según la condición acordada y la disponibilidad." },
     { "type": "textarea", "id": "unavailable_message", "label": "Servicio no disponible", "default": "Estamos preparando las solicitudes de pasteles personalizados. Pronto podrás contarnos tu idea desde aquí." },
     { "type": "text", "id": "success_title", "label": "Título al enviar", "default": "Tu idea ya está en manos de Dayana." },
     { "type": "textarea", "id": "success_message", "label": "Mensaje al enviar", "default": "Recibimos tu solicitud y las fotos seleccionadas. Dayana revisará los detalles y la disponibilidad. Podrás consultar la propuesta y continuar la conversación desde tu seguimiento. Todavía no hay una reserva confirmada." }

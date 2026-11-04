@@ -52,6 +52,20 @@ async function fixture(t) {
   return { db, open: () => createDurableStore(storage), store: createDurableStore(storage) };
 }
 
+test('Durable SQL preserves delivery terms, reservation, staff receipt and idempotency on recreation',async t=>{
+ const {store,open}=await fixture(t);
+ const {id}=store.createRequest(customer,input,'create-delivery');
+ store.propose(staff,id,{...proposal,paymentMode:'delivery'},'quote-delivery');
+ store.accept(customer,id,1,'accept-delivery');
+ const reopened=open();assert.equal(reopened.getTracking(customer,id).status,'reserved');
+ assert.equal(reopened.getTracking(customer,id).payment.stage,'delivery');
+ reopened.setStatus(staff,id,'ready','ready-delivery');
+ const receipt=reopened.recordDeliveryPayment(staff,id,1,'receipt-delivery');
+ assert.equal(receipt.billing.netPaidCents,17000);assert.equal(receipt.billing.source,'staff');
+ const retry=open().recordDeliveryPayment(staff,id,1,'receipt-delivery');
+ assert.equal(retry.payments.length,1);assert.equal(retry.payment.stage,'paid');
+});
+
 test('Durable SQL adapter persists snapshots and operation keys across store recreation', async t => {
   const { store, open } = await fixture(t);
   const created = store.createRequest(customer, input, 'create');
@@ -114,7 +128,7 @@ test('Durable SQL adapter enforces current proposal versions without fabricating
   assert.equal(accepted.pendingProposal, null);
   assert.equal(accepted.status, 'quoted');
   assert.deepEqual(accepted.payments, []);
-  assert.deepEqual(accepted.history, [{ version: 1, status: 'quoted', totalCents: 17000, reply: proposal.reply }]);
+  assert.deepEqual(accepted.history, [{ version: 1, status: 'quoted', totalCents: 17000, reply: proposal.reply, paymentMode:'deposit' }]);
   assert.deepEqual(store.accept(customer, id, 2, 'accept'), accepted);
 });
 

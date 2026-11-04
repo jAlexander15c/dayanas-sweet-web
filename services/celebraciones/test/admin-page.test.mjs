@@ -1,7 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderAdminPage } from '../src/admin-page.mjs';
-import { createAdminApi, createOperationBook, paymentSummary, parseDollars, calendarInput, canMarkReady, paymentConnectionSummary } from '../src/admin-ui.js';
+import { createAdminApi, createOperationBook, paymentSummary, parseDollars, calendarInput, canMarkReady, paymentConnectionSummary, canRecordDeliveryPayment, paymentTerms, proposalPaymentMode } from '../src/admin-ui.js';
+
+test('staff UI permits unpaid ready only for delivery and distinguishes recorded receipts',()=>{
+ const s={status:'reserved',acceptedProposal:{version:1,totalCents:15000,paymentMode:'delivery'},pendingProposal:null,payments:[],payment:{stage:'delivery',reviewRequired:false,url:null},billing:{proposalVersion:1,totalCents:15000,taxCents:0,netPaidCents:0,balanceDueCents:15000,currency:'USD',source:'staff'}};
+ assert.equal(canMarkReady(s),true);assert.equal(canRecordDeliveryPayment(s),true);
+ assert.equal(canRecordDeliveryPayment({...s,status:'ready'}),true);
+ assert.equal(canMarkReady({...s,pendingProposal:{version:2}}),false);
+ assert.equal(canRecordDeliveryPayment({...s,pendingProposal:{version:2}}),false);
+ assert.equal(canMarkReady({...s,acceptedProposal:{...s.acceptedProposal,paymentMode:'full'}}),false);
+ assert.equal(canRecordDeliveryPayment({...s,payment:{...s.payment,reviewRequired:true}}),false);
+ assert.match(paymentTerms('deposit',15001),/90.01/);assert.match(paymentTerms('full',15000),/150.00/);assert.match(paymentTerms('delivery',15000),/contra entrega/);
+ assert.match(paymentTerms('delivery',17000,15000),/20.00 de saldo/);
+ assert.match(paymentTerms('full',17000,15000),/20.00 de saldo/);
+ assert.match(paymentTerms('delivery',15000,15000),/Sin saldo pendiente/);
+ assert.match(paymentTerms('delivery',14000,15000),/Diferencia a favor/);
+ assert.equal(proposalPaymentMode({details:{urgent:true},acceptedProposal:{paymentMode:'deposit'}}),'deposit');
+});
 
 test('public shell escapes the app key, contains no request data and restricts framing to its exact shop', async () => {
   const response = renderAdminPage({ clientId: '\"><script>alert(1)</script>&', shop: 'test-bakery.myshopify.com' });

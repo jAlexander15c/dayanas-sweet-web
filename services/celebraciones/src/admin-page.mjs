@@ -42,17 +42,22 @@ export function renderAdminPage({ clientId, shop } = {}) {
     <article id="ds-detail" hidden aria-labelledby="ds-request-title">
       <button id="ds-back-to-list" type="button">← Volver a solicitudes</button>
       <div class="ds-detail-head"><div><p class="ds-eyebrow" id="ds-request-id"></p><h2 id="ds-request-title" tabindex="-1">Detalle de la solicitud</h2><p id="ds-pickup"></p><p id="ds-urgency" class="ds-muted"></p></div><span id="ds-status" class="ds-badge"></span></div>
-      <section class="ds-card"><h3>Reserva y pagos</h3><div id="ds-finances" class="ds-finances"></div><p id="ds-billing-note" class="ds-muted"></p><p class="ds-muted">El pago se realiza en Shopify. Los pagos recibidos se conservan.</p><p id="ds-credit" class="ds-note" hidden></p><button id="ds-payment-sync" type="button">Actualizar estado del pago</button></section>
+      <section class="ds-card"><h3>Reserva y pagos</h3><div id="ds-finances" class="ds-finances"></div><p id="ds-billing-note" class="ds-muted"></p><p class="ds-muted">Los pagos recibidos se conservan.</p><p id="ds-credit" class="ds-note" hidden></p>
+        <form id="ds-delivery-form" class="ds-stack" hidden><fieldset id="ds-delivery-fields" class="ds-stack"><p id="ds-delivery-amount" class="ds-note"></p><label class="ds-receipt-confirm"><input name="received" type="checkbox" required> Confirmo que ya recibí este importe del cliente.</label><button type="submit" class="ds-primary">Registrar pago recibido</button><p class="ds-muted">Este registro confirma el cobro en Celebraciones; no realiza un cargo ni registra una transacción en Shopify.</p></fieldset></form>
+        <button id="ds-payment-sync" type="button">Actualizar estado del pago</button>
+      </section>
       <section class="ds-card"><p class="ds-eyebrow">La idea del cliente</p><h3>Lo que nos contó</h3><p id="ds-request-text" class="ds-copy"></p><div id="ds-photos" class="ds-photos"></div></section>
       <section class="ds-card"><h3>Correos de actualizaciones</h3><p class="ds-muted">Comprueba el estado de cada aviso. «Aceptado» significa que el proveedor lo recibió, no que el cliente lo haya leído.</p><div id="ds-notifications" class="ds-stack"></div><button id="ds-notifications-refresh" type="button">Actualizar correos</button></section>
       <section id="ds-accepted" class="ds-card" hidden><p class="ds-eyebrow">Diseño y precio vigentes</p><h3>Propuesta aceptada</h3><div id="ds-accepted-copy"></div></section>
       <section id="ds-pending" class="ds-card ds-pending" hidden><p class="ds-eyebrow">Esperando aceptación del cliente</p><h3>Propuesta pendiente</h3><div id="ds-pending-copy"></div></section>
       <section class="ds-card"><h3>Prepara la propuesta</h3><p id="ds-proposal-note" class="ds-muted">El cliente debe aceptar la propuesta para que cambie el diseño y precio vigentes.</p>
-        <p class="ds-muted ds-tax-note">El cliente pagará el precio confirmado mediante el enlace de Shopify.</p><form id="ds-proposal-form" class="ds-stack"><fieldset id="ds-proposal-fields" class="ds-stack">
+        <p class="ds-muted ds-tax-note">El cliente pagará según la condición que elijas en esta propuesta.</p><form id="ds-proposal-form" class="ds-stack"><fieldset id="ds-proposal-fields" class="ds-stack">
           <div class="ds-two"><label>Lo que podemos preparar<textarea name="canPrepare" required maxlength="2000"></textarea></label><label>Lo que cambia o no podemos reproducir<textarea name="changes" maxlength="2000"></textarea></label></div>
           <label>Respuesta final de la pastelera<textarea name="reply" required maxlength="2000"></textarea></label>
           <div class="ds-two"><label>Pastel y personalización (USD)<input name="baseCents" inputmode="decimal" type="number" min="0" max="1000000" step="0.01" required></label><label>Recargo por urgencia (USD)<input name="surchargeCents" inputmode="decimal" type="number" min="0" max="1000000" step="0.01" value="0" required></label></div>
           <label>Mostrar al cliente<select name="display"><option value="total">Solo total</option><option value="breakdown">Desglose y total</option></select></label>
+          <label>¿Cómo debe pagar el cliente?<select name="paymentMode"><option value="deposit">Anticipo del 60 %</option><option value="full">Pago completo antes de preparar</option><option value="delivery">Pago completo contra entrega</option></select></label>
+          <p id="ds-payment-mode-note" class="ds-muted"></p>
           <p id="ds-price-preview" class="ds-note" aria-live="polite">Completa el precio de la propuesta.</p>
           <button type="submit" class="ds-primary">Enviar propuesta</button>
         </fieldset></form>
@@ -63,5 +68,10 @@ export function renderAdminPage({ clientId, shop } = {}) {
     </article>
   </div>
   <noscript><p>Activa JavaScript para consultar y gestionar las solicitudes.</p></noscript>
-</main></body></html>`, { headers });
+</main>
+<dialog id="ds-photo-dialog" class="ds-photo-dialog" aria-labelledby="ds-photo-title">
+  <div class="ds-photo-toolbar"><h2 id="ds-photo-title">Foto de referencia</h2><div><button id="ds-photo-zoom" type="button" aria-pressed="false" aria-controls="ds-photo-view">Ampliar</button><button id="ds-photo-close" type="button" autofocus>Cerrar</button></div></div>
+  <div id="ds-photo-view" class="ds-photo-view"><img id="ds-photo-full" alt=""></div>
+</dialog>
+</body></html>`, { headers });
 }

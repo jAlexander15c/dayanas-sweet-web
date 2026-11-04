@@ -135,6 +135,10 @@ export function createPaymentService({ store, client, mode='TEST', storefrontOri
   async function run(actor,id,operationId,action) {
     // Read authorizes ownership even when another invocation currently holds the lease.
     const before=store.getPaymentContext(actor,id);
+    if(before.snapshot.acceptedProposal?.paymentMode==='delivery') {
+      if(action==='pay')throw failure('CONFLICT');
+      return before.snapshot;
+    }
     if(action==='sync'&&!before.state)return before.snapshot;
     if(actor.role==='staff'&&action==='pay')throw failure('AUTH_REQUIRED');
     if(action==='pay'&&!before.state){

@@ -75,7 +75,7 @@ export function createHandler({ store, config, paymentService, guestEmail, mailT
       }
       const url = new URL(request.url), calendarMatch=url.pathname.match(/^\/(proxy|admin)\/calendar$/), paymentStatusMatch=url.pathname.match(/^\/(admin)\/payment-status$/);
       const mailTestMatch=url.pathname.match(/^\/(admin)\/email-test$/);
-      const match = calendarMatch || paymentStatusMatch || mailTestMatch || url.pathname.match(/^\/(proxy|admin)\/requests(?:\/([a-zA-Z0-9-]{1,100}))?(?:\/(comments|accept|proposals|status|photos|payment|payment-sync|email-retry)(?:\/([a-zA-Z0-9-]{1,100}))?)?$/);
+      const match = calendarMatch || paymentStatusMatch || mailTestMatch || url.pathname.match(/^\/(proxy|admin)\/requests(?:\/([a-zA-Z0-9-]{1,100}))?(?:\/(comments|accept|proposals|status|photos|payment|payment-sync|email-retry|delivery-payment)(?:\/([a-zA-Z0-9-]{1,100}))?)?$/);
       if (!match) return json({ code: 'NOT_FOUND' }, 404);
       const [, surface, id, action, photoId] = match;
       if(photoId && action!=='photos') throw error('NOT_FOUND');
@@ -145,9 +145,14 @@ export function createHandler({ store, config, paymentService, guestEmail, mailT
         }
         return json(store.propose(actor, id, body.proposal, body.operationId));
       }
+      if (action === 'delivery-payment') {
+        if(surface!=='admin')throw error('AUTH_REQUIRED');
+        shape(body,['proposalVersion','operationId']);
+        return json(store.recordDeliveryPayment(actor,id,body.proposalVersion,body.operationId));
+      }
       if (action === 'status' && surface === 'admin') {
         shape(body, ['status', 'operationId']);
-        if(['ready','preparing'].includes(body.status)) {
+        if(['ready','preparing'].includes(body.status) && store.getTracking(actor,id).acceptedProposal?.paymentMode!=='delivery') {
           if(!paymentService)throw error('UNAVAILABLE');
           // A fresh operation on every HTTP attempt checks refunds/cancellations
           // even when a previous ready attempt or reconciliation was retried.

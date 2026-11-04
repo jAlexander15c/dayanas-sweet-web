@@ -66,6 +66,16 @@ main{max-width:1440px;margin:auto;padding:32px}
 .ds-photos figure{width:150px;margin:0}
 .ds-photos img{width:150px;height:130px;object-fit:cover;border-radius:10px}
 .ds-photos figcaption{font-size:11px;line-height:1.4;margin-top:6px}
+.ds-photo-open{display:grid;padding:0;border:0;border-radius:10px;overflow:hidden;text-align:center;width:150px}
+.ds-photo-open span{display:block;padding:6px;font-size:12px;background:var(--ds-rose)}
+.ds-photo-dialog{width:min(1100px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);padding:16px;border:1px solid var(--ds-line);border-radius:16px;background:var(--ds-white);color:var(--ds-ink)}
+.ds-photo-dialog::backdrop{background:rgba(35,20,29,.78)}
+.ds-photo-toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+.ds-photo-toolbar h2{font:600 16px/1.4 Arial,sans-serif;margin:0;overflow-wrap:anywhere;flex:1;min-width:100px}
+.ds-photo-toolbar>div{display:flex;gap:8px;flex-wrap:wrap}
+.ds-photo-view{max-height:calc(100dvh - 180px);overflow:auto;overscroll-behavior:contain;border-radius:8px;background:var(--ds-paper)}
+.ds-photo-view img{display:block;margin:auto;max-width:100%;max-height:calc(100dvh - 180px);width:auto;height:auto;object-fit:contain}
+.ds-photo-view.is-zoomed img{max-width:none;max-height:none;min-width:100%;width:auto;height:auto}
 .ds-pending{border:2px solid var(--ds-pink)}
 .ds-proposal-price{font:400 24px/1.3 Georgia,serif;color:var(--ds-pink);margin-bottom:10px}
 .ds-stack{display:grid;gap:18px}
@@ -77,6 +87,8 @@ form button{justify-self:start}
 .ds-message p{margin-top:7px}
 #ds-comment-form{margin-top:20px}
 #ds-comment-note{margin-top:16px}
+.ds-receipt-confirm{display:flex;align-items:center;gap:12px;min-height:44px}
+.ds-receipt-confirm input[type=checkbox]{width:22px;height:22px;min-height:22px;flex:0 0 auto;margin:0}
 .ds-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}
 details summary{font-weight:600;cursor:pointer;min-height:30px}
 #ds-history{margin-top:20px}
