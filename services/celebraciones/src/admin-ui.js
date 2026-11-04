@@ -170,6 +170,8 @@ function startPanel() {
   }
   function updateControls() {
     const snapshot = current();
+    q('#ds-alert-refresh').disabled=busy||denied;
+    q('#ds-staff-alerts').querySelectorAll('button').forEach(button=>{button.disabled=busy||denied;});
     q('#ds-refresh').disabled = busy || denied;
     q('#ds-back-to-list').disabled = busy || denied;
     q('#ds-more').disabled = busy || denied;q('#ds-more').hidden=!nextCursor;
@@ -193,6 +195,7 @@ function startPanel() {
   }
   async function accessDenied() {
     denied = true; selected = null; snapshots.clear(); drafts.clear(); calendarDays.clear(); calendarLoaded = false; revokePhotos();
+    q('#ds-staff-alerts-card').hidden=true;q('#ds-staff-alerts').replaceChildren();q('#ds-alert-count').textContent='';
     q('#ds-workspace').hidden = true; q('#ds-detail').hidden = true; q('#ds-access').hidden = false;
     q('#ds-requests').replaceChildren(); q('#ds-thread').replaceChildren(); q('#ds-history').replaceChildren();
     q('#ds-request-text').textContent = ''; q('#ds-finances').replaceChildren(); q('#ds-accepted-copy').replaceChildren(); q('#ds-pending-copy').replaceChildren();
@@ -359,7 +362,14 @@ function startPanel() {
       const snapshot = await api(`${pathFor(id)}/${action}`, { ...payload, operationId });
       remember(snapshot); operations.complete(key);
       if (action === 'comments') draftFor(snapshots.get(id)).text = '';
-      renderList(); if (selected === id) renderDetail(); feedback('Cambios guardados.');
+      renderList(); if (selected === id) renderDetail();
+      if (action === 'proposals') {
+        feedback('Propuesta enviada. Esperando la aceptación del cliente. Puedes consultar el estado del correo en «Correos de actualizaciones».');
+        const confirmation = q('#ds-feedback');
+        confirmation.setAttribute('tabindex', '-1');
+        confirmation.focus({ preventScroll: true });
+        confirmation.scrollIntoView({ block: 'center', behavior: 'instant' });
+      } else feedback('Cambios guardados.');
     } catch (error) {
       if (error.code === 'CONFLICT') {
         // Refresh for review; never repeat a mutation against changed state automatically.
@@ -429,6 +439,7 @@ function startPanel() {
     if(selected){remember(await api(pathFor(selected)));renderList();renderDetail(true);}
     try { await loadCalendar(); } catch (error) { renderCalendar(); throw error; }
     if (denied) return;
+    await refreshAlerts();
     feedback('Solicitudes actualizadas.');
   }
   q('#ds-refresh').addEventListener('click', () => void locked(refresh));
@@ -452,8 +463,60 @@ function startPanel() {
       container.replaceChildren(node('p', result.message, 'ds-note'), details); feedback('Comprobación de conexión terminada.');
     } catch (error) { container.replaceChildren(node('p', 'No se pudo comprobar la conexión. Puedes volver a intentar.', 'ds-muted')); throw error; }
   }));
-  window.addEventListener('pagehide', revokePhotos);
-  void locked(refresh);
+  let alertsLoading=false,alertsSignature='';
+  async function openAlertRequest(id) {
+    saveDraft();
+    const fresh=await api(pathFor(id));remember(fresh);selected=id;
+    renderList();renderDetail(true);q('#ds-request-title').focus();
+    q('#ds-request-title').scrollIntoView({block:'start',behavior:'instant'});
+  }
+  async function refreshAlerts(background=false) {
+    if(denied||alertsLoading)return;
+    alertsLoading=true;
+    try {
+      const result=await api('/admin/staff-alerts');
+      if(denied)return;
+      if(!Array.isArray(result.alerts)||!Number.isSafeInteger(result.unread))throw failure('UNAVAILABLE');
+      q('#ds-staff-alerts-card').hidden=false;
+      q('#ds-alert-count').textContent=`${result.unread} sin leer`;
+      q('#ds-alert-status').textContent='Los pagos aparecen cuando el servicio confirma el cobro. Actualización automática cada 30 segundos mientras el panel está visible.';
+      const container=q('#ds-staff-alerts'),signature=JSON.stringify(result.alerts);
+      // Do not replace a focused button while someone is navigating the inbox.
+      if(signature===alertsSignature||(background&&container.contains(document.activeElement)))return;
+      alertsSignature=signature;container.replaceChildren();
+      if(!result.alerts.length)container.append(node('p','No tienes avisos nuevos.','ds-muted'));
+      for(const alert of result.alerts) {
+        const item=node('article',undefined,`ds-staff-alert${alert.read?'':' is-unread'}`);
+        item.append(node('strong',alert.kind==='payment'?`Pago confirmado · ${usd(alert.amountCents)}`:'Nuevo mensaje de la clienta'));
+        item.append(node('p',`${alert.reference||'Solicitud de pastel'} · ${new Date(alert.createdAt).toLocaleString('es')}`,'ds-muted'));
+        item.append(node('p',alert.kind==='payment'?`Saldo pendiente al confirmar: ${usd(alert.balanceDueCents)}.`:'Hay una respuesta para revisar en la conversación.'));
+        const mailStates={pending:'Correo pendiente de envío',sending:'Correo en proceso',sent:'Correo aceptado por el proveedor',failed:'No se pudo enviar el correo',unknown:'No se pudo confirmar el envío del correo'};
+        item.append(node('p',mailStates[alert.emailStatus]||'Estado del correo no disponible','ds-muted'));
+        const actions=node('div',undefined,'ds-actions'),open=node('button','Ver solicitud','ds-primary');open.type='button';
+        open.addEventListener('click',()=>void locked(()=>openAlertRequest(alert.requestId)));actions.append(open);
+        if(!alert.read) {
+          const read=node('button','Marcar leído');read.type='button';
+          read.addEventListener('click',()=>void locked(async()=>{await api('/admin/staff-alerts',{id:alert.id});await refreshAlerts();q('#ds-alert-refresh').focus();}));actions.append(read);
+        }
+        item.append(actions);container.append(item);
+      }
+      updateControls();
+    } catch(error) {
+      if(error.code==='AUTH_REQUIRED'){await accessDenied();return;}
+      q('#ds-alert-status').textContent='No pudimos actualizar los avisos. Pulsa «Actualizar avisos» para reintentar.';
+      if(!background)q('#ds-staff-alerts-card').hidden=false;
+    } finally {alertsLoading=false;}
+  }
+  q('#ds-alert-refresh').addEventListener('click',()=>void locked(()=>refreshAlerts()));
+  const pollAlerts=()=>{if(!document.hidden&&!busy&&!denied)void refreshAlerts(true);};
+  const alertsTimer=window.setInterval(pollAlerts,30000);
+  document.addEventListener('visibilitychange',pollAlerts);
+  window.addEventListener('pagehide',()=>{revokePhotos();window.clearInterval(alertsTimer);});
+  void locked(async()=>{
+    await refresh();
+    const requested=new URLSearchParams(location.search).get('solicitud');
+    if(requested&&/^[a-f0-9-]{36}$/.test(requested)&&!denied)await openAlertRequest(requested);
+  });
 }
 
 if (typeof document !== 'undefined') startPanel();

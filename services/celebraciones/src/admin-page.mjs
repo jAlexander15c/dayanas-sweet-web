@@ -26,6 +26,13 @@ export function renderAdminPage({ clientId, shop } = {}) {
   <p class="ds-eyebrow">Celebraciones</p><h1>Una propuesta <em>con cada detalle.</em></h1>
   <p class="ds-sub">Revisa cada solicitud, conversa con el cliente y prepara su propuesta.</p>
   <p id="ds-feedback" role="status" aria-live="polite">Conectando con Shopify…</p>
+  <section id="ds-staff-alerts-card" class="ds-card ds-staff-alerts" hidden aria-labelledby="ds-staff-alerts-title">
+    <div class="ds-list-head"><h2 id="ds-staff-alerts-title">Avisos</h2><span id="ds-alert-count" class="ds-badge" role="status"></span></div>
+    <p class="ds-muted">Respuestas de la clienta y pagos confirmados. También recibirás los avisos en tu correo.</p>
+    <button id="ds-alert-refresh" type="button">Actualizar avisos</button>
+    <p id="ds-alert-status" class="ds-muted" role="status"></p>
+    <div id="ds-staff-alerts"></div>
+  </section>
   <section id="ds-access" class="ds-card" hidden><h2>Acceso no autorizado</h2><p>Abre esta aplicación desde Shopify con una cuenta autorizada para gestionar las celebraciones.</p></section>
   <div id="ds-workspace" class="ds-workspace" hidden>
     <aside class="ds-sidebar" aria-label="Solicitudes y agenda"><div class="ds-list-head"><h2>Solicitudes</h2><button id="ds-refresh" type="button">Actualizar</button></div>

@@ -39,6 +39,20 @@ function staffRequest(path,body,staffId='9'){
  return new Request(`https://backend.test/admin${path}`,{method:body?'POST':'GET',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
 }
 
+test('staff alerts require authorized staff and accept only an alert ID for marking read',async()=>{
+ const store=createStore(':memory:');try{
+  const owner={shop:config.shop,customerId:'7'},staff={shop:config.shop,role:'staff',staffId:'9'};
+  const {id}=store.createRequest(owner,{requestText:'Pastel',pickup:{label:'Recoger'}},'alert-create');store.comment(owner,id,'Hola','alert-message');
+  const handler=createHandler({store,config});
+  assert.equal((await handler(new Request('https://backend.test/admin/staff-alerts'))).status,401);
+  assert.equal((await handler(staffRequest('/staff-alerts',undefined,'8'))).status,401);
+  const result=await (await handler(staffRequest('/staff-alerts'))).json();assert.equal(result.unread,1);
+  assert.equal((await handler(staffRequest('/staff-alerts',{id:result.alerts[0].id,recipient:'other@example.test'}))).status,422);
+  assert.equal((await handler(staffRequest('/staff-alerts',{id:result.alerts[0].id}))).status,200);
+  assert.equal(store.listStaffAlerts(staff).unread,0);
+ }finally{store.close();}
+});
+
 test('delivery receipt is staff-only, server-priced, version-bound and works after ready without Shopify',async()=>{
  const store=createStore(':memory:');try{
   const owner={shop:config.shop,customerId:'7'},staff={shop:config.shop,role:'staff',staffId:'9'};

@@ -13,7 +13,7 @@ const store=createStore(':memory:'),shop='fixture.myshopify.com';
 const staff={shop,role:'staff',staffId:'9'},customer={shop,customerId:'7'};
 const {id}=store.createRequest(customer,{requestText:'Pastel de vainilla con flores. Datos ficticios para prueba local.',pickup:{label:'Recogida de prueba'}},'create');
 store.propose(staff,id,{baseCents:15000,surchargeCents:0,display:'total',canPrepare:'Pastel de vainilla con flores de fondant.',changes:'Sin cambios.',reply:'Prepararemos tu pastel.',paymentMode:'deposit'},'quote');
-const shell=(await renderAdminPage({clientId:'fixture',shop}).text()).replace('<script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>','<script>window.shopify={idToken:async()=>"local-fixture"}</script>');
+const shell=(await renderAdminPage({clientId:'fixture',shop}).text()).replace('<script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>','<script>window.shopify={idToken:async()=>"local-fixture"};const originalInterval=window.setInterval;window.setInterval=(fn,ms)=>{if(ms===30000)window.fixturePollAlerts=fn;return originalInterval(fn,ms)}</script>');
 const liquid=readFileSync('sections/ds-celebracion-seguimiento.liquid','utf8');
 const schema=JSON.parse(liquid.match(/{% schema %}([\s\S]*?){% endschema %}/)[1]);
 const settings=Object.fromEntries(schema.settings.filter(s=>s.id).map(s=>[s.id,s.default||'']));
@@ -33,7 +33,8 @@ const server=createServer(async(req,res)=>{
   if(path.startsWith(`/admin/requests/${id}/photos/`)){const photo=store.getPhoto(staff,id,path.split('/').at(-1));res.setHeader('Content-Type',photo.mimeType);res.end(photo.bytes);return}
   let input='';for await(const chunk of req)input+=chunk;const body=input?JSON.parse(input):{};
   let result;
-  if(path==='/admin/requests')result={requests:store.listRequests(staff)};
+  if(path==='/admin/staff-alerts')result=req.method==='POST'?store.readStaffAlert(staff,body.id):store.listStaffAlerts(staff);
+  else if(path==='/admin/requests')result={requests:store.listRequests(staff)};
   else if(path==='/admin/calendar')result={days:[]};
   else if(path===`/admin/requests/${id}`)result=store.getTracking(staff,id);
   else if(path===`/admin/requests/${id}/proposals`)result=store.propose(staff,id,body.proposal,body.operationId);
@@ -70,8 +71,27 @@ try{
  const viewport=async width=>call('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:false});
  const panel=async()=>{await call('Page.navigate',{url:origin});await until(`!!document.querySelector('#ds-requests button') && !document.querySelector('#ds-refresh').disabled`);await evaluate(`document.querySelector('#ds-requests button').click()`);await until(`!document.querySelector('#ds-detail').hidden && !document.querySelector('#ds-refresh').disabled`)};
  const output='docs/maquetas-celebraciones/qa/payment-options';mkdirSync(output,{recursive:true});
- async function capture(name){await delay(100);const r=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:true});writeFileSync(`${output}/${name}.png`,Buffer.from(r.data,'base64'))}
+ async function capture(name){await delay(100);const r=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:!name.startsWith('alerts')});writeFileSync(`${output}/${name}.png`,Buffer.from(r.data,'base64'))}
  await viewport(1280);await panel();
+ store.comment(customer,id,'Consulta de prueba para la pastelera','customer-notice');
+ await evaluate(`document.querySelector('[name=reply]').value='Borrador conservado';document.querySelector('[name=reply]').dispatchEvent(new Event('input',{bubbles:true}));document.querySelector('#ds-alert-refresh').click()`);
+ await until(`document.querySelector('#ds-alert-count').textContent==='1 sin leer' && !document.querySelector('#ds-alert-refresh').disabled`);
+ assert.equal(await evaluate(`document.querySelector('[name=reply]').value`),'Borrador conservado');
+ await evaluate(`document.querySelector('#ds-staff-alerts-card').scrollIntoView({block:'start'})`);await capture('alerts-desktop');
+ await viewport(390);await capture('alerts-mobile');
+ assert.equal(await evaluate(`document.documentElement.scrollWidth<=innerWidth`),true,'alerts mobile overflow');
+ await evaluate(`Array.from(document.querySelectorAll('#ds-staff-alerts button')).find(b=>b.textContent==='Marcar le'+String.fromCharCode(237)+'do').click()`);
+ await until(`document.querySelector('#ds-alert-count').textContent==='0 sin leer' && !document.querySelector('#ds-alert-refresh').disabled`);
+ await evaluate(`document.querySelector('#ds-staff-alerts button').click()`);
+ await until(`document.activeElement===document.querySelector('#ds-request-title') && !document.querySelector('#ds-refresh').disabled`);
+ assert.equal(await evaluate(`document.querySelector('[name=reply]').value`),'Borrador conservado');
+ await viewport(1280);
+
+ store.comment(customer,id,'Segunda consulta','customer-notice-2');
+ await evaluate(`document.querySelector('[name=reply]').focus();window.fixturePollAlerts()`);
+ await until(`document.querySelector('#ds-alert-count').textContent==='1 sin leer'`);
+ assert.equal(await evaluate(`document.activeElement===document.querySelector('[name=reply]')`),true,'background alerts preserve focus');
+ assert.equal(await evaluate(`document.querySelector('[name=reply]').value`),'Borrador conservado','background alerts preserve draft');
  await until(`!!document.querySelector('#ds-photos button')`);
  await evaluate(`document.querySelector('#ds-photos button').click()`);
  assert.equal(await evaluate(`document.querySelector('#ds-photo-dialog').open`),true);
@@ -93,8 +113,10 @@ try{
  await viewport(1280);
  for(const mode of ['full','deposit','delivery']){
   await evaluate(`{const select=document.querySelector('[name=paymentMode]');select.value=${JSON.stringify(mode)};select.dispatchEvent(new Event('change',{bubbles:true}));document.querySelector('#ds-proposal-form').requestSubmit()}`);
-  await until(`document.querySelector('#ds-feedback').textContent==='Cambios guardados.' && !document.querySelector('#ds-refresh').disabled`);
+  await until(`document.querySelector('#ds-feedback').textContent.startsWith('Propuesta enviada.') && !document.querySelector('#ds-refresh').disabled`);
   assert.equal(store.getTracking(staff,id).pendingProposal.paymentMode,mode);
+  assert.equal(await evaluate(`document.activeElement===document.querySelector('#ds-feedback')`),true,'proposal confirmation receives focus');
+  assert.equal(await evaluate(`(()=>{const r=document.querySelector('#ds-feedback').getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight})()`),true,'proposal confirmation is visible');
  }
  assert.match(await evaluate(`document.querySelector('#ds-price-preview').textContent`),/contra entrega/);
  await evaluate(`document.querySelector('#ds-proposal-form').scrollIntoView({block:'center'})`);await capture('panel-desktop');

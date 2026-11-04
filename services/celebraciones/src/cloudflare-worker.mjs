@@ -1,3 +1,4 @@
+import { runStaffAlertJobs } from './staff-alerts.mjs';
 import { DurableObject } from 'cloudflare:workers';
 import { createDurableStore } from './durable-store.mjs';
 import { createHandler } from './http.mjs';
@@ -33,9 +34,10 @@ export class CelebrationStore extends DurableObject {
     try {sendEmail=createResendTransport({apiKey:env.RESEND_API_KEY});email=createQuoteEmail({key:env.GUEST_ACCESS_KEY,storefrontOrigin:env.STOREFRONT_ORIGIN,send:sendEmail});} catch { /* Guest creation stays disabled until configured. */ }
     this.scheduler=paymentService||email?createPaymentScheduler({store:this.store,service:paymentService,storage:ctx.storage,shop:env.SHOPIFY_SHOP,
       ...(email?{additionalDue:()=>{
-        const due=[this.store.nextGuestEmailDue(env.SHOPIFY_SHOP),this.store.nextNotificationDue(env.SHOPIFY_SHOP)].filter(value=>value!==null);
+        const due=[this.store.nextGuestEmailDue(env.SHOPIFY_SHOP),this.store.nextNotificationDue(env.SHOPIFY_SHOP),this.store.nextStaffAlertDue(env.SHOPIFY_SHOP)].filter(value=>value!==null);
         return due.length?Math.min(...due):null;
       },additionalRun:async()=>{
+        await runStaffAlertJobs({store:this.store,shop:env.SHOPIFY_SHOP,clientId:env.SHOPIFY_CLIENT_ID,send:sendEmail});
         await runQuoteEmailJobs({store:this.store,shop:env.SHOPIFY_SHOP,email});
         await runNotificationJobs({store:this.store,shop:env.SHOPIFY_SHOP,email,resolveCustomer:id=>shopifyClient.getCustomerContact(id)});
       }}:{})}):null;
@@ -80,7 +82,7 @@ export default {
     }
     if (!configured(env)) return unavailable();
     if(path.startsWith('/proxy/') && env.SERVICE_ENABLED!=='true')return unavailable();
-    if (!/^\/(proxy|admin)\/(requests(?:\/|$)|calendar$|session$|payment-status$|email-test$)/.test(path) && !/^\/proxy\/guest\/(requests(?:\/|$)|calendar$)/.test(path)) return Response.json({ code: 'NOT_FOUND' }, { status: 404, headers: { 'Cache-Control': 'no-store' } });
+    if (!/^\/(proxy|admin)\/(requests(?:\/|$)|calendar$|session$|payment-status$|email-test$|staff-alerts$)/.test(path) && !/^\/proxy\/guest\/(requests(?:\/|$)|calendar$)/.test(path)) return Response.json({ code: 'NOT_FOUND' }, { status: 404, headers: { 'Cache-Control': 'no-store' } });
     // One object for the configured shop: no user-controlled object names and
     // every read/mutation remains authenticated inside the object.
     const id = env.CELEBRATIONS.idFromName(env.SHOPIFY_SHOP);

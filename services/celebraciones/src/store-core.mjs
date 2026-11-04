@@ -1,3 +1,4 @@
+import { createStaffAlerts } from './staff-alerts.mjs';
 import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { hashCapability, validateGuestContact, guestRecipientKey } from './guest-access.mjs';
 
@@ -286,6 +287,8 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
         reference:guest?.reference??null,isGuest:!!guest,revoked:guest?.revoked_at!=null,customerId:guest?null:owner.customer_id,attempts:row.attempts};
     }
 
+    const staffAlerts = createStaffAlerts(db);
+
     function paymentState(actor, id) {
       const row = db.prepare('SELECT state FROM payment_states WHERE shop=? AND request_id=?').get(actor.shop, id);
       return row ? JSON.parse(row.state) : null;
@@ -321,6 +324,7 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
             return view(actor, snapshot);
           }
           apply(actor, snapshot);
+          if (!actor.isStaff && action==='comment') staffAlerts.enqueue(actor.shop,snapshot,`comment:${actor.principal}:${operationId}`,{kind:'comment'});
           if(['accept','setStatus'].includes(action)){
             const state=paymentState(actor,id);
             if(state)updatePaymentJob(actor,snapshot,{...state,updatedAt:Date.now()});
@@ -457,6 +461,12 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
         });
       },
 
+      listStaffAlerts(actorInput) { return guarded(()=>{const actor=identity(actorInput);if(!actor.isStaff)fail('AUTH_REQUIRED');return staffAlerts.list(actor.shop);}); },
+      readStaffAlert(actorInput,id) { return guarded(()=>{const actor=identity(actorInput);if(!actor.isStaff)fail('AUTH_REQUIRED');requestId(id);if(!staffAlerts.markRead(actor.shop,id))fail('NOT_FOUND');return staffAlerts.list(actor.shop);}); },
+      nextStaffAlertDue(shop) { return guarded(()=>staffAlerts.nextDue(shop)); },
+      claimStaffAlert(shop,now) { return guarded(()=>transaction(()=>staffAlerts.claim(shop,now))); },
+      finishStaffAlert(shop,id,status,now) { return guarded(()=>transaction(()=>staffAlerts.finish(shop,id,status,now))); },
+
       getTracking(actorInput, id) {
         return guarded(() => {
           const actor = identity(actorInput);
@@ -517,7 +527,14 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
             Object.assign(state,statePatch);
             if (publicPatch.payment) snapshot.payment=publicPatch.payment;
             if (publicPatch.billing) snapshot.billing=publicPatch.billing;
-            if (publicPatch.payments) snapshot.payments=publicPatch.payments;
+            if (publicPatch.payments) {
+              snapshot.payments=publicPatch.payments;
+              if(publicPatch.billing?.source==='shopify') for(const payment of snapshot.payments) {
+                if(!staffAlerts.isBaselinePayment(actor.shop,id,payment.id)&&payment.status==='confirmed'&&payment.amountCents>0) {
+                  staffAlerts.enqueue(actor.shop,snapshot,`payment:${payment.id}`,{kind:'payment',amountCents:payment.amountCents,balanceDueCents:snapshot.billing.balanceDueCents});
+                }
+              }
+            }
             if (publicPatch.reserve && ['requested','quoted'].includes(snapshot.status)) snapshot.status='reserved';
             if (complete) {
               db.prepare('UPDATE payment_operations SET status=? WHERE shop=? AND request_id=? AND operation_id=?').run('completed',actor.shop,id,state.activeOperationId);

@@ -75,7 +75,8 @@ export function createHandler({ store, config, paymentService, guestEmail, mailT
       }
       const url = new URL(request.url), calendarMatch=url.pathname.match(/^\/(proxy|admin)\/calendar$/), paymentStatusMatch=url.pathname.match(/^\/(admin)\/payment-status$/);
       const mailTestMatch=url.pathname.match(/^\/(admin)\/email-test$/);
-      const match = calendarMatch || paymentStatusMatch || mailTestMatch || url.pathname.match(/^\/(proxy|admin)\/requests(?:\/([a-zA-Z0-9-]{1,100}))?(?:\/(comments|accept|proposals|status|photos|payment|payment-sync|email-retry|delivery-payment)(?:\/([a-zA-Z0-9-]{1,100}))?)?$/);
+      const staffAlertsMatch=url.pathname.match(/^\/(admin)\/staff-alerts$/);
+      const match = staffAlertsMatch || calendarMatch || paymentStatusMatch || mailTestMatch || url.pathname.match(/^\/(proxy|admin)\/requests(?:\/([a-zA-Z0-9-]{1,100}))?(?:\/(comments|accept|proposals|status|photos|payment|payment-sync|email-retry|delivery-payment)(?:\/([a-zA-Z0-9-]{1,100}))?)?$/);
       if (!match) return json({ code: 'NOT_FOUND' }, 404);
       const [, surface, id, action, photoId] = match;
       if(photoId && action!=='photos') throw error('NOT_FOUND');
@@ -96,6 +97,7 @@ export function createHandler({ store, config, paymentService, guestEmail, mailT
         if (!config.staffIds?.includes(identity.staffId)) throw error('AUTH_REQUIRED');
         actor = { ...identity, role: 'staff' };
       }
+      if(staffAlertsMatch){if(request.method==='GET')return json(store.listStaffAlerts(actor));if(request.method==='POST'){const body=await readBody(request);shape(body,['id']);return json(store.readStaffAlert(actor,body.id));}throw error('NOT_FOUND');}
       if(paymentStatusMatch){if(request.method!=='GET')throw error('NOT_FOUND');if(!paymentService)throw error('UNAVAILABLE');return json(await paymentService.checkConfiguration());}
       if(mailTestMatch){if(request.method!=='POST')throw error('NOT_FOUND');const body=await readBody(request);shape(body,['operationId']);if(!mailTest)throw error('UNAVAILABLE');return json(await mailTest(body.operationId));}
       if(calendarMatch){

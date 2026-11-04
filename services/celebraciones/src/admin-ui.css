@@ -90,6 +90,13 @@ form button{justify-self:start}
 .ds-receipt-confirm{display:flex;align-items:center;gap:12px;min-height:44px}
 .ds-receipt-confirm input[type=checkbox]{width:22px;height:22px;min-height:22px;flex:0 0 auto;margin:0}
 .ds-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}
+.ds-staff-alerts{margin-bottom:28px}
+.ds-staff-alerts h2{margin:0}
+.ds-staff-alert{padding:20px 0;border-top:1px solid var(--ds-line)}
+.ds-staff-alert:first-child{margin-top:18px}
+.ds-staff-alert p{margin-top:8px}
+.ds-staff-alert.is-unread{border-left:3px solid var(--ds-accent,#b72959);padding-left:16px}
+#ds-staff-alerts{max-height:560px;overflow:auto}
 details summary{font-weight:600;cursor:pointer;min-height:30px}
 #ds-history{margin-top:20px}
 #ds-history h4{margin-top:0}

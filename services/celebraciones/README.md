@@ -1,5 +1,13 @@
 # Servicio de celebraciones
 
+## Avisos privados para la pastelera
+
+La bandeja **Avisos** muestra respuestas nuevas de clientes (incluidos invitados) y pagos confirmados por Shopify. Se actualiza cada 30 segundos con el panel visible sin reemplazar borradores. **Ver solicitud** abre el detalle; **Marcar leído** conserva el aviso en el historial. Se muestran hasta 50 avisos, con prioridad para los no leídos.
+
+Los mismos eventos generan correos a **Dayanaoramasgalano@gmail.com**, destinatario confirmado por el usuario. El enlace abre el panel autenticado de Shopify. El estado del correo distingue pendiente, aceptado por el proveedor, fallido y envío incierto; aceptado no significa leído. Los reintentos conocidos son limitados y un resultado incierto no se reenvía automáticamente. Marcar leído no cancela el correo.
+
+Los pagos aparecen después de la reconciliación existente con Shopify (normalmente cada cinco minutos, o al actualizar el estado del pago). Abrir un checkout no confirma un pago. Cada transacción genera como máximo un aviso; los pagos anteriores a esta función quedan excluidos. Los registros manuales contra entrega realizados por la pastelera no generan un aviso de pago Shopify.
+
 Backend con persistencia SQLite y autenticación Shopify. Instalado y probado con una cuenta real de Shopify y pagos ficticios. Actualmente está limitado a la cuenta piloto mediante `PAYMENTS_MODE=TEST` y `TEST_CUSTOMER_IDS`; el tema público aún no está activado. Estado y operación: [CLOUDFLARE.md](CLOUDFLARE.md).
 
 ## Qué implementa

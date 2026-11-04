@@ -52,6 +52,14 @@ async function fixture(t) {
   return { db, open: () => createDurableStore(storage), store: createDurableStore(storage) };
 }
 
+test('Durable SQL preserves staff alerts, read state and queued email on recreation',async t=>{
+ const {store,open}=await fixture(t);const {id}=store.createRequest(customer,input,'alert-create');
+ store.comment(customer,id,'Pregunta','alert-comment');
+ const restored=open(),result=restored.listStaffAlerts(staff);assert.equal(result.unread,1);
+ restored.readStaffAlert(staff,result.alerts[0].id);assert.equal(open().listStaffAlerts(staff).unread,0);
+ assert.ok(open().nextStaffAlertDue(staff.shop));
+});
+
 test('Durable SQL preserves delivery terms, reservation, staff receipt and idempotency on recreation',async t=>{
  const {store,open}=await fixture(t);
  const {id}=store.createRequest(customer,input,'create-delivery');
