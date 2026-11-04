@@ -13,7 +13,7 @@ test('block matches only the configured product ID and precedes buy buttons with
   assert.match(snippet, /elsif block.settings.product != blank and block.settings.product.id == product.id/);
   assert.match(main, /when 'ds_topping'[\s\S]*?render 'ds-topping-picker', product: product, block: block, product_form_id: product_form_id/);
   const block = schema.blocks.find((block) => block.type === 'ds_topping');
-  assert.equal(block.name, 'Selector de opción obligatoria');
+  assert.equal(block.name, 'Opción obligatoria');
   assert.deepEqual(block.settings.map((setting) => [setting.id, setting.type]), [
     ['product', 'product'], ['label', 'text'], ['property_name', 'text'],
     ['options', 'textarea'], ['error_text', 'text'], ['hide_dynamic_checkout', 'checkbox'],
