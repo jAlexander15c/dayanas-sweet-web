@@ -26,11 +26,11 @@ test('actual Worker queues staff events, persists alarms and delivers guest link
  export class TestStore extends CelebrationStore {
  async fetch(request){if(new URL(request.url).pathname==='/test/alarm'){const scheduled=(await this.ctx.storage.getAlarm())!==null;await this.alarm();return Response.json({scheduled});}return super.fetch(request);}
  }`,resolveDir:dir},bundle:true,write:false,format:'esm',platform:'neutral',external:['node:*','cloudflare:*'],plugins:[{name:'admin-text',setup(build){build.onLoad({filter:/admin-ui\.(js|css)$/},args=>({contents:readFileSync(args.path,'utf8'),loader:'text'}));}}]});
- const sent=[];
+ const sent=[];let emailStatus=200;
  const mf=new Miniflare(convertV4MiniflareOptions({workers:[{modules:true,compatibilityDate:'2026-11-03',compatibilityFlags:['nodejs_compat'],script:bundled.outputFiles[0].text,
   bindings:{SHOPIFY_SHOP:shop,SHOPIFY_APP_SECRET:secret,SHOPIFY_CLIENT_ID:clientId,SHOPIFY_STAFF_IDS:'9',STOREFRONT_ORIGIN:'https://dayanassweet.com',SERVICE_ENABLED:'true',GUEST_ENABLED:'true',PAYMENTS_ENABLED:'false',GUEST_ACCESS_KEY:Buffer.alloc(32,7).toString('base64'),RESEND_API_KEY:'re_test'},
   durableObjects:{CELEBRATIONS:{className:'TestStore',useSQLite:true}},
-  outboundService:async request=>{assert.equal(request.url,'https://api.resend.com/emails');sent.push(await request.json());return Response.json({id:'accepted'});}
+  outboundService:async request=>{assert.equal(request.url,'https://api.resend.com/emails');sent.push(await request.json());return Response.json({id:'accepted'},{status:emailStatus});}
  }]}));
  try{
   const capability='ab'.repeat(32),pickupAt=new Date(Date.now()+20*86400000);pickupAt.setUTCHours(18,0,0,0);
@@ -48,5 +48,14 @@ test('actual Worker queues staff events, persists alarms and delivers guest link
   assert.equal((await mf.dispatchFetch(...admin(request.id,'comments',{text:'Actualización',operationId:'message'}))).status,200);
   assert.equal((await (await stub.fetch('https://local.test/test/alarm')).json()).scheduled,true);
   assert.equal(sent.length,3);assert.match(sent[2].subject,/Nuevo mensaje/);
+  emailStatus=403;
+  const failedMessage=await(await mf.dispatchFetch(...admin(request.id,'comments',{text:'Aviso a reintentar',operationId:'failed-message'}))).json();
+  const notificationId=failedMessage.notifications[0].id;
+  await stub.fetch('https://local.test/test/alarm');assert.equal(sent.length,4);
+  emailStatus=200;
+  assert.equal((await mf.dispatchFetch(...admin(request.id,'email-retry',{notificationId,operationId:'retry-failed'}))).status,200);
+  assert.equal((await(await stub.fetch('https://local.test/test/alarm')).json()).scheduled,true);assert.equal(sent.length,5);
+  assert.equal((await mf.dispatchFetch(...admin(request.id,'email-retry',{notificationId,operationId:'retry-failed'}))).status,200);
+  await stub.fetch('https://local.test/test/alarm');assert.equal(sent.length,5);
  }finally{await mf.dispose();}
 });

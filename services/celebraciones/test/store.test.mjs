@@ -37,6 +37,8 @@ function seedReserved(path, id) {
     const snapshot = JSON.parse(row.snapshot);
     snapshot.status = 'reserved';
     snapshot.payments = [{ id: 'confirmed-payment-1', amountCents: 9000, status: 'confirmed' }];
+    snapshot.billing={proposalVersion:snapshot.acceptedProposal.version,totalCents:snapshot.acceptedProposal.totalCents,netPaidCents:9000,balanceDueCents:snapshot.acceptedProposal.totalCents-9000};
+    snapshot.payment={url:null,stage:'balance',reviewRequired:false};
     snapshot.version += 1;
     db.prepare('UPDATE requests SET snapshot=?, version=? WHERE shop=? AND id=?')
       .run(JSON.stringify(snapshot), snapshot.version, customer.shop, id);
@@ -100,7 +102,7 @@ test('proposal versions increase independently and stale acceptance never applie
   assert.equal(first.status, 'quoted');
   assert.equal(first.pendingProposal.version, 1);
   assert.equal(first.pendingProposal.totalCents, 17000);
-  assert.deepEqual(first.permissions, { canComment: true, canAccept: false });
+  assert.deepEqual(first.permissions, { canComment: true, canAccept: false,canPrepare:false,canPropose:true });
   assert.equal(store.getTracking(customer, id).permissions.canAccept, true);
   const second = store.propose(staff, id, { ...proposal, baseCents: 16000 }, 'p2');
   assert.equal(second.pendingProposal.version, 2);
@@ -136,13 +138,13 @@ test('accepting adjustments preserves payment IDs, amounts and operational progr
   store.propose(staff, id, { ...proposal, surchargeCents: 0 }, 'p1');
   store.accept(customer, id, 1, 'a1');
   seedReserved(path, id);
+  store.setStatus(staff,id,'preparing','prepare');
   const pending = store.propose(staff, id, proposal, 'p2');
   assert.equal(pending.acceptedProposal.totalCents, 15000);
-  assert.equal(pending.status, 'reserved');
+  assert.equal(pending.status, 'preparing');
   const accepted = store.accept(customer, id, 2, 'a2');
-  assert.equal(accepted.status, 'reserved');
+  assert.equal(accepted.status, 'preparing');
   assert.equal(accepted.acceptedProposal.totalCents - accepted.payments[0].amountCents, 8000);
-  store.setStatus(staff, id, 'preparing', 'prepare');
   store.propose(staff, id, { ...proposal, baseCents: 7000, surchargeCents: 0 }, 'p3');
   const reduced = store.accept(customer, id, 3, 'a3');
   assert.equal(reduced.status, 'preparing');
@@ -165,7 +167,7 @@ test('ready blocks fresh mutations but recognizes earlier successful retries', (
   trusted.payment={url:null,stage:'paid',reviewRequired:false};
   trustedDb.prepare('UPDATE requests SET snapshot=? WHERE shop=? AND id=?').run(JSON.stringify(trusted),customer.shop,id);trustedDb.close();
   const ready = store.setStatus(staff, id, 'ready', 'ready');
-  assert.deepEqual(ready.permissions, { canComment: false, canAccept: false });
+  assert.deepEqual(ready.permissions, { canComment: false, canAccept: false,canPrepare:false,canPropose:false });
   assert.equal(store.comment(customer, id, 'Hola', 'comment').status, 'ready');
   assert.equal(store.accept(customer, id, 1, 'accept').status, 'ready');
   assert.equal(store.propose(staff, id, proposal, 'propose').status, 'ready');

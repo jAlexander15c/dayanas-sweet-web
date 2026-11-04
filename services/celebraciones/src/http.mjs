@@ -1,7 +1,7 @@
 import { verifyAppProxy, verifyAdminSession } from './shopify-auth.mjs';
 import { randomUUID } from 'node:crypto';
 import { hashCapability, validateGuestContact, decodeGuestPhoto } from './guest-access.mjs';
-const status = { AUTH_REQUIRED: 401, NOT_FOUND: 404, CONFLICT: 409, VALIDATION: 422, UNAVAILABLE: 503, RATE_LIMITED: 429 };
+const status = { AUTH_REQUIRED: 401, NOT_FOUND: 404, CONFLICT: 409, QUOTE_EXPIRED:409, CHECKOUT_PENDING:409, VALIDATION: 422, UNAVAILABLE: 503, RATE_LIMITED: 429 };
 const error = code => Object.assign(new Error(code), { code });
 function json(body, code = 200) { return Response.json(body, { status: code, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } }); }
 async function readBody(request, limit = 32768) {
@@ -75,7 +75,7 @@ export function createHandler({ store, config, paymentService, guestEmail, mailT
       }
       const url = new URL(request.url), calendarMatch=url.pathname.match(/^\/(proxy|admin)\/calendar$/), paymentStatusMatch=url.pathname.match(/^\/(admin)\/payment-status$/);
       const mailTestMatch=url.pathname.match(/^\/(admin)\/email-test$/);
-      const match = calendarMatch || paymentStatusMatch || mailTestMatch || url.pathname.match(/^\/(proxy|admin)\/requests(?:\/([a-zA-Z0-9-]{1,100}))?(?:\/(comments|accept|proposals|status|photos|payment|payment-sync)(?:\/([a-zA-Z0-9-]{1,100}))?)?$/);
+      const match = calendarMatch || paymentStatusMatch || mailTestMatch || url.pathname.match(/^\/(proxy|admin)\/requests(?:\/([a-zA-Z0-9-]{1,100}))?(?:\/(comments|accept|proposals|status|photos|payment|payment-sync|email-retry)(?:\/([a-zA-Z0-9-]{1,100}))?)?$/);
       if (!match) return json({ code: 'NOT_FOUND' }, 404);
       const [, surface, id, action, photoId] = match;
       if(photoId && action!=='photos') throw error('NOT_FOUND');
@@ -107,7 +107,10 @@ export function createHandler({ store, config, paymentService, guestEmail, mailT
         }
         throw error('NOT_FOUND');
       }
-      if(request.method==='GET' && !id && !action) return json({requests:store.listRequests(actor)});
+      if(request.method==='GET' && !id && !action) {
+        if(surface==='admin')return json(store.listRequestPage(actor,{cursor:url.searchParams.get('cursor'),query:url.searchParams.get('q')||''}));
+        return json({requests:store.listRequests(actor)});
+      }
       if(request.method==='GET' && id && action==='photos' && photoId){
         const photo=store.getPhoto(actor,id,photoId);
         return new Response(photo.bytes,{headers:{'Content-Type':photo.mimeType,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; sandbox",'Content-Disposition':'inline'}});
@@ -132,15 +135,26 @@ export function createHandler({ store, config, paymentService, guestEmail, mailT
       }
       if (action === 'comments') { shape(body, ['text', 'operationId']); return json(store.comment(actor, id, body.text, body.operationId)); }
       if (action === 'accept' && surface === 'proxy') { shape(body, ['proposalVersion', 'operationId']); return json(store.accept(actor, id, body.proposalVersion, body.operationId)); }
-      if (action === 'proposals' && surface === 'admin') { shape(body, ['proposal', 'operationId']); return json(store.propose(actor, id, body.proposal, body.operationId)); }
+      if(action==='email-retry'&&surface==='admin'){shape(body,['notificationId','operationId']);return json(store.retryNotification(actor,id,body.notificationId,body.operationId));}
+      if (action === 'proposals' && surface === 'admin') {
+        shape(body, ['proposal', 'operationId']);
+        const context=store.getPaymentContext(actor,id);
+        if(context.state?.draftId&&!context.state.orderId){
+          if(!paymentService)throw error('CHECKOUT_PENDING');
+          await paymentService.sync(actor,id,`proposal-${randomUUID()}`);
+        }
+        return json(store.propose(actor, id, body.proposal, body.operationId));
+      }
       if (action === 'status' && surface === 'admin') {
         shape(body, ['status', 'operationId']);
-        if(body.status==='ready') {
+        if(['ready','preparing'].includes(body.status)) {
           if(!paymentService)throw error('UNAVAILABLE');
           // A fresh operation on every HTTP attempt checks refunds/cancellations
           // even when a previous ready attempt or reconciliation was retried.
           const current=await paymentService.sync(actor,id,`ready-${randomUUID()}`);
-          if(current.payment?.stage!=='paid'||current.payment.reviewRequired||current.pendingProposal)throw error('CONFLICT');
+          if(current.payment?.reviewRequired||current.pendingProposal)throw error('CONFLICT');
+          if(body.status==='ready'&&current.payment?.stage!=='paid')throw error('CONFLICT');
+          if(body.status==='preparing'&&!['paid','balance'].includes(current.payment?.stage))throw error('CONFLICT');
         }
         return json(store.setStatus(actor, id, body.status, body.operationId));
       }

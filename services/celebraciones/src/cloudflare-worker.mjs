@@ -57,7 +57,7 @@ export class CelebrationStore extends DurableObject {
     if (!configured(this.env)) return unavailable();
     if(new URL(request.url).pathname.startsWith('/proxy/') && this.env.SERVICE_ENABLED!=='true')return unavailable();
     const path=new URL(request.url).pathname;
-    const financialRequest=request.method==='POST'&&/\/requests\/[^/]+\/(payment|payment-sync|accept|status|proposals|comments)$/.test(path);
+    const financialRequest=request.method==='POST'&&/\/requests\/[^/]+\/(payment|payment-sync|accept|status|proposals|comments|email-retry)$/.test(path);
     const guestCreation=request.method==='POST'&&path==='/proxy/guest/requests';
     if(!this.scheduler||(!financialRequest&&!guestCreation))return this.handler(request);
     // Persist a recovery wake-up before the handler can send any mutation.

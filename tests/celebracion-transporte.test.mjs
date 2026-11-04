@@ -37,3 +37,9 @@ test('payment transport submits only the operation ID for start and reconciliati
   assert.deepEqual(calls.map(call => JSON.parse(call.options.body)), [{ operationId: 'pay-1' }, { operationId: 'sync-1' }]);
   assert.ok(calls.every(call => call.options.method === 'POST' && call.options.credentials === 'same-origin'));
 });
+test('tracking transport preserves quote expiry and pending checkout error codes', async () => {
+  for (const code of ['QUOTE_EXPIRED', 'CHECKOUT_PENDING']) {
+    const api = setup(async () => Response.json({ code }, { status: 409 }));
+    await assert.rejects(api.createHttpService('/apps/celebraciones').acceptProposal('cake-1', 3, 'op-1'), error => error.code === code);
+  }
+});

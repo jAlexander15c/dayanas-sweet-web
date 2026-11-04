@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createStore } from '../src/store.mjs';
 import { createPaymentScheduler } from '../src/payment-scheduler.mjs';
+import { DatabaseSync } from 'node:sqlite';
 
 const { createPaymentService } = await import('../src/payment-service.mjs').catch(() => ({}));
 const shop = 'sweet.myshopify.com';
@@ -54,6 +55,91 @@ function setup(t, { durable = false, mode = 'TEST', urgent = false, clock = Date
   }
   return { store, open, path, actor, capability, id: request.id, client, service, calls, paid, get draft() { return draft; }, get order() { return order; } };
 }
+
+function editPersistedSnapshot(f,apply){
+ const db=new DatabaseSync(f.path);
+ try{const snapshot=JSON.parse(db.prepare('SELECT snapshot FROM requests WHERE shop=? AND id=?').get(shop,f.id).snapshot);apply(snapshot);db.prepare('UPDATE requests SET snapshot=? WHERE shop=? AND id=?').run(JSON.stringify(snapshot),shop,f.id);}finally{db.close();}
+}
+
+for(const guest of [false,true])for(const totalCents of [9000,10000,11000])test(`legacy ${guest?'guest':'account'} unpaid initial checkout blocks revised ${totalCents} and later reconciles actual paid money`,async t=>{
+ const f=setup(t,{guest,durable:true,totalCents:10000});await f.service.pay(f.actor,f.id,'pay-v1');
+ // Trusted historical fixture: simulate an acceptance saved before CHECKOUT_PENDING existed.
+ editPersistedSnapshot(f,snapshot=>{snapshot.acceptedProposal={...snapshot.acceptedProposal,...proposal(totalCents),version:2,totalCents};});
+ const blocked=await f.service.sync(f.actor,f.id,'legacy-unpaid');
+ assert.equal(blocked.payment.stage,'review');assert.equal(blocked.payment.url,null);assert.equal(blocked.payment.reason,'CHECKOUT_PENDING');
+ assert.equal(f.calls.filter(([name])=>name==='createDepositDraft').length,1);assert.equal(f.calls.filter(([name])=>name==='beginOrderEdit').length,0);
+ f.paid(6000);
+ const paid=await f.service.sync(f.actor,f.id,'legacy-paid');
+ assert.equal(paid.status,'reserved');assert.equal(paid.billing.totalCents,totalCents);assert.equal(paid.billing.netPaidCents,6000);assert.equal(paid.billing.balanceDueCents,totalCents-6000);
+ assert.equal(paid.payment.stage,'balance');assert.equal(paid.payment.reason,undefined);assert.equal(f.calls.filter(([name])=>name==='createDepositDraft').length,1);
+});
+
+for(const guest of [false,true])test(`${guest?'guest':'account'} proposal mutation waits for the existing initial checkout and proceeds after verified payment`,async t=>{
+ const f=setup(t,{guest,durable:true,totalCents:10000});await f.service.pay(f.actor,f.id,'pay');
+ assert.throws(()=>f.store.propose(staff,f.id,proposal(11000),'before-payment'),{code:'CHECKOUT_PENDING'});
+ editPersistedSnapshot(f,snapshot=>{snapshot.pendingProposal={...snapshot.acceptedProposal,...proposal(11000),version:2,totalCents:11000};});
+ assert.throws(()=>f.store.accept(f.actor,f.id,2,'accept-before-payment'),{code:'CHECKOUT_PENDING'});
+ editPersistedSnapshot(f,snapshot=>{snapshot.pendingProposal=null;});
+ f.paid();await f.service.sync(f.actor,f.id,'verified-payment');
+ f.store.propose(staff,f.id,proposal(11000),'after-payment');f.store.accept(f.actor,f.id,2,'accept-after-payment');
+ const result=await f.service.sync(f.actor,f.id,'reconcile-new-price');assert.equal(result.billing.totalCents,11000);assert.equal(result.billing.netPaidCents,6000);assert.equal(result.billing.balanceDueCents,5000);
+});
+
+test('legacy revision plus a lost initial draft response recovers only the persisted checkout and actual payment',async t=>{
+ const f=setup(t,{guest:true,durable:true,totalCents:10000}),create=f.client.createDepositDraft;
+ f.client.createDepositDraft=async input=>{await create(input);throw Object.assign(new Error('lost response'),{code:'PAYMENT_REVIEW'});};
+ assert.equal((await f.service.pay(f.actor,f.id,'pay')).payment.stage,'review');
+ editPersistedSnapshot(f,snapshot=>{snapshot.acceptedProposal={...snapshot.acceptedProposal,...proposal(11000),version:2,totalCents:11000};});
+ const store=f.open(),actor=store.authenticateGuest(shop,f.id,f.capability),service=createPaymentService({store,client:f.client,mode:'TEST'});
+ const blocked=await service.sync(actor,f.id,'recover');assert.equal(blocked.payment.reason,'CHECKOUT_PENDING');assert.equal(blocked.payment.url,null);
+ assert.equal(store.getPaymentContext(actor,f.id).state.draftId,gid('DraftOrder'));
+ f.paid(6000);const paid=await service.sync(actor,f.id,'paid');assert.equal(paid.billing.totalCents,11000);assert.equal(paid.billing.netPaidCents,6000);assert.equal(paid.billing.balanceDueCents,5000);
+ assert.equal(f.calls.filter(([name])=>name==='createDepositDraft').length,1);
+});
+
+for(const explicit of [false,true])test(`expired ${explicit?'explicit proposal':'pickup fallback'} rejects the first payment before configuration or draft network calls`,async t=>{
+ const f=setup(t,{durable:true});
+ editPersistedSnapshot(f,snapshot=>{if(explicit)snapshot.acceptedProposal.expiresAt='2020-01-01T00:00:00Z';else{delete snapshot.acceptedProposal.expiresAt;snapshot.details.pickupAt='2020-01-01T00:00:00Z';}});
+ let checks=0;f.client.checkConfiguration=async()=>{checks++;throw new Error('network must not be attempted');};
+ await assert.rejects(f.service.pay(f.actor,f.id,'expired'),{code:'QUOTE_EXPIRED'});assert.equal(checks,0);assert.equal(f.calls.length,0);
+ assert.equal(f.store.getPaymentContext(f.actor,f.id).state,null);
+});
+
+test('explicit future expiry allows the first payment and elapsed validity never blocks existing money or refunds',async t=>{
+ let time=Date.now();const f=setup(t,{durable:true,clock:()=>time});
+ editPersistedSnapshot(f,snapshot=>{snapshot.acceptedProposal.expiresAt=new Date(time+60000).toISOString();});
+ assert.equal((await f.service.pay(f.actor,f.id,'pay')).payment.stage,'deposit');f.paid();time+=120000;
+ const initial=await f.service.sync(f.actor,f.id,'after-expiry');assert.equal(initial.billing.netPaidCents,9000);assert.equal(initial.billing.balanceDueCents,6000);
+ f.order.transactions.push({id:gid('OrderTransaction',2),kind:'REFUND',status:'SUCCESS',test:true,amountCents:1000,currency:'USD',parentId:gid('OrderTransaction')});f.order.refundedCents=1000;f.order.netPaymentCents=8000;f.order.outstandingCents=7000;f.order.fullyPaid=false;
+ const refunded=await f.service.sync(f.actor,f.id,'refund-after-expiry');assert.equal(refunded.billing.netPaidCents,8000);assert.equal(refunded.billing.balanceDueCents,7000);
+});
+
+for(const guest of [false,true])for(const explicit of [false,true])test(`${guest?'guest':'account'} unpaid checkout hides expired ${explicit?'proposal':'pickup fallback'} URL while later real money remains reconcilable`,async t=>{
+ let time=Date.now();const f=setup(t,{guest,durable:true,clock:()=>time});
+ editPersistedSnapshot(f,snapshot=>{if(explicit)snapshot.acceptedProposal.expiresAt=new Date(time+60000).toISOString();else{delete snapshot.acceptedProposal.expiresAt;snapshot.details.pickupAt=new Date(time+60000).toISOString();}});
+ const checkout=await f.service.pay(f.actor,f.id,'valid-checkout');assert.equal(checkout.payment.stage,'deposit');assert.ok(checkout.payment.url);
+ time+=120000;
+ for(const [method,operationId]of [['pay','expired-pay'],['sync','expired-sync']]){
+  const expired=await f.service[method](f.actor,f.id,operationId);assert.equal(expired.payment.url,null);assert.equal(expired.payment.stage,'review');assert.equal(expired.payment.reason,'QUOTE_EXPIRED');
+ }
+ assert.equal(f.calls.filter(([name])=>name==='createDepositDraft').length,1);assert.equal(f.calls.filter(([name])=>name==='beginOrderEdit').length,0);
+ // An already opened Shopify checkout is external to the app. Its actual payment must still count.
+ f.paid();const reconciled=await f.service.sync(f.actor,f.id,'paid-after-expiry');assert.equal(reconciled.status,'reserved');assert.equal(reconciled.billing.netPaidCents,9000);assert.equal(reconciled.billing.balanceDueCents,6000);assert.equal(reconciled.payment.stage,'balance');assert.equal(reconciled.payment.reason,undefined);
+});
+
+for(const guest of [false,true])for(const explicit of [false,true])test(`${guest?'guest':'account'} completed payment replay and every tracking view mask an expired ${explicit?'proposal':'pickup fallback'} checkout`,async t=>{
+ const originalNow=Date.now;let time=originalNow();const f=setup(t,{guest,durable:true,clock:()=>time});
+ editPersistedSnapshot(f,snapshot=>{if(explicit)snapshot.acceptedProposal.expiresAt=new Date(time+60000).toISOString();else{delete snapshot.acceptedProposal.expiresAt;snapshot.details.pickupAt=new Date(time+60000).toISOString();}});
+ const initial=await f.service.pay(f.actor,f.id,'same-operation');assert.ok(initial.payment.url);const calls=f.calls.length;
+ time+=120000;Date.now=()=>time;t.after(()=>{Date.now=originalNow;});
+ const views=[f.store.getTracking(f.actor,f.id),f.store.getTracking(staff,f.id),f.store.listRequests(staff).find(item=>item.id===f.id),f.store.listRequestPage(staff,{}).requests.find(item=>item.id===f.id)];
+ if(!guest)views.push(f.store.listRequests(customer).find(item=>item.id===f.id));
+ views.push(await f.service.pay(f.actor,f.id,'same-operation'));
+ for(const view of views){assert.equal(view.acceptedProposal.expiresAt,new Date(time-60000).toISOString());assert.equal(view.payment.url,null);assert.equal(view.payment.reason,'QUOTE_EXPIRED');assert.equal(view.payment.stage,'review');}
+ assert.equal(f.calls.length,calls,'completed replay and views must not need remote reads or mutations');
+ f.paid();const reconciled=await f.service.sync(f.actor,f.id,'actual-payment');assert.equal(reconciled.payment.stage,'balance');assert.ok(reconciled.payment.url);assert.equal(reconciled.billing.netPaidCents,9000);
+ assert.equal(f.store.getTracking(f.actor,f.id).payment.url,reconciled.payment.url);assert.equal((await f.service.pay(f.actor,f.id,'same-operation')).payment.stage,'balance');
+});
 
 test('guest financial identity stays null and persisted draft relationship verifies full 60/40 payment',async t=>{
  const f=setup(t,{guest:true,durable:true});
@@ -464,6 +550,7 @@ test('a missing calculated application identity never adds a second discount to 
 
 test('price below money received is represented without refund and remains in review', async t => {
   const f = setup(t); await f.service.pay(customer, f.id, 'pay'); f.paid();
+  await f.service.sync(customer,f.id,'verify-deposit-before-adjustment');
   f.store.propose(staff, f.id, proposal(7000), 'adjust'); f.store.accept(customer, f.id, 2, 'accept-adjust');
   const result = await f.service.sync(customer, f.id, 'sync-adjust');
   assert.equal(result.billing.netPaidCents, 9000); assert.equal(result.billing.overpaymentCents, 2000); assert.equal(result.payment.url, null);

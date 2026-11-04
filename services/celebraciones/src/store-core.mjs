@@ -1,7 +1,7 @@
 import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { hashCapability, validateGuestContact, guestRecipientKey } from './guest-access.mjs';
 
-const ERROR_CODES = new Set(['AUTH_REQUIRED', 'NOT_FOUND', 'CONFLICT', 'VALIDATION', 'UNAVAILABLE', 'RATE_LIMITED']);
+const ERROR_CODES = new Set(['AUTH_REQUIRED', 'NOT_FOUND', 'CONFLICT', 'VALIDATION', 'UNAVAILABLE', 'RATE_LIMITED', 'QUOTE_EXPIRED', 'CHECKOUT_PENDING']);
 const guestActors = new WeakMap();
 const MAX_CENTS = 100000000;
 const CREATE_SCOPE = '__create__';
@@ -46,6 +46,16 @@ function requestId(id) {
 
 function operationKey(operationId) {
   if (typeof operationId !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(operationId)) fail('VALIDATION');
+}
+function proposalExpired(snapshot,proposal){
+  const expiresAt=proposal?.expiresAt||snapshot.details?.pickupAt;
+  return !!expiresAt&&(!Number.isFinite(Date.parse(expiresAt))||Date.parse(expiresAt)<=Date.now());
+}
+function preparationAllowed(snapshot){
+  const total=snapshot.acceptedProposal?.totalCents||0;
+  const required=snapshot.details?.urgent?total:Number((BigInt(total)*60n+99n)/100n);
+  return !!snapshot.acceptedProposal&&!snapshot.pendingProposal&&required>0&&snapshot.billing?.proposalVersion===snapshot.acceptedProposal.version
+    &&snapshot.billing.netPaidCents>=required&&['balance','paid'].includes(snapshot.payment?.stage)&&!snapshot.payment.reviewRequired;
 }
 
 function canonical(value) {
@@ -219,15 +229,24 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
       return snapshot;
     }
 
-    function view(actor, snapshot) {
+    function view(actor, snapshot, includeNotifications=true) {
       // Permissions belong to the current authenticated actor, never to saved JSON.
+      const state=paymentState(actor,snapshot.id);
+      const expiredInitialCheckout=state?.draftId&&!state.orderId&&proposalExpired(snapshot,snapshot.acceptedProposal);
       return {
         ...snapshot,
+        ...(snapshot.acceptedProposal?{acceptedProposal:{...snapshot.acceptedProposal,...(snapshot.details?.pickupAt&&!snapshot.acceptedProposal.expiresAt?{expiresAt:snapshot.details.pickupAt}:{})}}:{}),
+        ...(snapshot.pendingProposal?{pendingProposal:{...snapshot.pendingProposal,...(snapshot.details?.pickupAt&&!snapshot.pendingProposal.expiresAt?{expiresAt:snapshot.details.pickupAt}:{})}}:{}),
+        ...(actor.isStaff&&includeNotifications?{notifications:db.prepare('SELECT id,event,status,attempts FROM notification_jobs WHERE shop=? AND request_id=? ORDER BY rowid DESC').all(actor.shop,snapshot.id).map(row=>({id:row.id,...JSON.parse(row.event),eventStatus:JSON.parse(row.event).status,status:row.status==='sending'?'pending':row.status,attempts:row.attempts}))}:{}),
         ...(snapshot.reference?{emailStatus:emailStatus(actor.shop,snapshot.id)}:{}),
         ...(snapshot.acceptedProposal && !snapshot.payment ? {payment:{url:null,stage:'deposit',reviewRequired:false}} : {}),
+        // Saved checkout URLs and completed operation replays must expire too.
+        // Keep durable financial state intact so a later Shopify payment reconciles.
+        ...(expiredInitialCheckout?{payment:{...snapshot.payment,url:null,stage:'review',reviewRequired:true,reason:'QUOTE_EXPIRED'}}:{}),
         permissions: {
           canComment: snapshot.status !== 'ready',
-          canAccept: !actor.isStaff && snapshot.status !== 'ready' && snapshot.pendingProposal !== null,
+          canAccept: !actor.isStaff && snapshot.status !== 'ready' && snapshot.pendingProposal !== null&&!proposalExpired(snapshot,snapshot.pendingProposal),
+          ...(actor.isStaff?{canPrepare:snapshot.status==='reserved'&&preparationAllowed(snapshot),canPropose:snapshot.status!=='ready'&&(!state?.draftId||!!state?.orderId)}:{}),
         },
       };
     }
@@ -295,7 +314,7 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
             .run(snapshot.version, JSON.stringify(snapshot), actor.shop, id);
           insertOperation.run(actor.shop, actor.principal, id, operationId, hash, id);
           if(actor.isStaff&&['propose','comment','setStatus'].includes(action)){
-            const event={kind:action,status:snapshot.status,version:snapshot.version};
+            const event={kind:action,status:snapshot.status,version:snapshot.version,createdAt:new Date().toISOString()};
             db.prepare("INSERT INTO notification_jobs(shop,id,request_id,event,contact,status,due_at) VALUES(?,?,?,?,?,'pending',?)")
               .run(actor.shop,randomUUID(),id,JSON.stringify(event),snapshot.contact?JSON.stringify(snapshot.contact):null,Date.now());
           }
@@ -377,6 +396,14 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
         });
       });},
       nextNotificationDue(shop){return guarded(()=>{shopKey(shop);return db.prepare("SELECT MIN(due_at) AS due FROM notification_jobs WHERE shop=? AND status IN ('pending','sending')").get(shop)?.due??null;});},
+      retryNotification(actorInput,id,notificationId,operationId){
+        return mutate(actorInput,id,operationId,'retryNotification',{notificationId},(actor)=>{
+          if(!actor.isStaff)fail('AUTH_REQUIRED');requestId(notificationId);
+          const job=db.prepare('SELECT status FROM notification_jobs WHERE shop=? AND request_id=? AND id=?').get(actor.shop,id,notificationId);
+          if(!job)fail('NOT_FOUND');if(job.status!=='failed')fail('CONFLICT');
+          db.prepare("UPDATE notification_jobs SET status='pending',attempts=0,due_at=? WHERE shop=? AND id=?").run(Date.now(),actor.shop,notificationId);
+        });
+      },
       createRequest(actorInput, input, operationId) {
         return guarded(() => {
           const actor = identity(actorInput);
@@ -441,6 +468,8 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
             const snapshot = load(actor,id);
             if (!snapshot.acceptedProposal || snapshot.acceptedProposal.totalCents <= 0) fail('CONFLICT');
             let state = paymentState(actor,id);
+            if(action==='pay'&&!state?.draftId&&!state?.orderId&&proposalExpired(snapshot,snapshot.acceptedProposal))fail('QUOTE_EXPIRED');
+            if(action==='pay'&&snapshot.pendingProposal)fail('CONFLICT');
             const previous = db.prepare('SELECT action,proposal_version,status FROM payment_operations WHERE shop=? AND request_id=? AND operation_id=?').get(actor.shop,id,operationId);
             if (previous && previous.action !== action) fail('CONFLICT');
             if (previous?.status === 'completed') return { claimed:false, snapshot:view(actor,snapshot) };
@@ -510,6 +539,18 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
         });
       },
 
+      listRequestPage(actorInput,{cursor=null,query=''}={}){
+        return guarded(()=>{
+          const actor=identity(actorInput);if(!actor.isStaff)fail('AUTH_REQUIRED');
+          if(cursor!==null&&(typeof cursor!=='string'||!/^\d{1,15}$/.test(cursor)||!Number.isSafeInteger(Number(cursor))||Number(cursor)<1))fail('VALIDATION');
+          query=text(query,{empty:true,limit:100});const pattern='%'+query.replace(/[\\%_]/g,'\\$&')+'%';
+          const rows=db.prepare(`SELECT rowid AS sequence,snapshot,version FROM requests WHERE shop=? AND (? IS NULL OR rowid<?)
+            AND (?='' OR id=? OR json_extract(snapshot,'$.reference') LIKE ? ESCAPE '\\' OR json_extract(snapshot,'$.contact.name') LIKE ? ESCAPE '\\') ORDER BY rowid DESC LIMIT 51`)
+            .all(actor.shop,cursor===null?null:Number(cursor),cursor===null?null:Number(cursor),query,query,pattern,pattern);
+          const page=rows.slice(0,50);
+          return {requests:page.map(row=>view(actor,{...JSON.parse(row.snapshot),version:row.version},false)),nextCursor:rows.length>50?String(page.at(-1).sequence):null};
+        });
+      },
       listRequests(actorInput) {
         return guarded(() => {
           const actor = identity(actorInput);
@@ -577,7 +618,9 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
         return mutate(actorInput, id, operationId, 'accept', { proposalVersion }, (actor, snapshot) => {
           if (!Number.isSafeInteger(proposalVersion) || proposalVersion <= 0) fail('VALIDATION');
           if (actor.isStaff || snapshot.status === 'ready' || snapshot.pendingProposal?.version !== proposalVersion) fail('CONFLICT');
+          if(proposalExpired(snapshot,snapshot.pendingProposal))fail('QUOTE_EXPIRED');
           const state=paymentState(actor,id);
+          if(state?.draftId&&!state.orderId)fail('CHECKOUT_PENDING');
           if (state?.activeToken || (state && state.phase !== 'idle' && !state.uncertainPhase)) fail('CONFLICT');
           snapshot.acceptedProposal = snapshot.pendingProposal;
           snapshot.pendingProposal = null;
@@ -589,7 +632,9 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
       propose(actorInput, id, input, operationId) {
         return mutate(actorInput, id, operationId, 'propose', input, (actor, snapshot) => {
           if (!actor.isStaff || snapshot.status === 'ready') fail('CONFLICT');
-          if (paymentState(actor,id)?.activeToken) fail('CONFLICT');
+          const state=paymentState(actor,id);
+          if(state?.activeToken)fail('CONFLICT');
+          if(state?.draftId&&!state.orderId)fail('CHECKOUT_PENDING');
           const proposal = proposalInput(input);
           const previous = snapshot.pendingProposal ?? snapshot.acceptedProposal;
           const versions = [snapshot.pendingProposal?.version ?? 0, snapshot.acceptedProposal?.version ?? 0,
@@ -600,7 +645,7 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
               totalCents: previous.totalCents, reply: previous.reply,
             });
           }
-          snapshot.pendingProposal = { version: Math.max(...versions) + 1, ...proposal };
+          snapshot.pendingProposal = { version: Math.max(...versions) + 1, ...proposal,...(snapshot.details?.pickupAt?{expiresAt:snapshot.details.pickupAt}:{}) };
           if (snapshot.status === 'requested') snapshot.status = 'quoted';
         });
       },
@@ -609,6 +654,7 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
         return mutate(actorInput, id, operationId, 'setStatus', { status }, (actor, snapshot) => {
           if (!['preparing', 'ready'].includes(status)) fail('VALIDATION');
           if (!actor.isStaff || !['reserved', 'preparing'].includes(snapshot.status) || status === snapshot.status) fail('CONFLICT');
+          if(status==='preparing'&&!preparationAllowed(snapshot))fail('CONFLICT');
           if (status === 'ready' && (!snapshot.billing || snapshot.billing.proposalVersion !== snapshot.acceptedProposal?.version || snapshot.billing.balanceDueCents !== 0 || snapshot.billing.netPaidCents < snapshot.billing.totalCents || snapshot.payment?.stage !== 'paid' || snapshot.payment.reviewRequired || snapshot.pendingProposal)) fail('CONFLICT');
           snapshot.status = status;
         });

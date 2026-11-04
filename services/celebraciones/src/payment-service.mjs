@@ -6,7 +6,7 @@ function requireValue(ok, code='PAYMENT_REVIEW') { if (!ok) throw failure(code);
 const cents = value => Number.isSafeInteger(value) && value >= 0 && value <= 100_000_000;
 const diagnosticPhases=new Set(['claim','recover-draft','draft-create','read-draft','read-order','validate-ledger','validate-lines','reconcile-order','read-calculated-order','prepare-order-edit','order-open','verify-opened-order','edit-begin','edit-remove','edit-add','edit-discount','validate-calculated','edit-commit','verify-committed-order','get-payment-url','verify-payment-link','validate-payment-url']);
 const uncertainPhases=new Set(['draft-create','order-open','edit-begin','edit-remove','edit-add','edit-discount','edit-commit','edit-incomplete']);
-const diagnosticReasons=new Set(['OPERATION_REPLAY_OR_BUSY','DRAFT_RECOVERY_UNRESOLVED','UNCERTAIN_OPERATION','STAGED_EDIT_INSPECTED','INITIAL_CHECKOUT_NOT_CREATED','DRAFT_PROPOSAL_CHANGED','ORDER_CANCELLED','PAYMENT_PENDING','DEPOSIT_UNCONFIRMED','CHECKOUT_PROPOSAL_CHANGED','ORDER_CLOSED','ORDER_STILL_CLOSED','CALCULATED_MISMATCH','PAYMENT_URL_MISSING','PAYMENT_URL_UNTRUSTED','PAYMENT_STATE_CHANGED','OVERPAYMENT','VALIDATION_ERROR','PAYMENT_REVIEW','SHOPIFY_UNAVAILABLE','UNEXPECTED_ERROR']);
+const diagnosticReasons=new Set(['OPERATION_REPLAY_OR_BUSY','DRAFT_RECOVERY_UNRESOLVED','UNCERTAIN_OPERATION','STAGED_EDIT_INSPECTED','INITIAL_CHECKOUT_NOT_CREATED','DRAFT_PROPOSAL_CHANGED','QUOTE_EXPIRED','ORDER_CANCELLED','PAYMENT_PENDING','DEPOSIT_UNCONFIRMED','CHECKOUT_PROPOSAL_CHANGED','ORDER_CLOSED','ORDER_STILL_CLOSED','CALCULATED_MISMATCH','PAYMENT_URL_MISSING','PAYMENT_URL_UNTRUSTED','PAYMENT_STATE_CHANGED','OVERPAYMENT','VALIDATION_ERROR','PAYMENT_REVIEW','SHOPIFY_UNAVAILABLE','UNEXPECTED_ERROR']);
 const discountDiagnosticFlags=['identityMatches','baseMatches','quantityMatches','allocationCountMatches','allocatedAmountMatches','kindMatches','targetTypeMatches','fixedValueMatches','descriptionMatches','noUnexpectedDiscounts'];
 function safeDiscountDiagnostic(value){
   const result={};
@@ -45,6 +45,10 @@ export function createPaymentService({ store, client, mode='TEST', storefrontOri
     if(value===null)return null;
     try { const url=new URL(value); requireValue(url.protocol==='https:' && !url.username && !url.password && !url.port && [shop,trustedStorefront,'checkout.shopify.com'].includes(url.hostname));return url.href; }
     catch { throw failure('PAYMENT_REVIEW'); }
+  }
+  function quoteExpired(snapshot){
+    const deadline=snapshot.acceptedProposal?.expiresAt??snapshot.details?.pickupAt;
+    return deadline!==undefined&&deadline!==null&&(!Number.isFinite(Date.parse(deadline))||Date.parse(deadline)<=now());
   }
   function tags(value,state,id) {
     requireValue(Array.isArray(value.tags) && ['ds-celebraciones',`ds-request:${id}`,`ds-version:${state.originProposalVersion}`,`ds-operation:${state.originOperationId}`].every(tag=>value.tags.includes(tag)));
@@ -133,7 +137,10 @@ export function createPaymentService({ store, client, mode='TEST', storefrontOri
     const before=store.getPaymentContext(actor,id);
     if(action==='sync'&&!before.state)return before.snapshot;
     if(actor.role==='staff'&&action==='pay')throw failure('AUTH_REQUIRED');
-    if(action==='pay'&&!before.state)requireValue((await checkConfiguration()).configured,'UNAVAILABLE');
+    if(action==='pay'&&!before.state){
+      requireValue(!quoteExpired(before.snapshot),'QUOTE_EXPIRED');
+      requireValue((await checkConfiguration()).configured,'UNAVAILABLE');
+    }
     const claim=store.claimPayment(actor,id,operationId,action,now());
     if(!claim.claimed){report('claim',before.state?.uncertainPhase,'OPERATION_REPLAY_OR_BUSY');return claim.snapshot;}
     const {token,context}=claim;
@@ -148,7 +155,8 @@ export function createPaymentService({ store, client, mode='TEST', storefrontOri
     }
     function finish(stage,url=null,reviewRequired=false,reason=null,error,inspection) {
       if(reason)report(executionPhase,state.uncertainPhase,reason,error,inspection);
-      return checkpoint({phase:'idle'}, {payment:{url,stage,reviewRequired}, ...(lastBilling?{billing:lastBilling}:{}),...(lastPayments?{payments:lastPayments}:{}),reserve},true);
+      const publicReason=reason==='DRAFT_PROPOSAL_CHANGED'?{reason:'CHECKOUT_PENDING'}:reason==='QUOTE_EXPIRED'?{reason:'QUOTE_EXPIRED'}:{};
+      return checkpoint({phase:'idle'}, {payment:{url,stage,reviewRequired,...publicReason}, ...(lastBilling?{billing:lastBilling}:{}),...(lastPayments?{payments:lastPayments}:{}),reserve},true);
     }
     function checkedPaymentUrl(url){
       executionPhase='validate-payment-url';
@@ -192,6 +200,9 @@ export function createPaymentService({ store, client, mode='TEST', storefrontOri
         executionPhase='read-draft';
         const draft=await client.getDraft(state.draftId);verifyDraft(draft,context,id);
         if(!draft.orderId) {
+          // An already-open Shopify checkout can still complete externally.
+          // Hide its URL here, retain reconciliation, and leave manual review.
+          if(quoteExpired(context.snapshot))return finish('review',null,true,'QUOTE_EXPIRED');
           if(version!==state.originProposalVersion)return finish('review',null,true,'DRAFT_PROPOSAL_CHANGED');
           requireValue(['OPEN','INVOICE_SENT'].includes(draft.status));
           checkpoint({checkoutVersion:version,uncertainPhase:null});

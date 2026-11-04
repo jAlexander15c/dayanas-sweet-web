@@ -2,6 +2,16 @@
   'use strict';
   const statuses = { requested: 'Solicitud recibida', quoted: 'Cotización disponible', reserved: 'Reserva confirmada', preparing: 'En preparación', ready: 'Listo para recoger' };
   const messages = { AUTH_REQUIRED: 'Inicia sesión para consultar tu pastel.', NOT_FOUND: 'No encontramos esta solicitud.', CONFLICT: 'La propuesta cambió. Revisa la información actualizada antes de aceptar.', VALIDATION: 'Revisa la información e inténtalo de nuevo.', UNAVAILABLE: 'No pudimos completar la operación. Puedes volver a intentarlo.' };
+  messages.QUOTE_EXPIRED = 'Esta propuesta venció. Escríbele a Dayana para acordar una nueva fecha y recibir una propuesta vigente.';
+  messages.CHECKOUT_PENDING = 'Hay un pago pendiente de comprobar en Shopify. Actualiza el estado del pago antes de continuar; no vuelvas a pagar.';
+  const guestAccessMessage = 'Abre el enlace privado completo de tu correo para consultar esta solicitud sin iniciar sesión.';
+  const quoteExpired = (proposal, now = Date.now()) => typeof proposal?.expiresAt === 'string' && Date.parse(proposal.expiresAt) <= now;
+  function initialPaymentDeadline(snapshot) {
+    if (snapshot?.payment?.stage !== 'deposit') return null;
+    const deadlines = [snapshot.acceptedProposal?.expiresAt, snapshot.details?.pickupAt].map(value => typeof value === 'string' ? Date.parse(value) : NaN).filter(Number.isFinite);
+    return deadlines.length ? Math.min(...deadlines) : null;
+  }
+  const initialPaymentExpired = (snapshot, now = Date.now()) => { const deadline = initialPaymentDeadline(snapshot); return deadline !== null && deadline <= now; };
   const fail = code => Object.assign(new Error(messages[code]), { code });
   const cents = value => { if (!Number.isSafeInteger(value) || value < 0) throw fail('VALIDATION'); return value; };
   const paymentStages = new Set(['unavailable', 'deposit', 'syncing', 'balance', 'paid', 'review']);
@@ -37,6 +47,7 @@
     for (const p of [s.acceptedProposal, s.pendingProposal]) {
       if (p === null) continue;
       if (!p || !Number.isSafeInteger(p.version) || p.version < 1 || !['total', 'breakdown'].includes(p.display) || ['canPrepare', 'changes', 'reply'].some(k => typeof p[k] !== 'string')) throw fail('VALIDATION');
+      if (p.expiresAt !== undefined && p.expiresAt !== null && (typeof p.expiresAt !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(p.expiresAt) || !Number.isFinite(Date.parse(p.expiresAt)))) throw fail('VALIDATION');
       if (cents(p.baseCents) + cents(p.surchargeCents) !== cents(p.totalCents)) throw fail('VALIDATION');
     }
     if (s.comments.some(c => !c || ['id', 'author', 'text'].some(k => typeof c[k] !== 'string'))) throw fail('VALIDATION');
@@ -65,8 +76,8 @@
       catch (error) {
         const code = Object.hasOwn(messages, error?.code) ? error.code : 'UNAVAILABLE';
         if (code === 'AUTH_REQUIRED' || code === 'NOT_FOUND') state.snapshot = null;
-        if (code === 'CONFLICT') { try { receive(await service.getTracking(id)); } catch (refreshError) { if (['AUTH_REQUIRED', 'NOT_FOUND'].includes(refreshError?.code)) state.snapshot = null; } }
-        state.error = { code, message: messages[code] }; return false;
+        if (['CONFLICT', 'QUOTE_EXPIRED', 'CHECKOUT_PENDING'].includes(code)) { try { receive(await service.getTracking(id)); } catch (refreshError) { if (['AUTH_REQUIRED', 'NOT_FOUND'].includes(refreshError?.code)) state.snapshot = null; } }
+        state.error = { code, message: service.guest && ['AUTH_REQUIRED', 'NOT_FOUND'].includes(code) ? guestAccessMessage : messages[code] }; return false;
       } finally { state.busy = false; publish(); }
     }
     function operation(key, persist = false) {
@@ -85,6 +96,7 @@
     async function paymentAction(action) {
       const s = state.snapshot;
       if (state.busy || !s?.payment || !s.acceptedProposal || typeof service[action] !== 'function') return false;
+      if (action === 'startPayment' && initialPaymentExpired(s)) { state.error = { code: 'QUOTE_EXPIRED', message: messages.QUOTE_EXPIRED }; publish(); return false; }
       if (action === 'startPayment' && (s.pendingProposal || s.payment.reviewRequired || !['deposit', 'balance'].includes(s.payment.stage))) return false;
       const key = `${action}:${s.acceptedProposal.version}:${s.payment.stage}`, operationId = operation(key, true);
       const ok = await run(action, () => service[action](id, operationId));
@@ -106,7 +118,9 @@
       },
       async accept() {
         const s = state.snapshot;
-        if (state.busy || !s || s.status === 'ready' || !s.permissions.canAccept || !s.pendingProposal) return false;
+        if (state.busy || !s || s.status === 'ready' || !s.pendingProposal) return false;
+        if (quoteExpired(s.pendingProposal)) { state.error = { code: 'QUOTE_EXPIRED', message: messages.QUOTE_EXPIRED }; publish(); return false; }
+        if (!s.permissions.canAccept) return false;
         const version = s.pendingProposal.version, operationId = operation(`accept:${version}`);
         const ok = await run('accept', () => service.acceptProposal(id, version, operationId));
         if (ok) retries.delete(`accept:${version}`); return ok;
@@ -143,6 +157,15 @@
     if (root.dsTrackingController) return root.dsTrackingController;
     const q = key => root.querySelector(`[data-${key}]`);
     const put = (key, value) => { q(key).textContent = value; };
+    let expiryTimer = null;
+    const clearExpiryTimer = () => { if (expiryTimer !== null) global.clearTimeout?.(expiryTimer); expiryTimer = null; };
+    const login = q('login');
+    if (login && !service.guest && global.location) {
+      try {
+        const current = new URL(global.location.href), url = new URL(login.getAttribute('href'), current);
+        if (url.origin === current.origin) { current.hash = ''; current.searchParams.set('solicitud', id); url.searchParams.set('return_to', current.pathname + current.search); login.href = url.pathname + url.search; }
+      } catch (_) { /* Keep the Shopify-provided login route. */ }
+    }
     const gallery = q('photos') && typeof service.getPhoto === 'function' ? createPhotoGallery(q('photos'), service, id) : null;
     const list = (key, items, heading, body) => {
       const container = q(key); container.replaceChildren();
@@ -153,6 +176,8 @@
       const s = state.snapshot;
       q('content').hidden = !s;
       q('retry').hidden = !state.error || state.busy;
+      if (login) login.hidden = service.guest || state.error?.code !== 'AUTH_REQUIRED' || state.busy;
+      clearExpiryTimer();
       put('status-message', state.busy && !s ? 'Cargando tu solicitud…' : !s ? (state.error?.message || 'El seguimiento todavía no está disponible.') : '');
       put('action-message', s && state.error ? state.error.message : state.busy ? state.action === 'syncPayment' ? 'Comprobando el pago con Shopify…' : state.action === 'startPayment' ? 'Preparando el enlace seguro de pago…' : 'Guardando…' : '');
       if (!s) { gallery?.clear(); return; }
@@ -172,16 +197,19 @@
       put('balance', amounts.pendingTax?'Pendiente de actualizar en Shopify':money(amounts.creditCents || amounts.dueCents));
       put('payments-note', 'Paga el saldo 24 horas antes de recoger. Cualquier ajuste requiere tu aceptación.');
       if (q('payment-note')) {
-        const payment = s.payment, review = payment?.reviewRequired || payment?.stage === 'review';
-        const canPay = !!accepted && !s.pendingProposal && !review && ['deposit', 'balance'].includes(payment?.stage);
+        const payment = s.payment, review = payment?.reviewRequired || payment?.stage === 'review', expiredPayment = initialPaymentExpired(s);
+        const canPay = !!accepted && !s.pendingProposal && !expiredPayment && !review && ['deposit', 'balance'].includes(payment?.stage);
         const url = canPay ? paymentUrl(payment.url, [root.dataset.shop, root.dataset.paymentHost]) : null;
         const unsafeLink = canPay && payment.url !== null && !url;
         const label = payment?.stage === 'balance' ? 'Pagar saldo' : s.details?.urgent === true ? 'Pagar pedido' : 'Pagar anticipo';
-        q('pay').hidden = !canPay || !!url || unsafeLink; q('pay').disabled = state.busy; put('pay', label);
+        q('pay').hidden = !canPay || !!url || unsafeLink; q('pay').disabled = state.busy || expiredPayment; put('pay', label);
         q('payment-link').hidden = !url || state.busy; put('payment-link', label);
         if (url && !state.busy) q('payment-link').setAttribute('href', url); else q('payment-link').removeAttribute('href');
         q('payment-sync').hidden = !payment || !accepted; q('payment-sync').disabled = state.busy;
-        const note = review || unsafeLink ? 'Este pago necesita revisión. No vuelvas a pagar; Dayana comprobará el pedido. Puedes actualizar el estado.'
+        const note = expiredPayment ? 'Esta propuesta venció y su enlace de pago necesita revisión. No pagues con el enlace anterior. Escríbele a Dayana para acordar una nueva fecha y recibir una propuesta vigente.'
+          : review && payment?.reason === 'CHECKOUT_PENDING' ? 'Hay un checkout anterior pendiente de comprobar para otra versión de tu propuesta. No pagues con el enlace anterior. Escríbele a Dayana para revisar el pago y continuar.'
+          : review && payment?.reason === 'QUOTE_EXPIRED' ? 'Esta propuesta venció y su enlace de pago necesita revisión. No pagues con el enlace anterior. Escríbele a Dayana para acordar una nueva fecha y recibir una propuesta vigente.'
+          : review || unsafeLink ? 'Este pago necesita revisión. No vuelvas a pagar; Dayana comprobará el pedido. Puedes actualizar el estado.'
           : s.pendingProposal ? 'Revisa y acepta la propuesta pendiente antes de continuar con el pago.'
           : payment?.stage === 'syncing' ? 'Estamos comprobando el pago con Shopify. No vuelvas a pagar; actualiza el estado en unos momentos.'
           : payment?.stage === 'paid' ? 'Pago confirmado por Shopify. No tienes que volver a pagar.'
@@ -194,23 +222,32 @@
       put('breakdown', accepted ? `Pastel y personalización: ${money(accepted.baseCents)} · Urgencia: ${money(accepted.surchargeCents)}` : '');
       q('accepted').hidden = !accepted;
       put('request', s.requestText);
-      for (const [key, field] of [['can-prepare', 'canPrepare'], ['changes', 'changes'], ['reply', 'reply']]) put(key, accepted?.[field] || '');
-      const pending = s.pendingProposal; q('pending').hidden = !pending;
+      for (const [key, field] of [['can-prepare', 'canPrepare'], ['changes', 'changes'], ['reply', 'reply']]) put(key, key === 'changes' && accepted && !accepted.changes.trim() ? 'Sin cambios respecto a tu referencia.' : accepted?.[field] || '');
+      const pending = s.pendingProposal, expired = quoteExpired(pending); q('pending').hidden = !pending;
+      if (q('pending-expiry')) {
+        q('pending-expiry').hidden = !pending?.expiresAt;
+        if (pending?.expiresAt) {
+          const deadline = new Intl.DateTimeFormat('es-US', { timeZone: 'America/Chicago', dateStyle: 'long', timeStyle: 'short' }).format(new Date(pending.expiresAt));
+          put('pending-expiry', expired ? `Esta propuesta venció el ${deadline} (hora de Houston). Escríbele a Dayana para acordar una nueva fecha y recibir una propuesta vigente.` : `Vigente hasta el ${deadline} (hora de Houston).`);
+        }
+      }
       if (pending) {
         put('pending-title', accepted ? 'Hay un ajuste por revisar' : 'Tu cotización está lista');
         put('pending-note', ['reserved', 'preparing'].includes(s.status) ? 'Tu reserva y los pagos recibidos se conservan. Aceptar no realiza ningún cobro.' : 'Aceptar esta propuesta no reserva cupo ni realiza un cobro. La reserva se confirma con el pago correspondiente.');
         put('accept', accepted ? 'Aceptar ajuste' : 'Aceptar propuesta');
         q('pending-breakdown').hidden = pending.display !== 'breakdown';
         put('pending-breakdown', `Pastel y personalización: ${money(pending.baseCents)} · Urgencia: ${money(pending.surchargeCents)}`);
-        put('pending-reply', pending.reply); put('pending-can', pending.canPrepare); put('pending-changes', pending.changes);
+        put('pending-reply', pending.reply); put('pending-can', pending.canPrepare); put('pending-changes', pending.changes.trim() ? pending.changes : 'Sin cambios respecto a tu referencia.');
         put('pending-total', money(pending.totalCents));
         put('pending-balance', 'El saldo final se actualizará en Shopify al aceptar. Tus pagos recibidos se conservan.');
       }
-      q('accept').disabled = state.busy || !s.permissions.canAccept || s.status === 'ready';
+      q('accept').disabled = state.busy || !s.permissions.canAccept || expired || s.status === 'ready';
       const canComment = s.permissions.canComment && s.status !== 'ready';
       q('comment-form').hidden = !canComment; q('comment-closed').hidden = canComment;
       q('send').disabled = state.busy; q('comment-input').disabled = state.busy;
       list('comments', s.comments, c => c.author, c => c.text);
+      const now = Date.now(), deadlines = [Date.parse(pending?.expiresAt), initialPaymentDeadline(s)].filter(at => Number.isFinite(at) && at > now);
+      if (deadlines.length) expiryTimer = global.setTimeout?.(() => render(controller.state), Math.min(Math.min(...deadlines) - now + 1, 2147483647)) ?? null;
       list('history', s.history, h => `Propuesta ${h.version} · ${h.status} · ${money(h.totalCents)}`, h => h.reply);
     }
     const controller = createController(id, service, render, { shop: root.dataset.shop });
@@ -222,8 +259,8 @@
       try { await global.navigator.clipboard.writeText(link); put('copy-status', 'Enlace privado copiado. Guárdalo y no lo compartas.'); }
       catch (_) { q('private-link').hidden = false; q('private-link').value = link; q('private-link').select(); put('copy-status', 'Copia y guarda este enlace privado.'); }
     });
-    global.addEventListener?.('pagehide', () => gallery?.clear());
-    root.ownerDocument.addEventListener('shopify:section:unload', event => { if (event.target.contains(root)) gallery?.clear(); });
+    global.addEventListener?.('pagehide', () => { gallery?.clear(); clearExpiryTimer(); });
+    root.ownerDocument.addEventListener('shopify:section:unload', event => { if (event.target.contains(root)) { gallery?.clear(); clearExpiryTimer(); } });
     q('accept').addEventListener('click', async () => { if (await controller.accept()) put('action-message', 'Propuesta aceptada. No se ha realizado ningún cobro.'); });
     q('comment-form').addEventListener('submit', async event => {
       event.preventDefault();
@@ -234,8 +271,15 @@
     const syncOnReturn = () => { if (root.isConnected && controller.state.snapshot?.payment) void controller.syncPayment(); };
     global.addEventListener?.('pageshow', event => { if (event.persisted) void controller.load().then(ok => { if (ok) syncOnReturn(); }); });
     let leftForPayment = false;
-    if (q('payment-link')) q('payment-link').addEventListener('click', () => { leftForPayment = true; });
-    root.ownerDocument.addEventListener('visibilitychange', () => { if (root.ownerDocument.visibilityState === 'visible' && leftForPayment) { leftForPayment = false; syncOnReturn(); } });
+    if (q('payment-link')) q('payment-link').addEventListener('click', event => {
+      if (initialPaymentExpired(controller.state.snapshot)) { event.preventDefault(); render(controller.state); return; }
+      leftForPayment = true;
+    });
+    root.ownerDocument.addEventListener('visibilitychange', () => {
+      if (root.ownerDocument.visibilityState !== 'visible') return;
+      render(controller.state);
+      if (leftForPayment) { leftForPayment = false; syncOnReturn(); }
+    });
     void controller.load().then(ok => { if (ok && controller.state.snapshot?.payment && controller.state.snapshot.payment.stage !== 'unavailable') void controller.syncPayment(); });
     return controller;
   }

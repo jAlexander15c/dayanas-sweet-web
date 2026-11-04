@@ -108,7 +108,7 @@ export function createAdminApi({ shopify = globalThis.shopify, fetch: transport 
     if (response.status === 401 || response.status === 403) throw failure('AUTH_REQUIRED');
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
-      throw failure(['AUTH_REQUIRED', 'NOT_FOUND', 'CONFLICT', 'VALIDATION', 'UNAVAILABLE'].includes(data.code) ? data.code : 'UNAVAILABLE');
+      throw failure(['AUTH_REQUIRED', 'NOT_FOUND', 'CONFLICT', 'QUOTE_EXPIRED','CHECKOUT_PENDING','VALIDATION', 'UNAVAILABLE'].includes(data.code) ? data.code : 'UNAVAILABLE');
     }
     try { return asBlob ? await response.blob() : await response.json(); } catch { throw failure('UNAVAILABLE'); }
   };
@@ -120,6 +120,7 @@ function startPanel() {
   const proposalForm = q('#ds-proposal-form'), commentForm = q('#ds-comment-form'), calendarForm = q('#ds-calendar-form');
   let calendarDays = new Map(), calendarLoaded = false;
   let selected = null, busy = false, denied = false, photoGeneration = 0;
+  let nextCursor=null,searchQuery='';
   const photoUrls = new Set();
   const node = (tag, text, className) => { const element = document.createElement(tag); if (text !== undefined) element.textContent = text; if (className) element.className = className; return element; };
   const feedback = (message, error = false) => { q('#ds-feedback').textContent = message; q('#ds-feedback').classList.toggle('ds-error', error); };
@@ -137,6 +138,11 @@ function startPanel() {
     const snapshot = current();
     q('#ds-refresh').disabled = busy || denied;
     q('#ds-back-to-list').disabled = busy || denied;
+    q('#ds-more').disabled = busy || denied;q('#ds-more').hidden=!nextCursor;
+    q('#ds-search-form button').disabled=busy||denied;q('#ds-search').disabled=busy||denied;
+    q('#ds-notifications-refresh').disabled=busy||denied;
+    q('#ds-payment-sync').disabled=busy||denied||!snapshot?.acceptedProposal;
+    q('#ds-notifications').querySelectorAll('button').forEach(button=>{button.disabled=busy||denied;});
     q('#ds-payment-check').disabled = busy || denied;
     q('#ds-requests').querySelectorAll('button').forEach(button => { button.disabled = busy; });
     q('#ds-proposal-fields').disabled = busy || denied || !snapshot || snapshot.status === 'ready';
@@ -144,7 +150,7 @@ function startPanel() {
     q('#ds-calendar-fields').disabled = busy || denied || !calendarLoaded;
     q('#ds-preparing').hidden = snapshot?.status !== 'reserved';
     q('#ds-ready').hidden = !['reserved', 'preparing'].includes(snapshot?.status);
-    q('#ds-preparing').disabled = busy || denied;
+    q('#ds-preparing').disabled = busy || denied || snapshot?.permissions.canPrepare===false;
     q('#ds-ready').disabled = busy || denied || !canMarkReady(snapshot);
     q('#ds-workspace').setAttribute('aria-busy', String(busy));
   }
@@ -171,6 +177,8 @@ function startPanel() {
     const messages = {
       NOT_FOUND: 'No se encontró esta solicitud o ya no tienes acceso a ella.',
       CONFLICT: 'La solicitud cambió. Revisa la versión actual antes de volver a enviar. Tu borrador se conserva.',
+      QUOTE_EXPIRED:'La fecha de recogida ya pasó. No se puede aceptar ni iniciar el anticipo; coordina una nueva solicitud con la fecha correcta.',
+      CHECKOUT_PENDING:'Ya existe un checkout inicial pendiente. Comprueba si el cliente pagó antes de ajustar la propuesta. Si necesita cambios antes de pagar, coordina la cancelación del intento anterior en Shopify y una nueva solicitud; no le envíes dos enlaces de pago.',
       VALIDATION: 'Revisa la fecha, los textos y los importes: usa hasta dos decimales y un total máximo de $1,000,000.00. Tu borrador se conserva.',
       UNAVAILABLE: 'No pudimos completar la operación. Puedes reintentar; tu borrador se conserva.',
     };
@@ -186,7 +194,7 @@ function startPanel() {
   }
   function renderList() {
     const list = q('#ds-requests'); list.replaceChildren();
-    q('#ds-list-message').textContent = snapshots.size ? `${snapshots.size} ${snapshots.size === 1 ? 'solicitud' : 'solicitudes'}` : 'Todavía no hay solicitudes.';
+    q('#ds-list-message').textContent = snapshots.size ? `${snapshots.size} ${snapshots.size === 1 ? 'solicitud cargada' : 'solicitudes cargadas'}${nextCursor?' · Hay más solicitudes.':''}` : searchQuery?'No hay solicitudes que coincidan.':'Todavía no hay solicitudes.';
     for (const snapshot of snapshots.values()) {
       const button = node('button', undefined, 'ds-request'); button.type = 'button'; button.setAttribute('aria-pressed', String(snapshot.id === selected));
       button.append(node('strong', snapshot.pickup.label), node('span', states[snapshot.status] || 'Solicitud'), node('span', snapshot.requestText.slice(0, 100), 'ds-muted'));
@@ -254,8 +262,20 @@ function startPanel() {
     q('#ds-urgency').textContent = snapshot.details?.urgent === true ? 'Solicitud urgente' : snapshot.details?.urgent === false ? 'Solicitud normal' : 'Urgencia no indicada';
     q('#ds-status').textContent = states[snapshot.status] || 'Solicitud';
     const emailStates={pending:'Correo pendiente de envío.',sent:'Correo aceptado por el servidor de envío.',failed:'No se pudo enviar el correo. El acceso web sigue disponible.',unknown:'No se pudo confirmar el envío del correo. Revisar antes de reenviar.'};
-    const contact=snapshot.contact?`${snapshot.contact.name}\n${snapshot.contact.email}\n${snapshot.contact.phone}\n${emailStates[snapshot.emailStatus]||''}\n\n`:'';
+    const contact=snapshot.contact?`${snapshot.contact.name}\n${snapshot.contact.email}\n${snapshot.contact.phone}\nCorreo inicial: ${emailStates[snapshot.emailStatus]||''}\n\n`:'';
     q('#ds-request-text').textContent = contact + snapshot.requestText;
+    const notifications=q('#ds-notifications');notifications.replaceChildren();
+    const kinds={propose:'Propuesta',comment:'Mensaje',preparing:'En preparación',ready:'Listo para recoger'};
+    const mailStatuses={pending:'Pendiente de envío',sent:'Aceptado por el proveedor',failed:'No se pudo enviar',unknown:'Envío sin confirmar'};
+    for(const notice of snapshot.notifications||[]){
+      const item=node('div',undefined,['failed','unknown'].includes(notice.status)?'ds-note ds-error':'ds-note');
+      item.append(node('strong',`${kinds[notice.kind==='setStatus'?notice.eventStatus:notice.kind]||'Actualización'} · ${mailStatuses[notice.status]||'Estado no disponible'}`));
+      if(notice.createdAt)item.append(node('p',new Date(notice.createdAt).toLocaleString('es-US',{timeZone:'America/Chicago'}),'ds-muted'));
+      if(notice.status==='failed'){const retry=node('button','Reintentar correo');retry.type='button';retry.addEventListener('click',()=>void locked(()=>mutate('email-retry',{notificationId:notice.id})));item.append(retry);}
+      if(notice.status==='unknown')item.append(node('p','Revisa este envío en Resend antes de intentar enviar otro aviso. No se reenvía automáticamente para evitar duplicados.','ds-muted'));
+      notifications.append(item);
+    }
+    if(!snapshot.notifications?.length)notifications.append(node('p','Todavía no hay avisos de actualización.','ds-muted'));
     const finances = paymentSummary(snapshot), billed = billingIsCurrent(snapshot), staleBilling = !!snapshot.billing && !billed; q('#ds-finances').replaceChildren();
     for (const [label, value] of [[billed ? 'Total vigente' : 'Precio', finances.total], ['Recibido', finances.received], ['Saldo pendiente', finances.balance]]) {
       const item = node('div'); item.append(node('span', label, 'ds-muted'), node('strong', value === null ? staleBilling && label === 'Saldo pendiente' ? 'Pendiente de actualizar en Shopify' : 'Por acordar' : usd(value), value === null ? 'ds-money ds-money-pending' : 'ds-money')); q('#ds-finances').append(item);
@@ -274,9 +294,10 @@ function startPanel() {
     q('#ds-history').replaceChildren();
     for (const entry of snapshot.history) { const article = node('article'); article.append(node('h4', `Propuesta ${entry.version} · ${states[entry.status] || entry.status} · ${usd(entry.totalCents)}`), node('p', entry.reply, 'ds-copy')); q('#ds-history').append(article); }
     if (!snapshot.history.length) q('#ds-history').append(node('p', 'Todavía no hay propuestas anteriores.', 'ds-muted'));
-    q('#ds-proposal-note').textContent = snapshot.status === 'ready' ? 'El pastel está listo. Ya no se pueden enviar propuestas.' : 'El cliente debe aceptar la propuesta para que cambie el diseño y precio vigentes.';
+    q('#ds-proposal-note').textContent = snapshot.status === 'ready' ? 'El pastel está listo. Ya no se pueden enviar propuestas.' : snapshot.permissions.canPropose===false?'Hay un checkout inicial pendiente. El sistema comprobará si ya fue pagado antes de permitir otra propuesta; mientras siga pendiente, no se podrá cambiar.':'El cliente debe aceptar la propuesta para que cambie el diseño y precio vigentes.';
     q('#ds-comment-note').textContent = snapshot.permissions.canComment ? 'Un comentario no cambia la propuesta ni su precio.' : 'Esta solicitud ya no admite comentarios.';
     q('#ds-status-note').textContent = ['reserved', 'preparing'].includes(snapshot.status) ? !canMarkReady(snapshot) ? 'Para marcar listo, Shopify debe confirmar el pago completo, sin propuestas ni revisión de pago pendientes.' : 'Marca el avance cuando corresponda. Al marcar listo se cierran los comentarios y las propuestas.' : snapshot.status === 'ready' ? 'El pastel está listo para recoger.' : 'La preparación estará disponible cuando el servicio confirme la reserva. Aceptar una propuesta no confirma por sí solo pagos ni cupo.';
+    if(snapshot.status==='reserved'&&snapshot.permissions.canPrepare===false)q('#ds-status-note').textContent='No se puede iniciar la preparación: falta confirmar el anticipo vigente o resolver una propuesta o revisión pendiente. Actualiza el pago antes de continuar.';
     updateControls(); if (loadPhotos) void renderPhotos(snapshot);
   }
   function saveDraft() {
@@ -344,19 +365,26 @@ function startPanel() {
       feedback(payload.closed ? 'Fecha cerrada para nuevas solicitudes.' : 'Fecha abierta para nuevas solicitudes.');
     });
   });
-  async function refresh() {
-    const result = await api('/admin/requests');
+  async function loadPage(append=false){
+    const query=new URLSearchParams();if(searchQuery)query.set('q',searchQuery);if(append&&nextCursor)query.set('cursor',nextCursor);
+    const result=await api('/admin/requests'+(query.size?'?'+query.toString():''));
     if (!Array.isArray(result.requests)) throw failure('UNAVAILABLE');
-    const ids = new Set(result.requests.map(snapshot => snapshot.id));
+    if(!append)snapshots.clear();nextCursor=result.nextCursor||null;
     for (const snapshot of result.requests) remember(snapshot);
-    for (const id of snapshots.keys()) if (!ids.has(id)) { snapshots.delete(id); drafts.delete(id); }
-    if (selected && !snapshots.has(selected)) { selected = null; revokePhotos(); q('#ds-detail').hidden = true; q('#ds-empty').hidden = false; }
-    q('#ds-workspace').hidden = false; renderList(); if (selected) renderDetail(true);
+    q('#ds-workspace').hidden=false;renderList();
+  }
+  async function refresh() {
+    saveDraft();await loadPage();
+    if(selected){remember(await api(pathFor(selected)));renderList();renderDetail(true);}
     try { await loadCalendar(); } catch (error) { renderCalendar(); throw error; }
     if (denied) return;
     feedback('Solicitudes actualizadas.');
   }
   q('#ds-refresh').addEventListener('click', () => void locked(refresh));
+  q('#ds-more').addEventListener('click',()=>void locked(()=>loadPage(true)));
+  q('#ds-search-form').addEventListener('submit',event=>{event.preventDefault();void locked(async()=>{saveDraft();selected=null;revokePhotos();q('#ds-detail').hidden=true;q('#ds-empty').hidden=false;searchQuery=q('#ds-search').value.trim();await loadPage();});});
+  q('#ds-notifications-refresh').addEventListener('click',()=>void locked(async()=>{if(selected){remember(await api(pathFor(selected)));renderDetail();feedback('Estado de correos actualizado.');}}));
+  q('#ds-payment-sync').addEventListener('click',()=>void locked(()=>mutate('payment-sync',{})));
   q('#ds-back-to-list').addEventListener('click', () => {
     if (busy || denied) return;
     saveDraft(); selected = null; revokePhotos();

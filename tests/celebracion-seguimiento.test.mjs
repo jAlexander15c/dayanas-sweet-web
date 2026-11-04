@@ -117,3 +117,52 @@ test('un estado de pago incompleto o desconocido no reemplaza el snapshot confir
     assert.equal(await c.load(), false); assert.equal(c.state.snapshot, null);
   }
 });
+test('guest access errors ask for the private link instead of signing into an account', async () => {
+  for (const code of ['AUTH_REQUIRED', 'NOT_FOUND']) {
+    const c = api.createController('cake-1', { guest: true, getTracking: async () => { throw { code }; } });
+    assert.equal(await c.load(), false);
+    assert.match(c.state.error.message, /enlace privado completo/);
+    assert.doesNotMatch(c.state.error.message, /Inicia sesi/);
+  }
+});
+test('expired pending proposal prevents acceptance even after its loaded permissions become stale', async () => {
+  let calls = 0;
+  const s = snapshot(); s.pendingProposal.expiresAt = '2000-01-01T00:00:00.000Z';
+  const c = api.createController('cake-1', { getTracking: async () => s, acceptProposal: async () => { calls++; return s; } });
+  await c.load();
+  assert.equal(await c.accept(), false);
+  assert.equal(calls, 0);
+  assert.equal(c.state.error.code, 'QUOTE_EXPIRED');
+  assert.match(c.state.error.message, /venci/);
+});
+test('new server errors keep a clear message and refresh proposal permissions without changing received payments', async () => {
+  for (const code of ['QUOTE_EXPIRED', 'CHECKOUT_PENDING']) {
+    const s = snapshot(); let loads = 0;
+    const c = api.createController('cake-1', { getTracking: async () => (++loads === 1 ? s : { ...s, version: 2, permissions: { ...s.permissions, canAccept: false } }), acceptProposal: async () => { throw { code }; } });
+    await c.load(); assert.equal(await c.accept(), false);
+    assert.equal(c.state.error.code, code);
+    assert.equal(c.state.snapshot.permissions.canAccept, false);
+    assert.equal(api.balance(c.state.snapshot).paidCents, 9000);
+    assert.match(c.state.error.message, code === 'QUOTE_EXPIRED' ? /venci/ : /pago.*pendiente/);
+  }
+});
+test('malformed proposal expiration cannot replace a confirmed snapshot', async () => {
+  const s = snapshot(); s.pendingProposal.expiresAt = 'tomorrow';
+  const c = api.createController('cake-1', { getTracking: async () => s });
+  assert.equal(await c.load(), false); assert.equal(c.state.snapshot, null);
+});
+
+test('expired initial payment cannot start, but reconciliation and existing balance payments remain available', async () => {
+  for (const source of ['proposal', 'pickup']) {
+    const s = snapshot(); s.pendingProposal = null; s.payments = [];
+    s.payment = { stage: 'deposit', url: 'https://checkout.shopify.com/old', reviewRequired: false };
+    if (source === 'proposal') s.acceptedProposal.expiresAt = '2000-01-01T00:00:00.000Z';
+    else s.details = { pickupAt: '2000-01-01T00:00:00.000Z' };
+    let starts = 0, syncs = 0;
+    const c = api.createController('cake-1', { getTracking: async () => s, startPayment: async () => { starts++; return s; }, syncPayment: async () => { syncs++; return s; } });
+    await c.load(); assert.equal(await c.startPayment(), false); assert.equal(starts, 0); assert.equal(c.state.error.code, 'QUOTE_EXPIRED');
+    assert.equal(await c.syncPayment(), true); assert.equal(syncs, 1); assert.equal(api.balance(c.state.snapshot).dueCents, 15000);
+    s.payment.stage = 'balance'; s.payments = [{ id: 'p1', amountCents: 9000, status: 'confirmed' }];
+    await c.load(); assert.equal(await c.startPayment(), true); assert.equal(starts, 1); assert.equal(api.balance(c.state.snapshot).dueCents, 6000);
+  }
+});

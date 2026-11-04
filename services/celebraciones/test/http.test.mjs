@@ -55,6 +55,21 @@ function staff(path, staffId, body) {
   const signature = createHmac('sha256', config.secret).update(`${head}.${data}`).digest('base64url');
   return new Request(`https://backend.test/admin${path}`, { method: 'POST', headers: { Authorization: `Bearer ${head}.${data}.${signature}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 }
+test('admin paginates and searches requests while notification retry remains staff-only',async()=>{
+ const store=createStore(':memory:'),handler=createHandler({store,config}),actor={shop:config.shop,role:'staff',staffId:'9'};
+ const get=path=>{const authenticated=staff(path,'9',{});return new Request(authenticated.url,{headers:authenticated.headers});};
+ try{
+  let oldest;for(let i=0;i<101;i++){const request=store.createRequest({shop:config.shop,customerId:String(i+1)},{requestText:'Pastel',pickup:{label:'Houston'}},'create');oldest??=request;}
+  const first=await(await handler(get('/requests'))).json();assert.equal(first.requests.length,50);assert.ok(first.nextCursor);
+  const second=await(await handler(get('/requests?cursor='+first.nextCursor))).json();assert.equal(second.requests.length,50);
+  const third=await(await handler(get('/requests?cursor='+second.nextCursor))).json();assert.equal(third.requests[0].id,oldest.id);assert.equal(third.nextCursor,null);
+  const found=await(await handler(get('/requests?q='+oldest.id))).json();assert.equal(found.requests.length,1);
+  assert.equal((await handler(get('/requests?cursor=invalid'))).status,422);
+  store.comment(actor,oldest.id,'Aviso','message');const now=Date.now()+5,job=store.getNotificationJobs(config.shop,now)[0];store.claimNotification(config.shop,job.id,now);store.finishNotification(config.shop,job.id,{status:'failed',now:now+1});
+  const response=await handler(staff(`/requests/${oldest.id}/email-retry`,'9',{notificationId:job.id,operationId:'retry'}));assert.equal(response.status,200);assert.equal((await response.json()).notifications[0].status,'pending');
+  assert.equal((await handler(staff(`/requests/${oldest.id}/email-retry`,'10',{notificationId:job.id,operationId:'bad'}))).status,401);
+ }finally{store.close();}
+});
 test('HTTP authenticated staff proposes, customer accepts and no reservation/payment is fabricated', async () => {
   const store = createStore(':memory:'); const handler = createHandler({ store, config });
   try {

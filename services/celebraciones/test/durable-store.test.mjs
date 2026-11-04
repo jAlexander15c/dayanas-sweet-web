@@ -103,7 +103,7 @@ test('Durable SQL adapter enforces current proposal versions without fabricating
   const { id } = store.createRequest(customer, input, 'create');
   const first = store.propose(staff, id, proposal, 'proposal-1');
   assert.equal(first.pendingProposal.totalCents, 17000);
-  assert.deepEqual(first.permissions, { canComment: true, canAccept: false });
+  assert.deepEqual(first.permissions, { canComment: true, canAccept: false,canPrepare:false,canPropose:true });
   assert.equal(store.getTracking(customer, id).permissions.canAccept, true);
   store.propose(staff, id, { ...proposal, baseCents: 16000 }, 'proposal-2');
   assert.throws(() => store.accept(customer, id, 1, 'accept'), code('CONFLICT'));
@@ -142,13 +142,14 @@ test('Durable SQL adapter retains confirmed payments and closes fresh mutations 
   const snapshot = store.getTracking(customer, id);
   snapshot.status = 'reserved';
   snapshot.payments = [{ id: 'confirmed-1', amountCents: 9000, status: 'confirmed' }];
+  snapshot.billing={proposalVersion:1,totalCents:15000,netPaidCents:9000,balanceDueCents:6000};snapshot.payment={url:null,stage:'balance',reviewRequired:false};
   db.prepare('UPDATE requests SET snapshot=? WHERE shop=? AND id=?')
     .run(JSON.stringify(snapshot), customer.shop, id);
+  store.setStatus(staff, id, 'preparing', 'preparing');
   store.propose(staff, id, proposal, 'proposal-2');
   const accepted = store.accept(customer, id, 2, 'accept-2');
-  assert.equal(accepted.status, 'reserved');
+  assert.equal(accepted.status, 'preparing');
   assert.equal(accepted.acceptedProposal.totalCents - accepted.payments[0].amountCents, 8000);
-  store.setStatus(staff, id, 'preparing', 'preparing');
   store.propose(staff, id, { ...proposal, baseCents: 7000, surchargeCents: 0 }, 'proposal-3');
   const reduced = store.accept(customer, id, 3, 'accept-3');
   assert.equal(reduced.status, 'preparing');
@@ -158,8 +159,8 @@ test('Durable SQL adapter retains confirmed payments and closes fresh mutations 
   const trusted={...reduced,billing:{proposalVersion:3,totalCents:7000,netPaidCents:7000,balanceDueCents:0},payments:[{id:'confirmed-1',amountCents:7000,status:'confirmed'}],payment:{url:null,stage:'paid',reviewRequired:false}};
   db.prepare('UPDATE requests SET snapshot=? WHERE shop=? AND id=?').run(JSON.stringify(trusted),customer.shop,id);
   const ready = store.setStatus(staff, id, 'ready', 'ready');
-  assert.deepEqual(ready.permissions, { canComment: false, canAccept: false });
-  assert.deepEqual(open().accept(customer, id, 3, 'accept-3'), ready);
+  assert.deepEqual(ready.permissions, { canComment: false, canAccept: false,canPrepare:false,canPropose:false });
+  assert.deepEqual(open().accept(customer, id, 3, 'accept-3'),store.getTracking(customer,id));
   for (const action of [
     () => store.comment(customer, id, 'Nuevo', 'new-comment'),
     () => store.propose(staff, id, proposal, 'new-proposal'),

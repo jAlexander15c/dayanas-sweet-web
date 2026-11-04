@@ -11,6 +11,7 @@
 
     <div class="ds-tracking__availability">
       <p data-status-message role="status">El seguimiento todavía no está disponible.</p>
+      <a class="ds-tracking__button" data-login href="{{ routes.storefront_login_url | escape }}" hidden>Iniciar sesión y volver a mi solicitud</a>
       <button class="ds-tracking__button ds-tracking__button--secondary" data-retry type="button" hidden>{{ section.settings.retry_label | escape }}</button>
     </div>
 
@@ -75,6 +76,7 @@
         </dl>
         <div class="ds-tracking__breakdown" data-pending-breakdown hidden></div>
         <p class="ds-tracking__muted" data-pending-note>{{ section.settings.pending_note | escape }}</p>
+        <p class="ds-tracking__muted" data-pending-expiry role="status" hidden></p>
         <button class="ds-tracking__button" data-accept type="button">{{ section.settings.accept_label | escape }}</button>
       </section>
 
