@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {resolve} from 'node:path';
+import {registerPaginate, registerImageTag} from './helpers/shopify-liquid.mjs';
 
 const qaRequire = createRequire(resolve(process.env.DS_QA_ROOT || '.', 'orders-test-runtime.cjs'));
 const {Liquid} = qaRequire('liquidjs');
@@ -14,6 +15,8 @@ async function render(settings={}, {form={}, blocks, overrides={}}={}) {
   const config = schema();
   const context = {settings, form, routes:{all_products_collection_url:'/collections/all'}, section:{id:'qa-home', settings:{...defaults(config.settings),...overrides}, blocks:blocks || config.presets[0].blocks.map((block,index) => ({id:`category-${index}`,type:block.type,settings:{...defaults(config.blocks[0].settings),...block.settings}}))}};
   const liquid = new Liquid({root:resolve('snippets'),extname:'.liquid',globals:context});
+  registerPaginate(liquid);
+  registerImageTag(liquid);
   liquid.registerFilter('asset_url', name => `/assets/${name}`);
   liquid.registerFilter('image_url', (image, ...args) => `/images/${image.id}?width=${args[0]?.[1] || 1440}`);
   liquid.registerFilter('default_errors', errors => `<ul><li>${errors.email}</li></ul>`);

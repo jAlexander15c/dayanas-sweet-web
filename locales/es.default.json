@@ -335,6 +335,10 @@
       "view_all_label": "Ver todos los productos de la colección {{ collection_name }}"
     },
     "collection_list": {
+      "product_count": {
+        "one": "{{ count }} producto",
+        "other": "{{ count }} productos"
+      },
       "view_all": "Ver todo"
     },
     "collection_template": {
