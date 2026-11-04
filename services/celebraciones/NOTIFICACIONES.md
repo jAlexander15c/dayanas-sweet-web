@@ -10,7 +10,9 @@ Los correos contienen el tipo de actualización y el enlace, sin copiar conversa
 
 ## Validación local — 2026-11-03
 
-- Suite completa: 378/378 aprobadas (con `DS_QA_ROOT` apuntando al entorno existente de pruebas).
+Los cinco avisos incluyen ahora una alternativa HTML con la marca, colores rosados, número de solicitud y botón «Ver mi cotización». Se conserva el texto original como respaldo. El botón usa exactamente el enlace privado original, sin acortadores, imágenes externas ni seguimiento añadido. Todo texto variable se escapa antes de insertarlo en HTML. Diez vistas previas comprobadas en navegador: los cinco avisos a 390 y 1440 px, sin desbordamiento ni claves de acceso visibles en el texto. La apariencia final en un buzón real queda pendiente hasta publicar.
+
+- Suite completa: 379/379 aprobadas (con `DS_QA_ROOT` apuntando al entorno existente de pruebas).
 - `node tests/check-theme.mjs`: 41 archivos JS, 69 JSON y 57 esquemas válidos.
 - Shopify Theme Check: 0 errores y las 8 advertencias preexistentes del tema.
 - `git diff --check`: correcto.

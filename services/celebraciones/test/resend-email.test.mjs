@@ -23,7 +23,20 @@ test('Resend sends private plain text over HTTPS with stable idempotency and fix
  assert.equal(init.headers['Idempotency-Key'],calls[1].init.headers['Idempotency-Key']);
  assert.equal(body.from,"Dayana's Sweet <info@dayanassweet.com>");assert.deepEqual(body.to,[job.contact.email]);
  assert.equal(body.reply_to,'info@dayanassweet.com');assert.equal(body.subject,'Recibimos tu solicitud DS-000001');
- assert.match(body.text,/#acceso=abab/);assert.match(body.text,/todavía no reserva/);assert.equal(body.html,undefined);
+ assert.match(body.text,/#acceso=abab/);assert.match(body.text,/todavía no reserva/);
+ assert.match(body.html,/Ver mi cotización/);assert.match(body.html,/DS-000001/);
+ const link=body.text.match(/https:\/\/dayanassweet\.com\/\S+/)[0];
+ assert.ok(body.html.includes(`href="${link}"`));
+ assert.ok(!body.html.includes(`>${link}<`),'the private URL is hidden behind the button');
+});
+test('branded email escapes recipient text and cannot create extra links or executable markup',async()=>{
+ let body;
+ const send=createResendTransport({apiKey:'re_test',fetchImpl:async(_url,init)=>{body=JSON.parse(init.body);return Response.json({id:'accepted'});}});
+ const injected=buildQuoteMessage({...job,contact:{...job.contact,name:'<img src=x onerror=alert(1)>'}},capability,'https://dayanassweet.com');
+ assert.equal((await send({recipient:job.contact.email,message:injected})).status,'sent');
+ assert.match(body.html,/&lt;img/);assert.doesNotMatch(body.html,/<img|<script|<iframe/);
+ assert.equal((body.html.match(/href=/g)||[]).length,1);
+ assert.match(body.html,/width="100%"/);assert.match(body.html,/max-width:600px/);
 });
 test('Resend keeps uncertain acceptance unknown, retries only rate rejection and hides provider replies',async()=>{
  assert.equal(typeof createResendTransport,'function');
