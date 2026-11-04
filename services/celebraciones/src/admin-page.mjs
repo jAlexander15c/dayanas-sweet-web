@@ -38,6 +38,7 @@ export function renderAdminPage({ clientId, shop } = {}) {
     </aside>
     <section id="ds-empty" class="ds-card"><h2>Cada pastel empieza con una idea</h2><p>Selecciona una solicitud para ver sus detalles.</p></section>
     <article id="ds-detail" hidden aria-labelledby="ds-request-title">
+      <button id="ds-back-to-list" type="button">← Volver a solicitudes</button>
       <div class="ds-detail-head"><div><p class="ds-eyebrow" id="ds-request-id"></p><h2 id="ds-request-title" tabindex="-1">Detalle de la solicitud</h2><p id="ds-pickup"></p><p id="ds-urgency" class="ds-muted"></p></div><span id="ds-status" class="ds-badge"></span></div>
       <section class="ds-card"><h3>Reserva y pagos</h3><div id="ds-finances" class="ds-finances"></div><p id="ds-billing-note" class="ds-muted"></p><p class="ds-muted">El pago se realiza en Shopify. Los pagos recibidos se conservan.</p><p id="ds-credit" class="ds-note" hidden></p></section>
       <section class="ds-card"><p class="ds-eyebrow">La idea del cliente</p><h3>Lo que nos contó</h3><p id="ds-request-text" class="ds-copy"></p><div id="ds-photos" class="ds-photos"></div></section>

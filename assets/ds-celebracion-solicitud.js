@@ -217,6 +217,40 @@
     }
     if (guest) q('[data-copy-link]').addEventListener('click', copyTracking);
     function contactInput() { return guest ? validContact({ name: q('[data-contact-name]').value, email: q('[data-contact-email]').value, phone: q('[data-contact-phone]').value }) : null; }
+    function fieldMessage(field) {
+      if (field.type === 'checkbox') return field.checked ? '' : 'Debes confirmar que entiendes las condiciones de la solicitud.';
+      const value = field.value.trim();
+      if (!value) return 'Este campo es obligatorio.';
+      if (field.matches('[data-contact-email]') && !/^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,63}$/.test(value)) return 'Escribe un correo electrónico válido.';
+      if (field.matches('[data-contact-phone]') && (!/^\+?[\d ().-]+$/.test(value) || value.replace(/\D/g, '').length < 7)) return 'Escribe un teléfono válido con al menos 7 dígitos.';
+      if (/[\x00-\x1f\x7f]/.test(value)) return 'Revisa este dato; contiene caracteres no válidos.';
+      return field.validity.valid ? '' : 'Revisa el valor de este campo.';
+    }
+    function markField(field, message) {
+      let error = field.parentElement.querySelector('[data-field-error]');
+      if (!error) {
+        error = document.createElement('span'); error.dataset.fieldError = ''; error.className = 'ds-request__field-error';
+        error.id = `ds-field-error-${uuid()}`; field.parentElement.append(error);
+        field.setAttribute('aria-describedby', [field.getAttribute('aria-describedby'), error.id].filter(Boolean).join(' '));
+      }
+      error.textContent = message; error.hidden = !message;
+      field.parentElement.classList.toggle('ds-request__invalid', !!message);
+      if (message) field.setAttribute('aria-invalid', 'true'); else field.removeAttribute('aria-invalid');
+    }
+    function validateStep() {
+      const fields = qa(`[data-step="${step}"] [required]`);
+      fields.forEach(field => markField(field, fieldMessage(field)));
+      if (step === 2 && q('[data-date]').value && q('[data-time]').value) dateStatus();
+      const invalid = fields.find(field => field.getAttribute('aria-invalid') === 'true');
+      if (!invalid) return true;
+      q('[data-error]').textContent = 'Completa o corrige los campos marcados en rojo para continuar.';
+      q('[data-error]').hidden = false; invalid.focus(); return false;
+    }
+    form.addEventListener('input', event => {
+      if (!event.target.matches('[required]') || !event.target.parentElement.querySelector('[data-field-error]')) return;
+      markField(event.target, fieldMessage(event.target));
+      if (!qa('[aria-invalid="true"]').length) q('[data-error]').hidden = true;
+    });
     function row(parent, title, content) {
       const wrap = document.createElement('div'), label = document.createElement('dt'), value = document.createElement('dd');
       label.textContent = title; value.textContent = content; wrap.append(label, value); parent.append(wrap);
@@ -260,9 +294,14 @@
       try {
         if (!calendar.ready) throw fail('CALENDAR');
         const info = pickupInfo(q('[data-date]').value, q('[data-time]').value, Date.now(), calendar.closed);
+        markField(q('[data-date]'), ''); markField(q('[data-time]'), '');
         q('[data-date-status]').textContent = info.urgent ? 'Solicitud urgente: requiere aprobación y un recargo que Dayana cotizará. No confirma disponibilidad.' : 'Solicitud normal: desde 7 días de anticipación. La fecha y la hora están sujetas a confirmación.';
         return info;
-      } catch (error) { q('[data-date-status]').textContent = error.message; return null; }
+      } catch (error) {
+        q('[data-date-status]').textContent = error.message;
+        if (error.code !== 'CALENDAR' && q('[data-date]').value && q('[data-time]').value) markField(q(error.code === 'HOURS' ? '[data-time]' : '[data-date]'), error.message);
+        return null;
+      }
     }
     async function loadCalendar() {
       calendar.ready = false;
@@ -337,6 +376,7 @@
     form.addEventListener('submit', async event => {
       event.preventDefault();
       if (checkingCalendar) return;
+      if (!validateStep()) return;
       if (step < 3) {
         if (step === 2) {
           if (guest) { try { contactInput(); } catch (error) { q('[data-error]').textContent = error.message; q('[data-error]').hidden = false; const invalid = qa('[data-guest-contact] input').find(el => !el.checkValidity()); (invalid || q('[data-contact-name]')).focus(); return; } }

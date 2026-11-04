@@ -57,7 +57,7 @@
               <input id="DSRequestPhotos-{{ section.id }}" data-files type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="DSRequestPhotoHelp-{{ section.id }}">
               <p id="DSRequestPhotoHelp-{{ section.id }}" class="ds-request__muted">Opcionales. Hasta 3 fotos JPEG, PNG o WEBP, de 2 MB cada una. Son referencias privadas para Dayana; no garantizan una reproducción exacta. Al elegir nuevas fotos, se reemplaza la selección anterior.</p>
               <div class="ds-request__photos" data-photos></div>
-              <label for="DSRequestComments-{{ section.id }}">Comentarios e información adicional</label>
+              <label for="DSRequestComments-{{ section.id }}">Notas e información adicional (opcional)</label>
               <textarea id="DSRequestComments-{{ section.id }}" data-comments rows="7" maxlength="2000" placeholder="Cuéntanos los colores, nombres, textos y cualquier detalle importante de tu idea."></textarea>
               <fieldset class="ds-request__decorations">
                 <legend>Decoración que te gustaría</legend>
@@ -76,8 +76,8 @@
                 <p>Dayana puede cerrar fechas en el calendario. La fecha que solicites necesita su aceptación.</p>
               </div>
               <div class="ds-request__two">
-                <label>Fecha solicitada<input type="date" data-date required></label>
-                <label>Hora solicitada<input type="time" data-time min="08:00" max="18:00" required></label>
+                <label>Fecha solicitada (obligatoria)<input type="date" data-date required></label>
+                <label>Hora solicitada (obligatoria)<input type="time" data-time min="08:00" max="18:00" required></label>
               </div>
               <p class="ds-request__muted" data-calendar-status role="status">Consultando las fechas disponibles…</p>
               <button type="button" data-calendar-retry>Actualizar fechas disponibles</button>
@@ -90,9 +90,10 @@
               {% else %}
               <div data-guest-contact class="ds-request__contact">
                 <p>Te enviaremos el número de tu cotización y su enlace de seguimiento. No necesitas crear una cuenta.</p>
-                <label>Nombre<input data-contact-name name="name" autocomplete="name" maxlength="120" required></label>
-                <label>Correo electrónico<input data-contact-email name="email" type="email" autocomplete="email" maxlength="254" required></label>
-                <label>Teléfono<input data-contact-phone name="phone" type="tel" autocomplete="tel" maxlength="40" required></label>
+                <p class="ds-request__muted">Nombre, correo y teléfono son obligatorios para continuar.</p>
+                <label>Nombre (obligatorio)<input data-contact-name name="name" autocomplete="name" maxlength="120" required></label>
+                <label>Correo electrónico (obligatorio)<input data-contact-email name="email" type="email" autocomplete="email" maxlength="254" required></label>
+                <label>Teléfono (obligatorio)<input data-contact-phone name="phone" type="tel" autocomplete="tel" maxlength="40" required></label>
                 <label class="ds-request__honeypot" aria-hidden="true">Sitio web<input data-website name="website" tabindex="-1" autocomplete="off"></label>
                 <p class="ds-request__muted">Continuarás a la revisión de tu pastel, fotos y fecha antes de enviar la solicitud.</p>
               </div>

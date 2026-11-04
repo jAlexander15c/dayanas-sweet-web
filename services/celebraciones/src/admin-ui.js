@@ -136,6 +136,7 @@ function startPanel() {
   function updateControls() {
     const snapshot = current();
     q('#ds-refresh').disabled = busy || denied;
+    q('#ds-back-to-list').disabled = busy || denied;
     q('#ds-payment-check').disabled = busy || denied;
     q('#ds-requests').querySelectorAll('button').forEach(button => { button.disabled = busy; });
     q('#ds-proposal-fields').disabled = busy || denied || !snapshot || snapshot.status === 'ready';
@@ -356,6 +357,13 @@ function startPanel() {
     feedback('Solicitudes actualizadas.');
   }
   q('#ds-refresh').addEventListener('click', () => void locked(refresh));
+  q('#ds-back-to-list').addEventListener('click', () => {
+    if (busy || denied) return;
+    saveDraft(); selected = null; revokePhotos();
+    q('#ds-detail').hidden = true; q('#ds-empty').hidden = false;
+    renderList(); feedback('Selecciona una solicitud para ver sus detalles.');
+    (q('#ds-requests button') || q('#ds-refresh')).focus();
+  });
   q('#ds-payment-check').addEventListener('click', () => void locked(async () => {
     const container = q('#ds-payment-check-result'); container.replaceChildren(node('p', 'Comprobando conexión…', 'ds-muted'));
     try {
