@@ -106,6 +106,7 @@
   },
   "products": {
     "product": {
+      "choose_topping": "Choose topping",
       "add_to_cart": "Προσθήκη στο καλάθι",
       "description": "Περιγραφή",
       "on_sale": "Έκπτωση",

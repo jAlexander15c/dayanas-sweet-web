@@ -106,6 +106,7 @@
   },
   "products": {
     "product": {
+      "choose_topping": "Choose topping",
       "add_to_cart": "Lisää ostoskoriin",
       "description": "Kuvaus",
       "on_sale": "Alennusmyynti",

@@ -108,6 +108,7 @@
   },
   "products": {
     "product": {
+      "choose_topping": "Choose topping",
       "add_to_cart": "Dodaj v košarico",
       "description": "Opis",
       "on_sale": "Znižanje",

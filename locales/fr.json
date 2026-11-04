@@ -107,6 +107,7 @@
   },
   "products": {
     "product": {
+      "choose_topping": "Choose topping",
       "add_to_cart": "Ajouter au panier",
       "description": "Description",
       "on_sale": "Promotion",

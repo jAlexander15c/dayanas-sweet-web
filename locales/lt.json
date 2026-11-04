@@ -108,6 +108,7 @@
   },
   "products": {
     "product": {
+      "choose_topping": "Choose topping",
       "add_to_cart": "Įdėti į krepšelį",
       "description": "Aprašymas",
       "on_sale": "Išpardavimas",
