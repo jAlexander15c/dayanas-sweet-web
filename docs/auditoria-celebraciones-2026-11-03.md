@@ -82,7 +82,7 @@ Preparadas en la rama `jAlexander15c/cotizacion-invitados`, sin publicación nue
 - Correos: estado individual de las actualizaciones y reintento de fallos confirmados. Los resultados ambiguos requieren revisar Resend para evitar duplicados; «Aceptado» no significa entrega al destinatario.
 - Seguimiento: acceso a la sesión conservando la solicitud, instrucciones diferenciadas para invitados y texto para propuestas sin cambios.
 
-Pendiente de decisión del usuario: ampliar acceso a pedidos antiguos (`read_all_orders`) o limitar nuevas reservas a 45 días. No se han cambiado permisos ni ese horizonte.
+Resuelto con autorización explícita del usuario: se añadió `read_all_orders` en la versión activa `celebraciones-pedidos-antiguos` de Dayana Celebraciones y se confirmó «Todos los pedidos» en la instalación de la tienda. La consulta real de `/admin/payment-status` confirmó `configured=true`, `mode=REAL`, `currency=USD`, `missingScopes=[]` y `read_all_orders` entre los permisos concedidos. Se conserva el horizonte de reservas de hasta un año. No se consultó un pedido real de más de 60 días: la verificación fue del permiso efectivo concedido al servicio.
 
 La consulta real encontró una solicitud en revisión que corresponde a «PRUEBA TÉCNICA 2 — NO ELABORAR», creada anteriormente en modo TEST y pagada con tarjeta de prueba. No se modificó ni se intentó cobrar de nuevo en modo REAL.
 
