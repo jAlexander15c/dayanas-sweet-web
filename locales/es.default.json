@@ -160,6 +160,7 @@
       "view_full_details": "Ver todos los detalles",
       "shipping_policy_html": "Los <a href=\"{{ link }}\">gastos de envío</a> se calculan en la pantalla de pago.",
       "choose_options": "Seleccionar opciones",
+      "choose_topping": "Elegir topping",
       "choose_product_options": "Elegir opciones para {{ product_name }}",
       "value_unavailable": "{{ option_value }}: no disponible",
       "variant_sold_out_or_unavailable": "Variante agotada o no disponible",
@@ -334,6 +335,10 @@
       "view_all_label": "Ver todos los productos de la colección {{ collection_name }}"
     },
     "collection_list": {
+      "product_count": {
+        "one": "{{ count }} producto",
+        "other": "{{ count }} productos"
+      },
       "view_all": "Ver todo"
     },
     "collection_template": {

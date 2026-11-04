@@ -106,6 +106,7 @@
   },
   "products": {
     "product": {
+      "choose_topping": "Choose topping",
       "add_to_cart": "添加到购物车",
       "description": "描述",
       "on_sale": "促销",

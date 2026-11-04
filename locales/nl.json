@@ -106,6 +106,7 @@
   },
   "products": {
     "product": {
+      "choose_topping": "Choose topping",
       "add_to_cart": "Aan winkelwagen toevoegen",
       "description": "Beschrijving",
       "on_sale": "Aanbieding",

@@ -106,6 +106,7 @@
   },
   "products": {
     "product": {
+      "choose_topping": "Choose topping",
       "add_to_cart": "Hozzáadás a kosárhoz",
       "description": "Leírás",
       "on_sale": "Akciós",

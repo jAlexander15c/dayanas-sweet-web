@@ -106,6 +106,7 @@
   },
   "products": {
     "product": {
+      "choose_topping": "Choose topping",
       "add_to_cart": "Thêm vào giỏ hàng",
       "description": "Mô tả",
       "on_sale": "Giảm giá",

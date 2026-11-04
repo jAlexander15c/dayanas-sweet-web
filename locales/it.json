@@ -107,6 +107,7 @@
   },
   "products": {
     "product": {
+      "choose_topping": "Choose topping",
       "add_to_cart": "Aggiungi al carrello",
       "description": "Descrizione",
       "on_sale": "In offerta",

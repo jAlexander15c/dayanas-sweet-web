@@ -21,6 +21,16 @@ if (!customElements.get('product-form')) {
         evt.preventDefault();
         if (this.submitButton.getAttribute('aria-disabled') === 'true') return;
 
+        // Topping controls are outside the form, associated through form="...".
+        const invalidTopping = Array.from(this.form.elements).find(
+          (input) => input.matches('[data-ds-topping-option]') && !input.checkValidity()
+        );
+        if (invalidTopping) {
+          invalidTopping.closest('ds-topping-picker')?.validate?.();
+          invalidTopping.focus();
+          return;
+        }
+
         this.handleErrorMessage();
 
         // Quantity can live outside the form and be associated through its form attribute.

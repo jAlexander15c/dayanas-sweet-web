@@ -292,8 +292,15 @@
           </div>
           {% assign product_form_id = 'quick-add-' | append: section_id | append: card_product.id %}
           {%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
+          {%- capture requires_topping -%}{%- render 'ds-topping-picker', product: card_product, mode: 'requires' -%}{%- endcapture -%}
           {% if ds_closed == '1' %}
             <p class="ds-pbatch__stock is-out">Tanda cerrada</p>
+          {% elsif requires_topping == '1' and card_product.available and quick_add == 'standard' or requires_topping == '1' and card_product.available and quick_add == 'bulk' %}
+            <div class="quick-add">
+              <a class="quick-add__submit button button--full-width button--secondary" href="{{ card_product.url }}" aria-label="Elegir topping de {{ card_product.title | escape }}">
+                {{ 'products.product.choose_topping' | t }}
+              </a>
+            </div>
           {% elsif quick_add == 'standard' %}
             <div class="quick-add no-js-hidden">
               {%- liquid

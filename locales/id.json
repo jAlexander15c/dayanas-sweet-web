@@ -106,6 +106,7 @@
   },
   "products": {
     "product": {
+      "choose_topping": "Choose topping",
       "add_to_cart": "Tambahkan ke keranjang",
       "description": "Deskripsi",
       "on_sale": "Obral",

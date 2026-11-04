@@ -19,6 +19,17 @@
         "quantity_selector": {
           "type": "quantity_selector"
         },
+        "ds_topping": {
+          "type": "ds_topping",
+          "settings": {
+            "product": "brownie-box-almendras-chocolate",
+            "label": "Elige tu topping",
+            "property_name": "Topping",
+            "options": "Chocolate\nCaramelo\nDulce de leche",
+            "error_text": "Elige un topping para continuar.",
+            "hide_dynamic_checkout": true
+          }
+        },
         "buy_buttons": {
           "type": "buy_buttons",
           "settings": {
@@ -47,6 +58,7 @@
         "price",
         "variant_picker",
         "quantity_selector",
+        "ds_topping",
         "buy_buttons",
         "ds_batch",
         "description",

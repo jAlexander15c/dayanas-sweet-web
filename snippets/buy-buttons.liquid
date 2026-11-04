@@ -23,11 +23,36 @@
       endif
 
       assign show_dynamic_checkout = false
+      assign has_topping_picker = false
+      assign form_novalidate = 'novalidate'
       if block.settings.show_dynamic_checkout and gift_card_recipient_feature_active == false
         assign show_dynamic_checkout = true
       endif
+      for topping_block in section.blocks
+        if topping_block.type == 'ds_topping' and product.has_only_default_variant and topping_block.settings.product != blank and topping_block.settings.product.id == product.id
+          assign has_topping_picker = true
+          assign form_novalidate = nil
+          if topping_block.settings.hide_dynamic_checkout
+            assign show_dynamic_checkout = false
+          endif
+          break
+        endif
+      endfor
+      capture requires_topping
+        render 'ds-topping-picker', product: product, mode: 'requires'
+      endcapture
+      assign link_to_topping = false
+      if requires_topping == '1' and has_topping_picker == false
+        assign link_to_topping = true
+        assign show_dynamic_checkout = false
+      endif
     -%}
 
+    {%- if link_to_topping -%}
+      <a class="button button--full-width button--primary" href="{{ product.url }}" aria-label="Elegir topping de {{ product.title | escape }}">
+        {{ 'products.product.choose_topping' | t }}
+      </a>
+    {%- else -%}
     <product-form
       class="product-form"
       data-hide-errors="{{ gift_card_recipient_feature_active }}"
@@ -44,7 +69,7 @@
         product,
         id: product_form_id,
         class: 'form',
-        novalidate: 'novalidate',
+        novalidate: form_novalidate,
         data-type: 'add-to-cart-form'
       -%}
         <input
@@ -103,6 +128,7 @@
         </div>
       {%- endform -%}
     </product-form>
+    {%- endif -%}
     {%- endif -%}
   {%- else -%}
     <div class="product-form">
