@@ -29,7 +29,7 @@
         assign show_dynamic_checkout = true
       endif
       for topping_block in section.blocks
-        if topping_block.type == 'ds_topping' and topping_block.settings.product != blank and topping_block.settings.product.id == product.id
+        if topping_block.type == 'ds_topping' and product.has_only_default_variant and topping_block.settings.product != blank and topping_block.settings.product.id == product.id
           assign has_topping_picker = true
           assign form_novalidate = nil
           if topping_block.settings.hide_dynamic_checkout

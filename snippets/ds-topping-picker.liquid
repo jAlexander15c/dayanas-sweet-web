@@ -4,7 +4,13 @@
   requiere-opcion. This mode never renders controls or loads assets.
   Default mode renders only for the exact product selected in the block.
 {%- endcomment -%}
-{%- if mode == 'requires' -%}
+{%- comment -%}
+  Only single-variant products use this picker. While a product still has
+  variants (e.g. Brownie Box before its migration), the theme's own variant
+  picker stays and this snippet renders nothing, so both never show together.
+{%- endcomment -%}
+{%- if product.has_only_default_variant != true -%}
+{%- elsif mode == 'requires' -%}
   {%- if product.tags contains 'requiere-opcion' or product.handle == 'brownie-box-almendras-chocolate' -%}1{%- endif -%}
 {%- elsif block.settings.product != blank and block.settings.product.id == product.id -%}
   {{ 'ds-topping-picker.css' | asset_url | stylesheet_tag }}

@@ -50,10 +50,17 @@ test('radios are required, external form controls with no default selection and 
 test('matching picker enables native required validation independently of dynamic checkout setting', () => {
   const buttons = read('snippets/buy-buttons.liquid');
   assert.match(buttons, /assign form_novalidate = 'novalidate'/);
-  assert.match(buttons, /for topping_block in section.blocks\s+if topping_block.type == 'ds_topping' and topping_block.settings.product != blank and topping_block.settings.product.id == product.id\s+assign has_topping_picker = true\s+assign form_novalidate = nil\s+if topping_block.settings.hide_dynamic_checkout\s+assign show_dynamic_checkout = false/);
+  assert.match(buttons, /for topping_block in section.blocks\s+if topping_block.type == 'ds_topping' and product.has_only_default_variant and topping_block.settings.product != blank and topping_block.settings.product.id == product.id\s+assign has_topping_picker = true\s+assign form_novalidate = nil\s+if topping_block.settings.hide_dynamic_checkout\s+assign show_dynamic_checkout = false/);
   assert.match(buttons, /form 'product',[\s\S]*?novalidate: form_novalidate,/);
   assert.match(buttons, /if show_dynamic_checkout -%}\s*{{ form \| payment_button }}/);
   assert.equal(template.blocks.ds_topping.settings.hide_dynamic_checkout, true);
+});
+
+test('products that still have variants keep the theme variant picker and never get the extra picker', () => {
+  const guard = snippet.indexOf('{%- if product.has_only_default_variant != true -%}');
+  assert.ok(guard > 0, 'guard missing');
+  assert.ok(guard < snippet.indexOf("elsif mode == 'requires'"), 'guard must come before requires mode');
+  assert.ok(guard < snippet.indexOf('elsif block.settings.product != blank'), 'guard must come before rendering');
 });
 
 test('both card types use one tag/handle policy and replace standard/bulk quick add before the form', () => {
