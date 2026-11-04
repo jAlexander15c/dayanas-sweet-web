@@ -1,6 +1,6 @@
 {% comment %}
   Shared storefront categories. Parameters: blocks, hide_empty, show_count, heading_id.
-  home_only limits ds.en_inicio to the homepage; heading_tag defaults to h3.
+  home_only limits dayana.en_inicio to the homepage; heading_tag defaults to h3.
   A padded natural-title rank breaks order ties.
 {% endcomment %}
 {%- paginate collections by 250 -%}
@@ -13,13 +13,13 @@
   {%- capture category_keys -%}
     {%- for category in sorted_collections -%}
       {%- liquid
-        if category.metafields.ds.categoria != nil or category.metafields.ds.en_inicio != nil or category.metafields.ds.orden != nil
+        if category.metafields.dayana.categoria != nil or category.metafields.dayana.en_inicio != nil or category.metafields.dayana.orden != nil
           assign configured = true
         endif
         assign visible = false
-        if category.metafields.ds.categoria.value == true
+        if category.metafields.dayana.categoria.value == true
           assign visible = true
-          if home_only and category.metafields.ds.en_inicio.value != true
+          if home_only and category.metafields.dayana.en_inicio.value != true
             assign visible = false
           endif
         endif
@@ -31,7 +31,7 @@
         endif
       -%}
       {%- if visible -%}
-        {%- assign order = category.metafields.ds.orden.value | default: 9999999999 | at_least: 0 | prepend: '00000000000000000000' | slice: -20, 20 -%}
+        {%- assign order = category.metafields.dayana.orden.value | default: 9999999999 | at_least: 0 | prepend: '00000000000000000000' | slice: -20, 20 -%}
         {%- assign title_rank = forloop.index | prepend: '000000' | slice: -6, 6 -%}
         {{- order -}}::{{- title_rank -}}::{{- category.handle -}}|
         {%- assign category_count = category_count | plus: 1 -%}

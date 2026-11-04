@@ -11,12 +11,12 @@ metafields de colección, con lectura en storefront, son:
 
 | Metafield | Tipo | Uso |
 | --- | --- | --- |
-| `ds.categoria` | boolean | Debe valer `true`. |
-| `ds.en_inicio` | boolean | Debe valer `true` solo para aparecer en portada. |
-| `ds.orden` | number_integer | Ascendente: 1, 2, 3…; empate por título. |
+| `dayana.categoria` | boolean | Debe valer `true`. |
+| `dayana.en_inicio` | boolean | Debe valer `true` solo para aparecer en portada. |
+| `dayana.orden` | number_integer | Ascendente: 1, 2, 3…; empate por título. |
 
-`/collections` muestra todas las colecciones con `ds.categoria = true`, aunque
-`ds.en_inicio = false`; la portada exige ambas banderas. Los órdenes se
+`/collections` muestra todas las colecciones con `dayana.categoria = true`, aunque
+`dayana.en_inicio = false`; la portada exige ambas banderas. Los órdenes se
 convierten a claves de 20 posiciones; un rango de título natural, sin distinguir
 mayúsculas, resuelve empates. Un orden ausente se coloca al final
 (`9999999999`). Un orden negativo se trata como 0; el panel valida enteros ≥ 1.
@@ -102,7 +102,7 @@ ordenación, bloques y markup ejecutan el Liquid original.
 En la vista previa de Shopify, crear desde el panel 1, 2, 3 y 5 categorías
 publicadas, incluyendo Enlatados; comprobar ambas rutas a 1440, 768 y 360 px.
 Cambiar órdenes (2 y 10), empatar dos títulos, quitar una imagen, cambiar
-`ds.en_inicio`, probar categorías vacías y agotadas, activar ambos ajustes y
+`dayana.en_inicio`, probar categorías vacías y agotadas, activar ambos ajustes y
 recorrer las tarjetas con Tab. Con metadatos ausentes, comprobar los bloques
 Galletas/Brownies y añadir un tercer bloque. Con categorías configuradas pero
 ocultas, comprobar el respaldo manual de portada y el mensaje de `/collections`

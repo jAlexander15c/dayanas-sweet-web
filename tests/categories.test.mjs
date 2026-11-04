@@ -43,9 +43,9 @@ test('both sections use the shared grid and provide editor controls and 12 fallb
 
 test('Liquid statically enforces metafields, ordering, pagination and named single-link list items', () => {
   assert.match(source, /paginate collections by 250/);
-  assert.match(source, /if home_only and category\.metafields\.ds\.en_inicio\.value != true/);
+  assert.match(source, /if home_only and category\.metafields.dayana.en_inicio\.value != true/);
   assert.match(source, /sort_natural: 'title'/);
-  assert.match(source, /metafields\.ds\.orden\.value/);
+  assert.match(source, /metafields.dayana.orden\.value/);
   assert.match(source, /category_keys \| split: '\|' \| sort/);
   assert.match(source, /elsif configured == false or home_only/);
   assert.match(source, /<ul[^>]*role="list"[^>]*aria-labelledby=/);
@@ -86,7 +86,7 @@ async function render(categories = [], options = {}) {
 }
 const category = (title, order, extra = {}) => ({
   title, handle: title.toLowerCase().replaceAll(' ', '-'), url: `/collections/${title.toLowerCase()}`,
-  metafields: { ds: { categoria: { value: true }, en_inicio: { value: true }, orden: { value: order } } },
+  metafields: { dayana: { categoria: { value: true }, en_inicio: { value: true }, orden: { value: order } } },
   all_products_count: 1, products: [{ available: true }], ...extra,
 });
 const rendered = (name, fn) => test(name, { skip: !Liquid && 'liquidjs unavailable; static checks only' }, fn);
@@ -95,8 +95,8 @@ const names = html => [...html.matchAll(/<a[^>]+aria-label="([^"]+)"/g)].map(mat
 rendered('filters categories and home visibility; numeric order then natural title, including 2 before 10', async () => {
   const html = await render([
     category('Galletas', 10), category('Enlatados', 2), category('Brownies', 2),
-    category('Oculta', 1, { metafields: { ds: { categoria: { value: true }, en_inicio: { value: false } } } }),
-    category('Promociones', 1, { metafields: { ds: { categoria: { value: false }, en_inicio: { value: true } } } }),
+    category('Oculta', 1, { metafields: { dayana: { categoria: { value: true }, en_inicio: { value: false } } } }),
+    category('Promociones', 1, { metafields: { dayana: { categoria: { value: false }, en_inicio: { value: true } } } }),
     category('Sin configurar', 1, { metafields: {} }),
   ]);
   assert.deepEqual(names(html), ['Brownies', 'Enlatados', 'Galletas']);
@@ -105,7 +105,7 @@ rendered('filters categories and home visibility; numeric order then natural tit
 rendered('homepage falls back to manual blocks when configured categories are hidden', async () => {
   const blocks = [{ type: 'category', settings: { title: 'Manual' } }];
   assert.deepEqual(names(await render([], { blocks })), ['Manual']);
-  assert.deepEqual(names(await render([category('Hidden', 1, { metafields: { ds: { categoria: { value: true }, en_inicio: { value: false } } } })], { blocks })), ['Manual']);
+  assert.deepEqual(names(await render([category('Hidden', 1, { metafields: { dayana: { categoria: { value: true }, en_inicio: { value: false } } } })], { blocks })), ['Manual']);
 });
 
 rendered('shows empty/sold-out categories by default and optionally hides unavailable products', async () => {
@@ -128,7 +128,7 @@ rendered('semantic single-link cards, escaped name, actual image alt and optiona
 });
 
 rendered('listing includes categories excluded from home and uses h2 headings with responsive images', async () => {
-  const categories = [category('Solo menú', 1, {metafields: {ds: {categoria: {value: true}, en_inicio: {value: false}}}, image: {id: 'menu', alt: 'Foto'}})];
+  const categories = [category('Solo menú', 1, {metafields: {dayana: {categoria: {value: true}, en_inicio: {value: false}}}, image: {id: 'menu', alt: 'Foto'}})];
   assert.deepEqual(names(await render(categories)), []);
   const html = await render(categories, {home_only: false, heading_tag: 'h2'});
   assert.deepEqual(names(html), ['Solo menú']);
