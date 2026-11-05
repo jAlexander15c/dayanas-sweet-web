@@ -1,10 +1,106 @@
 {
   "sections": {
     "main": {
-      "type": "ds-contact"
+      "type": "ds-contact",
+      "settings": {
+        "aside_text": "<p>Horneamos por tandas y enviamos por transportista a todo EE. UU. Los pasteles personalizados se recogen en Fulshear, TX, en la fecha acordada. Nuestros productos se preparan en equipos compartidos con trigo, huevo, leche y frutos secos.</p>"
+      }
+    },
+    "batch": {
+      "type": "ds-batch",
+      "blocks": {
+        "step-open": {
+          "type": "step",
+          "settings": {
+            "when": "Hasta el [cierre]",
+            "text": "El menú está abierto. Cada producto tiene cupos limitados: solo lo que podemos hornear bien en un día. Cuando uno llega a cero, se cierra hasta la próxima tanda.",
+            "current": true
+          }
+        },
+        "step-bake": {
+          "type": "step",
+          "settings": {
+            "when": "Horneamos el [horneado]",
+            "text": "Todos los pedidos de la tanda salen del horno el mismo día. Armamos las cajas una por una y, si nos dejaste una nota, va adentro.",
+            "current": false
+          }
+        },
+        "step-ship": {
+          "type": "step",
+          "settings": {
+            "when": "Despacho [despacho]",
+            "text": "Entregamos tu pedido al transportista; desde ahí, la fecha de llegada depende de tu dirección.",
+            "current": false
+          }
+        }
+      },
+      "block_order": [
+        "step-open",
+        "step-bake",
+        "step-ship"
+      ],
+      "settings": {
+        "title": "Horneamos por tandas, no para una vitrina.",
+        "text": "<p>Abrimos el menú unos días, reunimos todos los pedidos y los horneamos juntos para una misma fecha de despacho. No horneamos en el minuto en que pides, pero nada sale del horno para quedarse esperando en un mostrador: se hace para tu tanda.</p>",
+        "color_scheme": "scheme-3"
+      }
+    },
+    "faq": {
+      "type": "ds-faq",
+      "blocks": {
+        "q-order": {
+          "type": "question",
+          "settings": {
+            "question": "¿Cuándo puedo hacer mi pedido?",
+            "answer": "<p>Mientras el menú esté abierto. Para la [tanda], recibimos pedidos hasta el [cierre]. Horneamos el [horneado] y despachamos [despacho]. Las fechas de la tanda actual siempre están en la barra superior.</p>",
+            "closed_answer": "<p>La tanda ya cerró. Suscríbete al boletín y te avisamos cuando abra el próximo menú.</p>"
+          }
+        },
+        "q-soldout": {
+          "type": "question",
+          "settings": {
+            "question": "¿Por qué se agota un producto?",
+            "answer": "<p>Cada tanda tiene cupos según lo que podemos hornear bien ese día. Cuando un producto llega a cero, se cierra hasta la próxima tanda. Suscríbete y te avisamos cuando vuelva a abrir el menú.</p>"
+          }
+        },
+        "q-shipping": {
+          "type": "question",
+          "settings": {
+            "question": "¿Cómo veo las opciones de entrega?",
+            "answer": "<p>Enviamos por transportista a todo EE. UU. El envío es gratis en pedidos desde $100; en pedidos menores, el costo aparece antes del pago. La fecha de despacho indica cuándo entregamos tu pedido al transportista; la llegada depende de tu dirección. Los pasteles personalizados no se envían: se recogen en Fulshear, TX, en la fecha acordada.</p>"
+          }
+        },
+        "q-storage": {
+          "type": "question",
+          "settings": {
+            "question": "¿Cómo conservo las galletas?",
+            "answer": "<p>Cuatro días fuera de la nevera en su caja cerrada, ocho días en la nevera y hasta tres meses en el congelador. Para revivirlas: 20 segundos en el microondas o 5 minutos en el horno a 350 °F. Los postres indican su conservación en la descripción de cada uno.</p>"
+          }
+        },
+        "q-ingredients": {
+          "type": "question",
+          "settings": {
+            "question": "¿Dónde consulto los ingredientes?",
+            "answer": "<p>En la descripción de cada producto. Trabajamos con harina de trigo, huevo, leche y frutos secos, y compartimos utensilios y equipos, por lo que puede existir contacto cruzado. Revisa los ingredientes específicos antes de comprar.</p>"
+          }
+        }
+      },
+      "block_order": [
+        "q-order",
+        "q-soldout",
+        "q-shipping",
+        "q-storage",
+        "q-ingredients"
+      ],
+      "settings": {
+        "title": "Antes de pedir",
+        "text": "Lo que conviene saber antes de elegir, para que tu caja llegue justo cuando la esperas."
+      }
     }
   },
   "order": [
-    "main"
+    "main",
+    "batch",
+    "faq"
   ]
 }

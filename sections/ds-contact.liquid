@@ -48,15 +48,9 @@
         <h2 class="ds-display ds-contact__heading" id="DSContactAside-{{ section.id }}">{{ section.settings.aside_title | escape }}</h2>
         <div class="rte">{% render 'ds-batch-text', text: section.settings.aside_text %}</div>
         <nav class="ds-contact__links" aria-label="{{ section.settings.aside_title | escape }}">
-          {%- liquid
-            assign home_url = routes.root_url
-            assign home_last = home_url | slice: -1
-            if home_last != '/'
-              assign home_url = home_url | append: '/'
-            endif
-          -%}
-          <a href="{{ home_url }}#ds-preguntas">{{ section.settings.faq_label | escape }}{% render 'ds-icon', name: 'arrow' %}</a>
-          <a href="{{ home_url }}#ds-tandas">{{ section.settings.batch_label | escape }}{% render 'ds-icon', name: 'arrow' %}</a>
+          {%- comment -%} Las secciones ds-faq y ds-batch viven en esta misma plantilla (page.contact.json). {%- endcomment -%}
+          <a href="#ds-preguntas">{{ section.settings.faq_label | escape }}{% render 'ds-icon', name: 'arrow' %}</a>
+          <a href="#ds-tandas">{{ section.settings.batch_label | escape }}{% render 'ds-icon', name: 'arrow' %}</a>
         </nav>
       </div>
     </aside>
@@ -78,7 +72,7 @@
     { "type": "text", "id": "error_text", "label": "Mensaje de error", "default": "Revisa los campos señalados e inténtalo de nuevo." },
     { "type": "image_picker", "id": "image", "label": "Imagen lateral" },
     { "type": "text", "id": "aside_title", "label": "Título lateral", "default": "Antes de escribir" },
-    { "type": "richtext", "id": "aside_text", "label": "Texto lateral", "default": "<p>Horneamos por tandas y enviamos solo por transportista. No ofrecemos retiro presencial. Nuestros productos se preparan en equipos compartidos con trigo, huevo, leche y frutos secos.</p>" },
+    { "type": "richtext", "id": "aside_text", "label": "Texto lateral", "default": "<p>Horneamos por tandas y enviamos por transportista a todo EE. UU. Los pasteles personalizados se recogen en Fulshear, TX, en la fecha acordada. Nuestros productos se preparan en equipos compartidos con trigo, huevo, leche y frutos secos.</p>" },
     { "type": "text", "id": "faq_label", "label": "Enlace a preguntas", "default": "Preguntas frecuentes" },
     { "type": "text", "id": "batch_label", "label": "Enlace a tandas", "default": "Cómo funcionan las tandas" }
   ],
