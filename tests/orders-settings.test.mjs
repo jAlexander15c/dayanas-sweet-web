@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {resolve} from 'node:path';
+import {readShopifyJson} from './helpers/shopify-json.mjs';
 
 // Test tooling can live outside the theme. See docs/pedidos-envios.md.
 const qaRequire = createRequire(resolve(process.env.DS_QA_ROOT || '.', 'orders-test-runtime.cjs'));
@@ -28,7 +29,7 @@ test('an unconfigured store stays closed instead of silently allowing orders', a
   assert.equal((await snippet('ds-batch-state')).trim(),'1');
 });
 test('the schema defaults render a closed launch with no dates of a previous sale', async () => {
-  const schema=JSON.parse(readFileSync('config/settings_schema.json','utf8'));
+  const schema=readShopifyJson('config/settings_schema.json');
   const defaults=Object.fromEntries(schema.flatMap(group=>group.settings||[]).filter(item=>item.id&&'default' in item).map(item=>[item.id,item.default]));
   assert.equal((await snippet('ds-batch-state',defaults)).trim(),'1');
   const output=clean(await snippet('ds-product-batch',defaults,{product,section:{id:'qa'}}));
@@ -92,7 +93,7 @@ test('the cart uses the shared shipping date and omits a pending preparation dat
   assert.doesNotMatch(output,/Horneamos tu pedido el\s+y/);
 });
 test('the configured FAQ never presents an empty answer when optional dates are pending', async () => {
-  const template=JSON.parse(readFileSync('templates/index.json','utf8'));
+  const template=readShopifyJson('templates/index.json');
   const configured=Object.values(template.sections).find(item=>item.type==='ds-faq');
   const blocks=configured.block_order.map(id=>({id,settings:configured.blocks[id].settings}));
   const output=await section('ds-faq',openSettings,{section:{id:'qa',settings:configured.settings,blocks}});

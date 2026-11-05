@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync, existsSync} from 'node:fs';
+import {readShopifyJson} from './helpers/shopify-json.mjs';
 
 const read = path => readFileSync(path, 'utf8');
 const active = path => {
-  const data = JSON.parse(read(path));
+  const data = readShopifyJson(path);
   return data.order.filter(id => !data.sections[id].disabled).map(id => data.sections[id].type);
 };
 
