@@ -59,6 +59,22 @@ test('browser tracking: login return, guest denial, empty changes and live expir
       assert.match(await evaluate(`document.querySelector('[data-pending-changes]').textContent`),/Sin cambios respecto a tu referencia/);
       assert.match(await evaluate(`document.querySelector('[data-changes]').textContent`),/Sin cambios respecto a tu referencia/);
       assert.match(await evaluate(`document.querySelector('[data-pending-expiry]').textContent`),/Vigente hasta.*Houston/);
+      const limitedComment = await evaluate(`(async()=>{
+        const root=document.querySelector('[data-ds-tracking]'), originalFetch=window.fetch;
+        trackingFixture.comments=[{id:'confirmed-comment',author:'Cliente',text:'Comentario confirmado antes del límite'}];
+        await root.dsTrackingController.load();
+        window.fetch=async(path,options)=>path.endsWith('/comments')?Response.json({code:'RATE_LIMITED'},{status:429}):originalFetch(path,options);
+        try {
+          document.querySelector('[data-comment-input]').value='Comentario rechazado por el límite';
+          document.querySelector('[data-comment-form]').requestSubmit();
+          for(let attempt=0;attempt<100 && root.dsTrackingController.state.busy;attempt++)await new Promise(resolve=>setTimeout(resolve,10));
+          return {message:document.querySelector('[data-action-message]').textContent,input:document.querySelector('[data-comment-input]').value,comments:document.querySelector('[data-comments]').textContent};
+        } finally {window.fetch=originalFetch;}
+      })()`);
+      assert.equal(limitedComment.message,'Has enviado varios mensajes seguidos. Espera un momento antes de enviar otro. Los mensajes confirmados como enviados ya están en la solicitud.');
+      assert.equal(limitedComment.input,'Comentario rechazado por el límite');
+      assert.match(limitedComment.comments,/Comentario confirmado antes del límite/);
+      assert.doesNotMatch(limitedComment.comments,/Comentario rechazado por el límite/);
       await evaluate(`trackingFixture.pendingProposal.expiresAt=new Date(Date.now()+150).toISOString();document.querySelector('[data-ds-tracking]').dsTrackingController.load()`);
       await delay(230);
       assert.equal(await evaluate(`document.querySelector('[data-accept]').disabled`),true);

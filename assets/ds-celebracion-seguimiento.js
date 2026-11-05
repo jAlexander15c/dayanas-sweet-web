@@ -4,6 +4,7 @@
   const messages = { AUTH_REQUIRED: 'Inicia sesión para consultar tu pastel.', NOT_FOUND: 'No encontramos esta solicitud.', CONFLICT: 'La propuesta cambió. Revisa la información actualizada antes de aceptar.', VALIDATION: 'Revisa la información e inténtalo de nuevo.', UNAVAILABLE: 'No pudimos completar la operación. Puedes volver a intentarlo.' };
   messages.QUOTE_EXPIRED = 'Esta propuesta venció. Escríbele a Dayana para acordar una nueva fecha y recibir una propuesta vigente.';
   messages.CHECKOUT_PENDING = 'Hay un pago pendiente de comprobar en Shopify. Actualiza el estado del pago antes de continuar; no vuelvas a pagar.';
+  messages.RATE_LIMITED = 'Has enviado varios mensajes seguidos. Espera un momento antes de enviar otro. Los mensajes confirmados como enviados ya están en la solicitud.';
   const guestAccessMessage = 'Abre el enlace privado completo de tu correo para consultar esta solicitud sin iniciar sesión.';
   const quoteExpired = (proposal, now = Date.now()) => typeof proposal?.expiresAt === 'string' && Date.parse(proposal.expiresAt) <= now;
   function initialPaymentDeadline(snapshot) {

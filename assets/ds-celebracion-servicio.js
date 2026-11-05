@@ -39,7 +39,7 @@
         }
         if (!response.headers.get('content-type')?.includes('application/json')) throw fail('UNAVAILABLE');
         const result = await response.json();
-        if (!response.ok) throw fail(['AUTH_REQUIRED', 'NOT_FOUND', 'CONFLICT', 'QUOTE_EXPIRED', 'CHECKOUT_PENDING', 'VALIDATION', 'UNAVAILABLE'].includes(result?.code) ? result.code : 'UNAVAILABLE');
+        if (!response.ok) throw fail(['AUTH_REQUIRED', 'NOT_FOUND', 'CONFLICT', 'QUOTE_EXPIRED', 'CHECKOUT_PENDING', 'RATE_LIMITED', 'VALIDATION', 'UNAVAILABLE'].includes(result?.code) ? result.code : 'UNAVAILABLE');
         return result;
       } catch (e) { throw e?.code ? e : fail('UNAVAILABLE'); }
       finally { clearTimeout(timer); }

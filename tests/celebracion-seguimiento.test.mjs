@@ -67,6 +67,19 @@ test('reintento de comentario conserva operación tras fallo de red', async () =
   await c.load(); assert.equal(await c.comment('  Hola  '), false); assert.equal(await c.comment('Hola'), true);
   assert.equal(ids[0], ids[1]); assert.equal(c.state.snapshot.comments[0].text, 'Hola');
 });
+test('comment rate limit explains waiting without confirming the rejected message', async () => {
+  const confirmed = { ...snapshot(), comments: [{ id: 'c1', author: 'Cliente', text: 'Mensaje ya confirmado' }] };
+  const controller = api.createController('cake-1', {
+    getTracking: async () => confirmed,
+    postComment: async () => { throw { code: 'RATE_LIMITED' }; },
+  });
+  await controller.load();
+  assert.equal(await controller.comment('Mensaje nuevo rechazado'), false);
+  assert.equal(controller.state.error.code, 'RATE_LIMITED');
+  assert.equal(controller.state.error.message, 'Has enviado varios mensajes seguidos. Espera un momento antes de enviar otro. Los mensajes confirmados como enviados ya están en la solicitud.');
+  assert.equal(controller.state.snapshot.comments.length, 1);
+  assert.equal(controller.state.snapshot.comments[0].text, 'Mensaje ya confirmado');
+});
 test('listo bloquea comentarios y aceptación aunque permisos estén desactualizados', async () => {
   let calls = 0;
   const c = api.createController('cake-1', { getTracking: async () => ({ ...snapshot(), status: 'ready' }), postComment: async () => { calls++; }, acceptProposal: async () => { calls++; } });

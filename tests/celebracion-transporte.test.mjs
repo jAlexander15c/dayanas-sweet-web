@@ -43,3 +43,9 @@ test('tracking transport preserves quote expiry and pending checkout error codes
     await assert.rejects(api.createHttpService('/apps/celebraciones').acceptProposal('cake-1', 3, 'op-1'), error => error.code === code);
   }
 });
+test('comment transport preserves HTTP 429 RATE_LIMITED for authenticated and guest customers', async () => {
+  for (const capability of [null, 'ab'.repeat(32)]) {
+    const api = setup(async () => Response.json({ code: 'RATE_LIMITED' }, { status: 429 }));
+    await assert.rejects(api.createHttpService('/apps/celebraciones', capability).postComment('cake-1', 'Otro mensaje', 'op-comment'), error => error.code === 'RATE_LIMITED');
+  }
+});
