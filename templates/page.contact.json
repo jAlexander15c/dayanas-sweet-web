@@ -1,7 +1,10 @@
 {
   "sections": {
     "main": {
-      "type": "ds-contact"
+      "type": "ds-contact",
+      "settings": {
+        "aside_text": "<p>Horneamos por tandas y enviamos por transportista a todo EE. UU. Los pasteles personalizados se recogen en Fulshear, TX, en la fecha acordada. Nuestros productos se preparan en equipos compartidos con trigo, huevo, leche y frutos secos.</p>"
+      }
     },
     "batch": {
       "type": "ds-batch",
@@ -64,7 +67,7 @@
           "type": "question",
           "settings": {
             "question": "¿Cómo veo las opciones de entrega?",
-            "answer": "<p>Realizamos únicamente envíos, sin retiro presencial. El envío es gratis en pedidos desde $100; en pedidos menores, el costo aparece antes del pago. La fecha de despacho indica cuándo entregamos tu pedido al transportista; la llegada depende de tu dirección.</p>"
+            "answer": "<p>Enviamos por transportista a todo EE. UU. El envío es gratis en pedidos desde $100; en pedidos menores, el costo aparece antes del pago. La fecha de despacho indica cuándo entregamos tu pedido al transportista; la llegada depende de tu dirección. Los pasteles personalizados no se envían: se recogen en Fulshear, TX, en la fecha acordada.</p>"
           }
         },
         "q-storage": {
