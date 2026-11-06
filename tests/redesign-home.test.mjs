@@ -84,7 +84,9 @@ test('schema supplies editable copy and image settings; images have intrinsic si
   for(const id of ['hero_line_1','hero_line_2','hero_line_3','hero_text','hero_image','closed_title','closed_text','open_title','open_text','signup_success','menu_title','menu_text']) assert.ok(config.settings.some(item=>item.id===id),id);
   assert.ok(config.blocks[0].settings.some(item=>item.type==='collection'));
   const output=await render({}, {overrides:{hero_image:{id:'custom',width:1800,height:700},hero_image_alt:'Foto <propia>'}});
-  assert.match(output,/src="\/images\/custom\?width=1440"/);
-  assert.match(output,/alt="Foto &lt;propia&gt;"/);
+  assert.match(output,/src="\/images\/custom\?width=1920"/);
+  assert.match(output,/srcset="[^"]*480w[^"]*1920w"/);
+  assert.match(output,/sizes="100vw"/);
+  assert.match(output,/alt="Foto &lt;propia/);
   for(const image of output.matchAll(/<img\b[^>]*>/g)) { assert.match(image[0],/width="\d+"/); assert.match(image[0],/height="\d+"/); assert.match(image[0],/alt="[^"]*"/); }
 });

@@ -10,7 +10,8 @@
 -%}
 <section class="ds-r-hero" id="inicio" aria-labelledby="{{ hero_title_id }}">
   {%- if section.settings.hero_image != blank -%}
-    <img class="ds-r-hero-photo" src="{{ section.settings.hero_image | image_url: width: 1440 }}" width="{{ section.settings.hero_image.width }}" height="{{ section.settings.hero_image.height }}" alt="{{ section.settings.hero_image_alt | escape }}" loading="eager" fetchpriority="high">
+    {%- comment -%} En móvil la foto ocupa el ancho completo con 235 px de alto; en escritorio, toda la portada. {%- endcomment -%}
+    {{ section.settings.hero_image | image_url: width: 1920 | image_tag: widths: '480, 750, 1080, 1440, 1920', sizes: '100vw', class: 'ds-r-hero-photo', alt: section.settings.hero_image_alt, loading: 'eager', fetchpriority: 'high', preload: true }}
   {%- else -%}
     <img class="ds-r-hero-photo" src="{{ 'ds-r-hero.png' | asset_url }}" width="1440" height="576" alt="{{ section.settings.hero_image_alt | escape }}" loading="eager" fetchpriority="high">
   {%- endif -%}

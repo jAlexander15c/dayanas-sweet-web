@@ -19,7 +19,7 @@ export function registerPaginate(engine) {
 export function registerImageTag(engine) {
   engine.registerFilter('image_tag', (url, ...args) => {
     const attrs = Object.fromEntries(args.filter(Array.isArray));
-    const escape = value => String(value ?? '').replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
+    const escape = value => String(value ?? '').replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
     const srcset = String(attrs.widths).split(',').map(width => `${url}&width=${width.trim()} ${width.trim()}w`).join(', ');
     return `<img src="${escape(url)}" srcset="${escape(srcset)}" width="1200" height="1200" class="${escape(attrs.class)}" sizes="${escape(attrs.sizes)}" alt="${escape(attrs.alt)}" loading="${escape(attrs.loading)}">`;
   });

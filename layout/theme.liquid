@@ -29,7 +29,13 @@
       <meta name="description" content="{{ page_description | escape }}">
     {% endif %}
 
+    {%- comment -%} El seguimiento es una utilidad privada por enlace: no debe aparecer en buscadores. {%- endcomment -%}
+    {%- if template.suffix == 'celebracion-seguimiento' -%}
+      <meta name="robots" content="noindex">
+    {%- endif -%}
+
     {% render 'meta-tags' %}
+    {% render 'ds-structured-data' %}
 
     <script type="module">
       import * as StandardEvents from 'https://cdn.shopify.com/storefront/standard-events.js';

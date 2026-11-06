@@ -1,0 +1,47 @@
+{%- comment -%}
+  Datos estructurados de la marca. Reemplaza el Organization/WebSite de la cabecera Dawn,
+  que está deshabilitada en header-group.json. Solo en la portada, como recomienda Google.
+  sameAs sale de los enlaces sociales del tema: si están vacíos, no se publica la propiedad.
+  No se marca Bakery/LocalBusiness: requiere dirección y horario confirmados por Dayana.
+{%- endcomment -%}
+{%- if request.page_type == 'index' -%}
+  {%- liquid
+    assign ds_social = settings.social_instagram_link | append: '|' | append: settings.social_facebook_link | append: '|' | append: settings.social_tiktok_link | append: '|' | append: settings.social_youtube_link | append: '|' | append: settings.social_pinterest_link | append: '|' | append: settings.social_twitter_link | split: '|'
+    assign ds_same_as = ''
+    for url in ds_social
+      if url != blank
+        assign ds_same_as = ds_same_as | append: '|' | append: url
+      endif
+    endfor
+    assign ds_same_as = ds_same_as | remove_first: '|' | split: '|'
+    if settings.logo != blank
+      assign ds_logo = settings.logo | image_url: width: 600 | prepend: 'https:'
+    else
+      assign ds_logo = 'ds-logo-horizontal.png' | asset_url | prepend: 'https:'
+    endif
+    assign ds_home = request.origin | append: routes.root_url
+  -%}
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "@id": {{ ds_home | append: '#organization' | json }},
+      "name": {{ shop.name | json }},
+      "url": {{ ds_home | json }},
+      "logo": {{ ds_logo | json }}
+      {%- if ds_same_as.size > 0 -%},
+      "sameAs": {{ ds_same_as | json }}
+      {%- endif %}
+    }
+  </script>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": {{ shop.name | json }},
+      "url": {{ ds_home | json }},
+      "inLanguage": {{ request.locale.iso_code | json }},
+      "publisher": { "@id": {{ ds_home | append: '#organization' | json }} }
+    }
+  </script>
+{%- endif -%}
