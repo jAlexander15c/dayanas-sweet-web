@@ -306,16 +306,9 @@
       {{ 'component-price.css' | asset_url | stylesheet_tag }}
     {%- endif -%}
 
-    {%- unless settings.type_body_font.system? -%}
-      {% comment %}theme-check-disable AssetPreload{% endcomment %}
-      <link rel="preload" as="font" href="{{ settings.type_body_font | font_url }}" type="font/woff2" crossorigin>
-      {% comment %}theme-check-enable AssetPreload{% endcomment %}
-    {%- endunless -%}
-    {%- unless settings.type_header_font.system? -%}
-      {% comment %}theme-check-disable AssetPreload{% endcomment %}
-      <link rel="preload" as="font" href="{{ settings.type_header_font | font_url }}" type="font/woff2" crossorigin>
-      {% comment %}theme-check-enable AssetPreload{% endcomment %}
-    {%- endunless -%}
+    {% comment %}Shared above-the-fold fonts. Match CSS relative URLs without asset_url's query string.{% endcomment %}
+    <link rel="preload" as="font" href="{{ 'ds-r-font-6bd4c886e4a9.woff2' | asset_url | split: '?' | first }}" type="font/woff2" crossorigin>
+    <link rel="preload" as="font" href="{{ 'ds-r-font-348dfd73d180.woff2' | asset_url | split: '?' | first }}" type="font/woff2" crossorigin>
 
     {%- if localization.available_countries.size > 1 or localization.available_languages.size > 1 -%}
       {{ 'component-localization-form.css' | asset_url | stylesheet_tag: preload: true }}

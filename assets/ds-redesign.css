@@ -3,35 +3,35 @@
   font-style: italic;
   font-weight: 400;
   font-display: swap;
-  src: url(ds-r-font-d90cebc85b32.woff2) format('truetype');
+  src: url(ds-r-font-30f1381ff576.woff2) format('woff2');
 }
 @font-face {
   font-family: 'DM Serif Display';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(ds-r-font-b883796f2d36.woff2) format('truetype');
+  src: url(ds-r-font-348dfd73d180.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Montserrat';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(ds-r-font-96cf68ad8389.woff2) format('truetype');
+  src: url(ds-r-font-6bd4c886e4a9.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Montserrat';
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url(ds-r-font-efae703531c8.woff2) format('truetype');
+  src: url(ds-r-font-74586c0f9709.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Montserrat';
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url(ds-r-font-bcc2c8b38b3b.woff2) format('truetype');
+  src: url(ds-r-font-a8bcd459ed21.woff2) format('woff2');
 }
 
 /* Opci?n 1 aprobada. Aislada de los componentes de comercio Dawn. */
