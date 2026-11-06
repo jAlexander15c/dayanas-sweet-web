@@ -125,9 +125,11 @@ test('M7: Salir elimina sesión local y memoria aun cuando falla la red', async 
   const source = await readFile(new URL('../src/staff-ui.js', import.meta.url), 'utf8');
   const nodes = new Map(), node = selector => { if (!nodes.has(selector)) nodes.set(selector, { hidden: false, replaceChildren() {}, remove() {}, querySelectorAll: () => [], classList: { toggle() {} } }); return nodes.get(selector); };
   const values = new Map([['dayanas.inventario.session', 'saved']]);
-  const context = vm.createContext({ document: { body: { dataset: { portal: 'true' } }, querySelector: node }, window: {}, location: { hash: '' }, URL, localStorage: { setItem: (k, v) => values.set(k, v), removeItem: k => values.delete(k) }, fetch: async () => { throw Error('offline'); } });
+  const legacy = new Map([['dayanas.inventario.session', 'old']]);
+  const context = vm.createContext({ document: { body: { dataset: { portal: 'true' } }, querySelector: node }, window: {}, location: { hash: '' }, URL, sessionStorage: { setItem: (k, v) => values.set(k, v), removeItem: k => values.delete(k) }, localStorage: { removeItem: k => legacy.delete(k) }, fetch: async () => { throw Error('offline'); } });
   vm.runInContext(source.replace('import.meta.url', "'https://store.test/apps/inventario/assets/staff-ui.js'") + '\n globalThis.setup = async () => { credential = {session:"secret"}; currentUser = {name:"Dayana", roles:["inventario"]}; initializeInventory = async () => {}; await showPanel(); }; globalThis.readCredential = () => credential;', context);
   await context.setup(); await node('#sign-out').onclick();
   assert.equal(values.has('dayanas.inventario.session'), false); assert.equal(context.readCredential(), null);
+  assert.equal(legacy.has('dayanas.inventario.session'), false);
   assert.equal(node('#panel-view').hidden, true); assert.equal(node('#access-view').hidden, false);
 });

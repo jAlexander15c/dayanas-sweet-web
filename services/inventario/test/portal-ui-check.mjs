@@ -66,7 +66,7 @@ try {
   await portal.getByRole('button', { name: 'Enviar invitación', exact: true }).click(); await portal.getByRole('heading', { name: 'María de prueba' }).waitFor();
   await screenshots(portal, 'usuarios');
   await portal.getByRole('button', { name: 'Salir', exact: true }).click(); await portal.getByRole('heading', { name: 'Entrar al panel' }).waitFor();
-  assert.equal(await portal.evaluate(() => localStorage.getItem('dayanas.inventario.session')), null);
+  assert.deepEqual(await portal.evaluate(() => [sessionStorage.getItem('dayanas.inventario.session'), localStorage.getItem('dayanas.inventario.session')]), [null, null]);
   await screenshots(portal, 'entrar');
   await portal.getByRole('button', { name: 'Olvidé mi contraseña', exact: true }).click(); await screenshots(portal, 'olvide');
   await portal.getByLabel('Usuario o correo').fill('dayana'); await portal.getByRole('button', { name: 'Enviar código', exact: true }).click(); await portal.getByRole('heading', { name: 'Revisa tu correo' }).waitFor();
@@ -81,7 +81,7 @@ try {
   await portal.getByRole('button', { name: 'Salir', exact: true }).click();
   await portal.getByRole('heading', { name: 'Entrar al panel' }).waitFor();
   await portal.getByText('No pudimos confirmar el cierre en el servidor', { exact: false }).waitFor();
-  assert.equal(await portal.evaluate(() => localStorage.getItem('dayanas.inventario.session')), null);
+  assert.deepEqual(await portal.evaluate(() => [sessionStorage.getItem('dayanas.inventario.session'), localStorage.getItem('dayanas.inventario.session')]), [null, null]);
   await portal.reload(); await portal.getByRole('heading', { name: 'Entrar al panel' }).waitFor();
   assert.deepEqual(errors, []);
   console.log('PASS portal-ui-check: 7 pantallas × 390/1440 px, 44px, CSP, invitación, conexión offline, usuarios, salir (también sin red), recuperación, cambio de contraseña, login y recarga; 14 capturas.');

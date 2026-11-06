@@ -7,8 +7,11 @@ const base = new URL('../', import.meta.url).pathname;
 let credential, currentUser, initializeInventory, invitationToken, recoveryIdentifier = '', busy = false;
 const field = (label, name, type = 'text', extra = '') => `<label>${label}<input name="${name}" type="${type}" required ${extra}></label>`;
 const rules = '<ul class="password-rules"><li>Al menos 10 caracteres</li><li>Distinta de tu usuario</li><li>No es una contraseña muy común</li></ul>';
-function clearSession() { credential = null; currentUser = null; localStorage.removeItem(storageKey); }
-function saveSession(result) { credential = { session: result.session, expiresAt: result.expiresAt }; localStorage.setItem(storageKey, JSON.stringify(credential)); currentUser = result.user; }
+// La sesión vive solo en esta pestaña (sessionStorage): se borra al cerrarla y no queda en el disco del navegador.
+// Se limpia también la copia que guardaban las versiones anteriores en localStorage.
+function forgetLegacySession() { try { localStorage.removeItem(storageKey); } catch { /* almacenamiento bloqueado */ } }
+function clearSession() { credential = null; currentUser = null; try { sessionStorage.removeItem(storageKey); } catch { /* almacenamiento bloqueado */ } forgetLegacySession(); }
+function saveSession(result) { credential = { session: result.session, expiresAt: result.expiresAt }; try { sessionStorage.setItem(storageKey, JSON.stringify(credential)); } catch { /* la sesión sigue en memoria */ } forgetLegacySession(); currentUser = result.user; }
 async function request(action, body = {}) {
   let response;
   if (portal) response = await fetch(`${base}api/${action}`, { method: 'POST', credentials: 'omit', referrerPolicy: 'no-referrer', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, session: credential?.session }) });
@@ -142,7 +145,8 @@ window.inventarioAccess = {
     const fragment = new URLSearchParams(location.hash.slice(1)); invitationToken = fragment.get('invitacion');
     if (invitationToken) { history.replaceState(null, '', location.pathname + location.search); showAccess('invitation'); return; }
     try {
-      credential = JSON.parse(localStorage.getItem(storageKey) || 'null');
+      forgetLegacySession();
+      credential = JSON.parse(sessionStorage.getItem(storageKey) || 'null');
       if (credential?.expiresAt > Date.now() && typeof credential.session === 'string') { currentUser = (await request('session')).user; await showPanel(); return; }
     } catch { /* Expired credentials are removed; no tokens go into diagnostics. */ }
     clearSession(); showAccess('login');
