@@ -13,7 +13,15 @@ export const MESSAGES = Object.freeze({
   shipped: 'Un pedido despachado ya no se cancela: se reembolsa.',
   fulfillmentScope: 'Falta un permiso de Shopify para despachar desde el panel. Mientras tanto, despacha desde el admin de Shopify.',
   uncertain: 'No pudimos confirmar si Shopify aplicó el cambio. Toca «Reintentar»: el panel revisa el pedido y no lo repite.',
+  processing: 'Shopify todavía está procesando la cancelación. Espera unos segundos y toca «Reintentar»: el panel revisa el pedido y no la repite.',
+  review: 'El pedido no quedó como se esperaba. Revisa el pedido en Shopify antes de repetir.',
+  cancelFailed: 'Shopify terminó sin cancelar el pedido. Revisa el pedido en Shopify antes de repetir.',
+  cancelRefund: 'El pedido se canceló, pero Shopify todavía no muestra el reembolso. Revisa los pagos del pedido en Shopify.',
+  stockCheck: 'Hay que confirmar el stock antes de guardar.',
 });
+// orderCancel runs as a background job. When its id is unknown (the answer was lost) the
+// panel waits this long after the last attempt before it may resend.
+export const CANCEL_SETTLE_MS = 120_000;
 const REFUND_REASONS = { damaged: 'Llegó dañado', missing: 'Faltó un producto', customer: 'Pedido de la clienta', other: 'Otro motivo' };
 const CANCEL_REASONS = { CUSTOMER: 'La clienta lo pidió', INVENTORY: 'Sin stock para la tanda', DECLINED: 'Pago rechazado o fraude', OTHER: 'Otro motivo' };
 const MONEY_ACTIONS = new Set(['cash', 'refund', 'edit', 'cancel']);
@@ -186,6 +194,8 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
         if (new Set(changes.map(c => c.lineItemId)).size !== changes.length || new Set(additions.map(a => a.variantId)).size !== additions.length) throw bad('Cambios repetidos.');
         return { changes, additions, notify: bool(body.notify) };
       },
+      // Additions and increases consume stock; Inventario checks it only when a write will really be sent.
+      needsStock: p => p.additions.length > 0 || p.changes.some(c => c.quantity > c.fromQuantity),
       async prepare(order, params, { actor }) {
         if (order.lineItems.pageInfo?.hasNextPage) throw conflict('ORDER_TOO_LARGE', 'Este pedido tiene demasiados productos para editarlo desde el panel.');
         const byId = new Map(order.lineItems.nodes.map(line => [line.id, line]));
@@ -199,7 +209,7 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
         const parts = [...params.changes.map(c => `${byId.get(c.lineItemId).title} ${c.fromQuantity}→${c.quantity}`), ...(params.additions.length ? [`${params.additions.reduce((n, a) => n + a.quantity, 0)} agregado(s)`] : [])];
         return { amountCents: null, summary: `Editó el pedido · ${parts.join(', ')}`.slice(0, 300),
           plan: { orderId: order.id, changes: params.changes.map(({ lineItemId, fromQuantity, quantity }) => ({ lineItemId, fromQuantity, quantity })), additions: params.additions, notify: params.notify,
-            staffNote: `Editado desde el panel por ${actor.staffName}`.slice(0, 255), originalLineIds: order.lineItems.nodes.map(line => line.id) } };
+            staffNote: `Editado desde el panel por ${actor.staffName}`.slice(0, 255), originalLines: order.lineItems.nodes.map(line => ({ id: line.id, quantity: line.currentQuantity })) } };
       },
       async perform(plan) {
         const calculated = await client.editBegin(plan.orderId);
@@ -212,14 +222,34 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
         for (const add of plan.additions) await client.editAddVariant(calculated.id, add.variantId, add.quantity);
         return client.editCommit(calculated.id, plan.notify, plan.staffNote);
       },
-      reconcile(order, plan) {
-        const byId = new Map(order.lineItems.nodes.map(line => [line.id, line]));
-        const added = order.lineItems.nodes.some(line => !plan.originalLineIds.includes(line.id) && line.currentQuantity > 0);
-        const atTarget = plan.changes.every(c => (byId.get(c.lineItemId)?.currentQuantity ?? 0) === c.quantity);
-        const atStart = plan.changes.every(c => byId.get(c.lineItemId)?.currentQuantity === c.fromQuantity);
-        if (atTarget && (added || !plan.additions.length)) return 'done';
-        if (atStart && !added) return 'retry';
-        return conflict('REVIEW_REQUIRED', 'El pedido cambió mientras se guardaba. Revísalo en Shopify antes de seguir.');
+      // Every change and addition of the stored plan is compared with the order: all at the
+      // target -> done; all at the start and nothing foreign -> retry; anything else -> review.
+      async reconcile(order, plan) {
+        const review = conflict('REVIEW_REQUIRED', MESSAGES.review);
+        if (order.lineItems.pageInfo?.hasNextPage) return review;
+        const lines = new Map(order.lineItems.nodes.map(line => [line.id, line]));
+        const changes = new Map(plan.changes.map(change => [change.lineItemId, change]));
+        const outcomes = [];
+        for (const { id, quantity } of plan.originalLines) {
+          const current = lines.get(id)?.currentQuantity, change = changes.get(id);
+          if (change) outcomes.push(current === change.quantity ? 'target' : current === change.fromQuantity ? 'start' : 'other');
+          else if (current !== quantity) outcomes.push('other');
+        }
+        const known = new Set(plan.originalLines.map(line => line.id));
+        const fresh = order.lineItems.nodes.filter(line => !known.has(line.id) && line.currentQuantity > 0);
+        if (plan.additions.length || fresh.length) {
+          const variants = await client.lineVariants(order.id);
+          if (!variants) return review;
+          for (const add of plan.additions) {
+            const index = fresh.findIndex(line => variants.get(line.id) === add.variantId);
+            if (index < 0) { outcomes.push('start'); continue; }
+            outcomes.push(fresh.splice(index, 1)[0].currentQuantity === add.quantity ? 'target' : 'other');
+          }
+          if (fresh.length) outcomes.push('other');
+        }
+        if (outcomes.length && outcomes.every(outcome => outcome === 'target')) return 'done';
+        if (outcomes.every(outcome => outcome === 'start')) return 'retry';
+        return review;
       },
     },
     cancel: {
@@ -231,13 +261,40 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
         if (activeFulfillments(order).length || !['UNFULFILLED', 'ON_HOLD', 'SCHEDULED', 'OPEN', 'PENDING_FULFILLMENT'].includes(order.displayFulfillmentStatus)) throw conflict('ORDER_SHIPPED', MESSAGES.shipped);
         const refundCents = params.refund ? Math.max(0, optionalCents(order.netPaymentSet)) : 0;
         return { amountCents: refundCents, summary: `Canceló el pedido · ${CANCEL_REASONS[params.reason]}${refundCents ? ` · reembolsó ${usd(refundCents)}` : ''}${params.restock ? ' · regresó al stock' : ''}`,
-          plan: { variables: { orderId: order.id, reason: params.reason, restock: params.restock, notifyCustomer: params.notify, staffNote: `Cancelado desde el panel por ${actor.staffName}`.slice(0, 255),
+          plan: { refundCents, variables: { orderId: order.id, reason: params.reason, restock: params.restock, notifyCustomer: params.notify, staffNote: `Cancelado desde el panel por ${actor.staffName}`.slice(0, 255),
             ...(params.refund ? { refundMethod: { originalPaymentMethodsRefund: true } } : {}) } } };
       },
       perform: plan => client.cancel(plan.variables),
-      reconcile: order => order.cancelledAt ? 'done' : 'retry',
+      // orderCancel only queues a job: success is claimed when the job is done and the order shows cancelledAt.
+      async performed(result, operation) {
+        const job = result?.job?.id ? { id: result.job.id, done: result.job.done === true } : null;
+        if (job) store.progress(operation.operationId, { jobId: job.id }, now());
+        if (job && !job.done) return 'processing';
+        return cancelVerdict(await client.order(operation.plan.variables.orderId), operation.plan, job ?? undefined, false);
+      },
+      async reconcile(order, plan, operation) {
+        const jobId = operation.progress?.jobId;
+        if (!jobId) return cancelVerdict(order, plan, undefined, settled(operation));
+        // Job first, then the order: a job that finished after the first read must be judged on a fresh order.
+        const job = await client.job(jobId);
+        return cancelVerdict(job?.done ? await client.order(plan.variables.orderId) : order, plan, job, settled(operation));
+      },
     },
   };
+
+  const settled = operation => now() - (operation.progress?.attemptedAt ?? operation.createdAt) >= CANCEL_SETTLE_MS;
+  // job: undefined = id unknown (answer lost); null = Shopify no longer knows it; { done }.
+  function cancelVerdict(order, plan, job, settledNow) {
+    const refundShown = !plan.refundCents || optionalCents(order.netPaymentSet) <= 0;
+    const running = job === undefined ? !settledNow : job?.done === false;
+    if (order.cancelledAt) {
+      if (refundShown) return 'done';
+      return running ? 'processing' : { done: true, warning: MESSAGES.cancelRefund };
+    }
+    if (job === undefined) return settledNow ? 'retry' : 'processing';
+    if (job?.done === false) return 'processing';
+    return job?.done === true ? conflict('CANCEL_FAILED', MESSAGES.cancelFailed) : conflict('REVIEW_REQUIRED', MESSAGES.review);
+  }
 
   function refundLines(value) {
     if (!Array.isArray(value) || value.length > 100) throw bad('Elige qué devolver.');
@@ -268,28 +325,32 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
     if (MONEY_ACTIONS.has(action) && isCelebraciones(order)) throw conflict('CELEBRACIONES_ORDER', MESSAGES.celebraciones);
   }
 
-  async function attempt(def, operationId, plan) {
-    const at = () => now();
-    try {
-      await def.perform(plan, operationId);
-      const response = { status: 200, body: { ok: true, operationId } };
-      store.finish(operationId, { state: 'succeeded', response, at: at() });
-      return response;
-    } catch (error) {
-      if (error?.uncertain) return { ...failure(error), body: { ...failure(error).body, operationId } };
-      const response = failure(error);
-      store.finish(operationId, { state: 'failed', response, at: at() });
-      return response;
-    }
-  }
-  async function resume(def, operation) {
-    let order;
-    try { order = await readOrder(operation.orderId); } catch { return { ...failure({ uncertain: true }), body: { ...failure({ uncertain: true }).body, operationId: operation.operationId } }; }
-    const verdict = def.reconcile(order, operation.plan);
-    if (verdict === 'retry') return attempt(def, operation.operationId, operation.plan);
-    const response = verdict === 'done' ? { status: 200, body: { ok: true, operationId: operation.operationId, reconciled: true } } : failure(verdict);
-    store.finish(operation.operationId, { state: verdict === 'done' ? 'succeeded' : 'failed', response, at: now() });
+  const uncertainFor = operationId => { const response = failure({ uncertain: true }); return { ...response, body: { ...response.body, operationId } }; };
+  const processingFor = operationId => ({ status: 202, body: { code: 'PROCESSING', state: 'processing', retryable: true, operationId, message: MESSAGES.processing } });
+  const stockCheck = () => ({ status: 409, body: { code: 'STOCK_CHECK_REQUIRED', message: MESSAGES.stockCheck } });
+  // Verdicts: 'done' | { done, warning } -> succeeded; 'processing' -> stays pending; an error -> failed.
+  function conclude(operationId, verdict, reconciled = false) {
+    if (verdict === 'processing') return processingFor(operationId);
+    const ok = verdict === 'done' || verdict?.done === true;
+    const response = ok ? { status: 200, body: { ok: true, operationId, ...(reconciled ? { reconciled: true } : {}), ...(verdict?.warning ? { warning: verdict.warning } : {}) } } : failure(verdict);
+    store.finish(operationId, { state: ok ? 'succeeded' : 'failed', response, at: now() });
     return response;
+  }
+  async function attempt(def, operation) {
+    const { operationId, plan } = operation;
+    store.progress(operationId, { attemptedAt: now() }, now());
+    let result;
+    try { result = await def.perform(plan, operationId); } catch (error) { return error?.uncertain ? uncertainFor(operationId) : conclude(operationId, error); }
+    if (!def.performed) return conclude(operationId, 'done');
+    // Shopify accepted the write; if its outcome cannot be read yet the operation stays pending.
+    try { return conclude(operationId, await def.performed(result, operation)); } catch { return processingFor(operationId); }
+  }
+  async function resume(def, operation, actor) {
+    let verdict;
+    try { verdict = await def.reconcile(await readOrder(operation.orderId), operation.plan, operation); } catch { return uncertainFor(operation.operationId); }
+    if (verdict !== 'retry') return conclude(operation.operationId, verdict, true);
+    if (def.needsStock?.(operation.plan) && actor?.stockVerified !== true) return stockCheck();
+    return attempt(def, operation);
   }
 
   function summarize(order, ready) {
@@ -354,9 +415,20 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
     },
     async detail(id) {
       try {
+        let operations = store.history(id);
+        // A cancellation still running in Shopify is settled here too: job first, then the order (cancelledAt).
+        const running = operations.filter(op => op.action === 'cancel' && op.state === 'pending' && op.progress?.jobId);
+        const jobs = new Map();
+        for (const op of running) { try { jobs.set(op.operationId, await client.job(op.progress.jobId)); } catch { /* asked again on the next read or retry */ } }
         const order = await readOrder(id);
         const variants = await client.lineVariants(order.id);
-        const operations = store.history(id), pickup = isPickup(order);
+        for (const op of running) {
+          if (!jobs.has(op.operationId)) continue;
+          const verdict = cancelVerdict(order, op.plan, jobs.get(op.operationId), settled(op));
+          if (verdict !== 'processing' && verdict !== 'retry') conclude(op.operationId, verdict, true);
+        }
+        if (running.length) operations = store.history(id);
+        const pickup = isPickup(order), cancelPending = operations.some(op => op.action === 'cancel' && op.state === 'pending');
         const ready = operations.some(op => op.action === 'ready' && op.state === 'succeeded');
         const lines = order.lineItems.nodes.map(line => ({ id: line.id, title: line.title, variantTitle: line.variantTitle || null, sku: line.sku || null,
           quantity: line.currentQuantity, unfulfilled: line.unfulfilledQuantity, refundable: line.refundableQuantity,
@@ -371,7 +443,7 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
           outstandingCents: cents(order.totalOutstandingSet), receivedCents: optionalCents(order.totalReceivedSet), refundedCents: optionalCents(order.totalRefundedSet), netPaymentCents: optionalCents(order.netPaymentSet),
           payment: [...new Set((order.paymentGatewayNames || []).map(gatewayLabel))],
           fulfillments: activeFulfillments(order).map(f => ({ createdAt: f.createdAt, displayStatus: f.displayStatus, tracking: (f.trackingInfo || []).map(t => ({ company: t.company || null, number: t.number || null, url: /^https:\/\//.test(t.url || '') ? t.url : null })) })),
-          shipped, canCancel: !order.cancelledAt && !shipped, timeline: timeline(order, operations, pickup), note: store.getNote(id),
+          shipped, cancelPending, canCancel: !order.cancelledAt && !shipped && !cancelPending, timeline: timeline(order, operations, pickup), note: store.getNote(id),
         } };
       } catch (error) { return failure(error); }
     },
@@ -412,13 +484,15 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
             if (previous) {
               if (previous.fingerprint !== fingerprint) throw conflict('OPERATION_REUSED', 'Esta clave ya se usó para otro cambio. Cierra y vuelve a intentarlo.');
               if (previous.state !== 'pending') return previous.response;
-              return await resume(def, previous);
+              return await resume(def, previous, actor);
             }
+            // Stock is confirmed only for a write that will really be sent, never for a stored receipt.
+            if (def.needsStock?.(params) && actor.stockVerified !== true) return stockCheck();
             const order = await readOrder(id);
             checkOrder(order, action);
             const prepared = await def.prepare(order, params, { operationId, actor });
             store.begin({ operationId, action, orderId: id, fingerprint, plan: prepared.plan, staffId: actor.staffId, staffName: actor.staffName, amountCents: prepared.amountCents, summary: prepared.summary, at: now() });
-            return await attempt(def, operationId, prepared.plan);
+            return await attempt(def, { operationId, orderId: id, plan: prepared.plan, progress: {}, createdAt: now() });
           } catch (error) { return failure(error); }
         });
       } catch (error) { return failure(error); }

@@ -12,14 +12,16 @@ export function portalStaffActor(actor,shop) {
 
 // Orders panel actor: set only by Inventario after its own session check.
 // stepUp is true only after Inventario verified the admin password for this request.
+// stockVerified is true only after Inventario checked the stock of this edit, which it does
+// only when Celebraciones answered STOCK_CHECK_REQUIRED (a write is about to be sent).
 export function portalOrdersActor(actor,shop) {
   if(!actor||actor.shop!==shop||actor.aud!=='pedidos'||typeof actor.userId!=='string'
     ||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(actor.userId)||typeof actor.name!=='string'||!actor.name.trim()||actor.name.length>120
     ||!Array.isArray(actor.roles)||!actor.roles.some(role=>role==='inventario'||role==='admin')
     ||!actor.roles.every(role=>['admin','inventario','celebraciones'].includes(role))
-    ||(actor.stepUp!==undefined&&actor.stepUp!==true)||Object.hasOwn(actor,'password')
+    ||(actor.stepUp!==undefined&&actor.stepUp!==true)||(actor.stockVerified!==undefined&&actor.stockVerified!==true)||Object.hasOwn(actor,'password')
     ||!Number.isSafeInteger(actor.sessionVersion)||actor.sessionVersion<1)throw denied();
-  return {shop,staffId:`user:${actor.userId}`,staffName:actor.name.trim(),roles:[...actor.roles],stepUp:actor.stepUp===true};
+  return {shop,staffId:`user:${actor.userId}`,staffName:actor.name.trim(),roles:[...actor.roles],stepUp:actor.stepUp===true,stockVerified:actor.stockVerified===true};
 }
 export const isOrdersPath=path=>typeof path==='string'&&/^\/orders(?:[/?#]|$)/.test(path);
 /** Audience is chosen by path: an orders actor never reaches Celebraciones routes and vice versa. */

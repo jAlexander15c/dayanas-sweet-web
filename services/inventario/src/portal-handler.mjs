@@ -36,10 +36,17 @@ async function handlePedidos({ env, identity, offline, clientFactory }, action, 
   if (write && ORDER_MONEY.has(write)) {
     if (typeof data.password !== 'string' || !data.password) throw fail(401, 'PASSWORD_REQUIRED', 'Escribe tu contraseña para confirmar.');
     forwarded = await identity.stepUp(data.session, data.password);
-    if (write === 'edit') await checkEditStock(offline, clientFactory, body);
   }
   const { stepUp, ...plain } = forwarded;
-  const result = await forwardToCelebraciones(env, { ...plain, ...(stepUp === true ? { stepUp: true } : {}) }, write ? 'POST' : 'GET', `/${route}`, body, 'pedidos');
+  const send = extra => forwardToCelebraciones(env, { ...plain, ...(stepUp === true ? { stepUp: true } : {}), ...extra }, write ? 'POST' : 'GET', `/${route}`, body, 'pedidos');
+  const result = await send({});
+  // Celebraciones resolves the operationId first: a stored receipt comes back without any
+  // stock check. Only when a write (new or retry) is about to be sent does it ask for stock;
+  // then this Worker checks it and repeats the call with stockVerified, which the browser cannot set.
+  if (write === 'edit' && result?.status === 409 && result.body?.code === 'STOCK_CHECK_REQUIRED') {
+    await checkEditStock(offline, clientFactory, body);
+    return send({ stockVerified: true });
+  }
   return result;
 }
 // Additions and increases must have stock now; Celebraciones re-checks the order itself.

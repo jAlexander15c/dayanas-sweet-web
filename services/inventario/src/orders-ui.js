@@ -6,6 +6,11 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const usd = cents => `$${(cents / 100).toFixed(2)}`;
 const portal = window.inventarioPortal;
 const UNCONFIRMED = 'No pudimos confirmar si se guardó. Toca «Reintentar»: consulta este mismo cambio y no lo repite.';
+// Rechazos que garantizan que Shopify no recibió el cambio (validación, permisos, monto o pedido
+// distinto, stock, userErrors). Solo con estos se descarta la clave. Cualquier otro error conserva la clave.
+const NOT_APPLIED = new Set(['VALIDATION', 'ROLE_REQUIRED', 'STEP_UP_REQUIRED', 'NOT_FOUND', 'ORDER_NOT_FOUND', 'NO_STOCK', 'AMOUNT_CHANGED', 'NOTHING_DUE',
+  'REFUND_LIMIT', 'ORDER_CHANGED', 'ORDER_SHIPPED', 'ORDER_CANCELLED', 'ORDER_TOO_LARGE', 'CELEBRACIONES_ORDER', 'PICKUP_ORDER', 'SHIPPING_ORDER',
+  'NOTHING_TO_FULFILL', 'FULFILLMENT_SCOPE', 'SHOPIFY_REJECTED', 'OPERATION_REUSED']);
 const STAGES = { preparar: 'Por preparar', listo: 'Listos', entregado: 'Entregados' };
 const STAGE_ONE = { preparar: 'Por preparar', listo: 'Listo', entregado: 'Entregado' };
 const REFUND_REASONS = [['damaged', 'Llegó dañado'], ['missing', 'Faltó un producto'], ['customer', 'Pedido de la clienta'], ['other', 'Otro']];
@@ -120,6 +125,7 @@ function actionButtons(order) {
       if (order.lines.some(line => line.unfulfilled > 0)) buttons.push('<button type="button" data-action="edit">Editar pedido</button>');
       if (order.netPaymentCents > 0) buttons.push('<button type="button" data-action="refund">Reembolsar</button>');
       if (order.canCancel) buttons.push('<button type="button" class="danger" data-action="cancel">Cancelar pedido</button>');
+      else if (order.cancelPending) notes.push('<p class="notice">Shopify está procesando la cancelación de este pedido. Vuelve a abrirlo en unos segundos.</p>');
       else notes.push('<p class="muted">Un pedido despachado ya no se cancela: se reembolsa.</p>');
     }
   } else notes.push('<p class="notice">Este pedido está cancelado.</p>');
@@ -193,32 +199,42 @@ async function send(after) {
   for (const input of dialog.querySelectorAll('input:not([type=password]),select,textarea')) input.disabled = true;
   try {
     const result = await portal.request(`pedidos/orders/${op.id}/${op.action}`, { body: { ...op.body, operationId: op.operationId }, ...(op.password ? { password: op.password } : {}) });
+    // 202: Shopify sigue procesando (cancelación asíncrona). Misma clave; reintentar solo consulta.
+    if (result?.state === 'processing') { op.sending = false; unconfirmed(result.message || UNCONFIRMED); return; }
     op = null;
     if (dialog.open) dialog.close();
     await after(result);
   } catch (failure) {
     if (!op) return;
     op.sending = false;
-    if (failure.result?.state === 'uncertain' && failure.result?.retryable) unconfirmed(failure.message);
-    else if (failure.status) {
-      // Respuesta definitiva: no se aplicó. El próximo intento usa una clave nueva.
-      const keepPassword = failure.code === 'PASSWORD_INVALID' || failure.code === 'PASSWORD_REQUIRED';
+    if (failure.code === 'PASSWORD_INVALID' || failure.code === 'PASSWORD_REQUIRED') {
+      // Rechazada antes de llegar a Shopify: mismo cambio y misma clave, solo se pide la contraseña otra vez.
+      error.textContent = failure.message;
+      confirmButton.disabled = false; backButton.disabled = false; backButton.hidden = false;
+      if ($('#sheet-password')) { $('#sheet-password').disabled = false; $('#sheet-password').value = ''; $('#sheet-password').focus(); }
+    } else if (failure.status && NOT_APPLIED.has(failure.code)) {
+      // Rechazo que garantiza que no se aplicó nada: se corrige el formulario y el próximo intento usa una clave nueva.
       op = null; error.textContent = failure.message;
       confirmButton.disabled = false; backButton.disabled = false; backButton.hidden = false;
       for (const input of dialog.querySelectorAll('input,select,textarea')) input.disabled = false;
-      if (keepPassword && $('#sheet-password')) { $('#sheet-password').value = ''; $('#sheet-password').focus(); }
-    } else unconfirmed(UNCONFIRMED);
+    } else {
+      // Puede ser de una operación ya aplicada: se conserva la clave y el reintento solo consulta ese mismo cambio.
+      // 4xx (p. ej. «Revisa el pedido en Shopify»): respuesta guardada; se puede cerrar. 5xx o sin respuesta: solo «Reintentar».
+      const uncertain = failure.result?.state === 'uncertain', review = !uncertain && failure.status >= 400 && failure.status < 500;
+      unconfirmed(uncertain || review ? failure.message : UNCONFIRMED, review);
+    }
   }
 }
-function unconfirmed(text) {
+function unconfirmed(text, canClose = false) {
   op.unconfirmed = true;
   $('#sheet-error').textContent = text;
   $('#sheet-confirm').textContent = 'Reintentar';
   $('#sheet-confirm').disabled = false;
-  $('#sheet-back').hidden = true;
+  $('#sheet-back').disabled = false;
+  $('#sheet-back').hidden = !canClose;
 }
 function done(message) {
-  return async () => { list = null; await showDetail(detail.id, message); };
+  return async result => { list = null; await showDetail(detail.id, result?.warning || message); };
 }
 
 function openAction(action) {

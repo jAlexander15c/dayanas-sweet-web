@@ -6,7 +6,7 @@ import { createShopifyOrdersClient } from '../src/orders-shopify.mjs';
 import { createOrdersStore } from '../src/orders-store.mjs';
 import { createOrdersService, MESSAGES } from '../src/orders-service.mjs';
 import { handleStaffGateway, portalOrdersActor, trustedPortalActor } from '../src/staff-gateway.mjs';
-import { createFakeShopify } from './fake-shopify-orders.mjs';
+import { cancellableOrder, createFakeShopify } from './fake-shopify-orders.mjs';
 
 const SHOP = 'dayanas-test.myshopify.com';
 const USER = '11111111-2222-4333-8444-555555555555';
@@ -23,14 +23,17 @@ function memorySql() {
     transaction: fn => { db.exec('BEGIN'); try { const value = fn(); db.exec('COMMIT'); return value; } catch (error) { db.exec('ROLLBACK'); throw error; } },
   };
 }
-function setup() {
-  const fake = createFakeShopify();
+function setup(options) {
+  const fake = createFakeShopify(options);
   const transport = createShopifyAdminTransport({ shop: SHOP, clientId: 'client', secret: 'secret', fetchImpl: fake.fetch, timeoutMs: 2000 });
   const store = createOrdersStore(memorySql());
-  const service = createOrdersService({ client: createShopifyOrdersClient({ transport }), store, now: () => Date.parse('2026-11-06T15:20:00Z') });
+  let clock = Date.parse('2026-11-06T15:20:00Z');
+  const service = createOrdersService({ client: createShopifyOrdersClient({ transport }), store, now: () => clock });
   const call = (method, path, body, who = ADMIN) => handleStaffGateway({ actor: who, method, path, body }, { config: { shop: SHOP }, ordersService: service });
-  return { fake, store, call };
+  return { fake, store, call, advance: ms => { clock += ms; } };
 }
+// Inventario sets stockVerified only after checking stock itself, when Celebraciones asks for it.
+const STOCKED = { ...ADMIN, stockVerified: true };
 const mutations = fake => fake.calls.filter(name => /^Panel(MarkAsPaid|Refund|Cancel|Fulfill|Ready|Edit)/.test(name)).length;
 
 test('list groups open orders, sums the bake list and excludes Celebraciones and shipped orders', async () => {
@@ -211,11 +214,17 @@ test('cancel: a shipped order is rejected with the refund advice; an open order 
   const body = { operationId: op(81), reason: 'INVENTORY', refund: true, restock: true, notify: true };
   fake.next('PanelCancel', 'lost');
   assert.equal((await call('POST', '/orders/1042/cancel', body)).body.state, 'uncertain');
+  // The job is still running and its id was lost: the retry must not resend orderCancel.
+  const early = await call('POST', '/orders/1042/cancel', body);
+  assert.deepEqual([early.status, early.body.state, early.body.retryable], [202, 'processing', true]);
+  assert.equal(fake.count('PanelCancel'), 1);
+  fake.runJobs();
   const retry = await call('POST', '/orders/1042/cancel', body);
   assert.deepEqual([retry.status, retry.body.reconciled], [200, true]);
   assert.equal(fake.count('PanelCancel'), 1);
   const raw = fake.raw(1042);
   assert.ok(raw.cancelledAt);
+  assert.equal(raw.refundedCents, raw.receivedCents);
   assert.deepEqual(raw.cancelInput.refundMethod, { originalPaymentMethodsRefund: true });
   assert.equal(raw.cancelInput.restock, true);
   assert.equal(raw.cancelInput.notifyCustomer, true);
@@ -223,16 +232,97 @@ test('cancel: a shipped order is rejected with the refund advice; an open order 
   assert.ok(!list.body.orders.some(order => order.name === '#1042'));
 });
 
+test('cancel is asynchronous: a pending job keeps the operation pending, is polled by id and never resent', async () => {
+  const { call, fake, store } = setup({ orders: [cancellableOrder()] });
+  const body = { operationId: op(82), reason: 'CUSTOMER', refund: true, restock: true, notify: false };
+  const first = await call('POST', '/orders/1046/cancel', body);
+  assert.deepEqual([first.status, first.body.state, first.body.code], [202, 'processing', 'PROCESSING']);
+  assert.equal(fake.raw(1046).cancelledAt, null);
+  assert.equal(store.getOperation(op(82)).state, 'pending');
+  assert.match(store.getOperation(op(82)).progress.jobId, /^gid:\/\/shopify\/Job\//);
+  const detail = await call('GET', '/orders/1046');
+  assert.deepEqual([detail.body.cancelPending, detail.body.canCancel, detail.body.cancelled], [true, false, false]);
+  const again = await call('POST', '/orders/1046/cancel', body);
+  assert.deepEqual([again.status, again.body.state], [202, 'processing']);
+  assert.equal(fake.count('PanelCancel'), 1);
+  assert.ok(fake.count('PanelJob') >= 2);
+  fake.runJobs();
+  // Reading the detail settles the job: the cancellation is confirmed by the job and by cancelledAt.
+  const settled = await call('GET', '/orders/1046');
+  assert.deepEqual([settled.body.cancelled, settled.body.cancelPending], [true, false]);
+  assert.equal(store.getOperation(op(82)).state, 'succeeded');
+  assert.equal(settled.body.timeline.find(event => event.panel).state, 'ok');
+  const replay = await call('POST', '/orders/1046/cancel', body);
+  assert.deepEqual([replay.status, replay.body.ok], [200, true]);
+  assert.equal(fake.count('PanelCancel'), 1);
+  assert.equal(fake.moneyCalls, 1);
+});
+
+test('cancel: the job is read before the order, so a job that finishes during the retry is confirmed, not failed', async () => {
+  // jobPolls: 1 -> the job finishes exactly when the panel asks for it, after any earlier read of the order.
+  const { call, fake, store } = setup({ orders: [cancellableOrder()], jobPolls: 1 });
+  const body = { operationId: op(86), reason: 'CUSTOMER', refund: true, restock: true, notify: false };
+  assert.equal((await call('POST', '/orders/1046/cancel', body)).status, 202);
+  const retry = await call('POST', '/orders/1046/cancel', body);
+  assert.deepEqual([retry.status, retry.body.reconciled, retry.body.warning], [200, true, undefined]);
+  assert.equal(store.getOperation(op(86)).state, 'succeeded');
+  const other = setup({ orders: [cancellableOrder()], jobPolls: 1 });
+  assert.equal((await other.call('POST', '/orders/1046/cancel', { ...body, operationId: op(87) })).status, 202);
+  const detail = await other.call('GET', '/orders/1046');
+  assert.deepEqual([detail.body.cancelled, detail.body.cancelPending], [true, false]);
+  assert.equal(other.store.getOperation(op(87)).state, 'succeeded');
+  assert.equal(fake.count('PanelCancel') + other.fake.count('PanelCancel'), 2);
+});
+
+test('cancel: a job that finishes without cancelling is failed with a clear message and not resent', async () => {
+  const { call, fake, store } = setup({ orders: [cancellableOrder()] });
+  const body = { operationId: op(83), reason: 'OTHER', refund: false, restock: true, notify: false };
+  assert.equal((await call('POST', '/orders/1046/cancel', body)).status, 202);
+  fake.runJobs({ cancel: false });
+  const result = await call('POST', '/orders/1046/cancel', body);
+  assert.deepEqual([result.status, result.body.code], [409, 'CANCEL_FAILED']);
+  assert.match(result.body.message, /Revisa el pedido en Shopify antes de repetir/);
+  assert.equal(store.getOperation(op(83)).state, 'failed');
+  assert.equal((await call('POST', '/orders/1046/cancel', body)).body.code, 'CANCEL_FAILED');
+  assert.equal(fake.count('PanelCancel'), 1);
+});
+
+test('cancel: cancelled but the refund is not shown yet is reported, never assumed', async () => {
+  const { call, fake } = setup({ orders: [cancellableOrder()] });
+  const body = { operationId: op(84), reason: 'CUSTOMER', refund: true, restock: true, notify: false };
+  assert.equal((await call('POST', '/orders/1046/cancel', body)).status, 202);
+  fake.runJobs({ refund: false });
+  const result = await call('POST', '/orders/1046/cancel', body);
+  assert.equal(result.status, 200);
+  assert.equal(result.body.warning, MESSAGES.cancelRefund);
+  assert.equal(fake.count('PanelCancel'), 1);
+});
+
+test('cancel: a request that never reached Shopify is resent once, only after the settle time', async () => {
+  const { call, fake, advance } = setup({ orders: [cancellableOrder()] });
+  const body = { operationId: op(85), reason: 'CUSTOMER', refund: false, restock: true, notify: false };
+  fake.next('PanelCancel', 'down');
+  assert.equal((await call('POST', '/orders/1046/cancel', body)).body.state, 'uncertain');
+  assert.equal((await call('POST', '/orders/1046/cancel', body)).status, 202);
+  assert.equal(fake.count('PanelCancel'), 1);
+  advance(3 * 60_000);
+  assert.equal((await call('POST', '/orders/1046/cancel', body)).status, 202);
+  assert.equal(fake.count('PanelCancel'), 2);
+  fake.runJobs();
+  assert.equal((await call('POST', '/orders/1046/cancel', body)).status, 200);
+  assert.equal(fake.count('PanelCancel'), 2);
+});
+
 test('edit: changes and additions commit once; lost commit is reconciled; stale quantities are rejected', async () => {
   const { call, fake } = setup();
-  const stale = await call('POST', '/orders/1043/edit', { operationId: op(90), changes: [{ lineItemId: 'gid://shopify/LineItem/22', variantId: 'gid://shopify/ProductVariant/503', fromQuantity: 2, quantity: 3 }], additions: [], notify: false });
+  const stale = await call('POST', '/orders/1043/edit', { operationId: op(90), changes: [{ lineItemId: 'gid://shopify/LineItem/22', variantId: 'gid://shopify/ProductVariant/503', fromQuantity: 2, quantity: 3 }], additions: [], notify: false }, STOCKED);
   assert.deepEqual([stale.status, stale.body.code], [409, 'ORDER_CHANGED']);
-  const wrongVariant = await call('POST', '/orders/1043/edit', { operationId: op(91), changes: [{ lineItemId: 'gid://shopify/LineItem/22', variantId: 'gid://shopify/ProductVariant/999', fromQuantity: 1, quantity: 2 }], additions: [], notify: false });
+  const wrongVariant = await call('POST', '/orders/1043/edit', { operationId: op(91), changes: [{ lineItemId: 'gid://shopify/LineItem/22', variantId: 'gid://shopify/ProductVariant/999', fromQuantity: 1, quantity: 2 }], additions: [], notify: false }, STOCKED);
   assert.equal(wrongVariant.status, 409);
   fake.next('PanelEditCommit', 'lost');
   const body = { operationId: op(92), changes: [{ lineItemId: 'gid://shopify/LineItem/22', variantId: 'gid://shopify/ProductVariant/503', fromQuantity: 1, quantity: 2 }], additions: [{ variantId: 'gid://shopify/ProductVariant/506', quantity: 1 }], notify: true };
-  assert.equal((await call('POST', '/orders/1043/edit', body)).body.state, 'uncertain');
-  const retry = await call('POST', '/orders/1043/edit', body);
+  assert.equal((await call('POST', '/orders/1043/edit', body, STOCKED)).body.state, 'uncertain');
+  const retry = await call('POST', '/orders/1043/edit', body, STOCKED);
   assert.deepEqual([retry.status, retry.body.reconciled], [200, true]);
   assert.equal(fake.count('PanelEditCommit'), 1);
   const raw = fake.raw(1043);
@@ -241,6 +331,81 @@ test('edit: changes and additions commit once; lost commit is reconciled; stale 
   assert.equal(raw.lastEditNotify, true);
   const shipped = await call('POST', '/orders/1045/edit', { operationId: op(93), changes: [{ lineItemId: 'gid://shopify/LineItem/41', variantId: null, fromQuantity: 2, quantity: 1 }], additions: [], notify: false });
   assert.equal(shipped.status, 422);
+});
+
+const EDIT_LOST = { operationId: op(94), changes: [{ lineItemId: 'gid://shopify/LineItem/22', variantId: 'gid://shopify/ProductVariant/503', fromQuantity: 1, quantity: 2 }], additions: [{ variantId: 'gid://shopify/ProductVariant/506', quantity: 2 }], notify: false };
+async function lostEdit(tamper) {
+  const ctx = setup();
+  ctx.fake.next('PanelEditCommit', 'lost');
+  assert.equal((await ctx.call('POST', '/orders/1043/edit', EDIT_LOST, STOCKED)).body.state, 'uncertain');
+  tamper?.(ctx.fake.raw(1043));
+  return { ...ctx, retry: await ctx.call('POST', '/orders/1043/edit', EDIT_LOST, STOCKED) };
+}
+test('edit reconciliation: every change and addition of the stored plan must match the order', async () => {
+  const exact = await lostEdit();
+  assert.deepEqual([exact.retry.status, exact.retry.body.reconciled], [200, true]);
+  for (const [name, tamper] of [
+    ['added line has another variant', raw => { raw.lines.at(-1).variantId = 'gid://shopify/ProductVariant/999'; }],
+    ['added line has another quantity', raw => { raw.lines.at(-1).current = 1; }],
+    ['changed line ended elsewhere', raw => { raw.lines.find(line => line.id === '22').current = 3; }],
+    ['an untouched line changed too', raw => { raw.lines.find(line => line.id === '21').current = 0; }],
+    ['a foreign line appeared', raw => { raw.lines.push({ ...raw.lines.at(-1), id: '7777', variantId: 'gid://shopify/ProductVariant/501', current: 1 }); }],
+  ]) {
+    const { retry, fake, store } = await lostEdit(tamper);
+    assert.deepEqual([retry.status, retry.body.code], [409, 'REVIEW_REQUIRED'], name);
+    assert.match(retry.body.message, /Revisa el pedido en Shopify antes de repetir/, name);
+    assert.equal(store.getOperation(op(94)).state, 'failed', name);
+    assert.equal(fake.count('PanelEditCommit'), 1, name);
+  }
+});
+
+test('edit reconciliation: nothing applied is retried; a partial or mixed state is never inferred as success', async () => {
+  const { call, fake } = setup();
+  fake.next('PanelEditCommit', 'down');
+  assert.equal((await call('POST', '/orders/1043/edit', EDIT_LOST, STOCKED)).body.state, 'uncertain');
+  const retry = await call('POST', '/orders/1043/edit', EDIT_LOST, STOCKED);
+  assert.equal(retry.status, 200);
+  assert.equal(fake.count('PanelEditCommit'), 2);
+  const mixed = setup();
+  mixed.fake.next('PanelEditCommit', 'down');
+  await mixed.call('POST', '/orders/1043/edit', EDIT_LOST, STOCKED);
+  mixed.fake.raw(1043).lines.find(line => line.id === '22').current = 2; // the change is there, the addition is not
+  const partial = await mixed.call('POST', '/orders/1043/edit', EDIT_LOST, STOCKED);
+  assert.deepEqual([partial.status, partial.body.code], [409, 'REVIEW_REQUIRED']);
+  assert.equal(mixed.fake.count('PanelEditCommit'), 1);
+});
+
+test('edit stock: Celebraciones asks for it only before a new write or a retry, never for an applied receipt', async () => {
+  const { call, fake } = setup();
+  const body = { ...EDIT_LOST, operationId: op(95) };
+  const ask = await call('POST', '/orders/1043/edit', body);
+  assert.deepEqual([ask.status, ask.body.code], [409, 'STOCK_CHECK_REQUIRED']);
+  assert.equal(fake.calls.length, 0);
+  assert.equal((await call('POST', '/orders/1043/edit', body, STOCKED)).status, 200);
+  // Same key again, without a new stock check: the stored receipt, no stock needed.
+  const receipt = await call('POST', '/orders/1043/edit', body);
+  assert.deepEqual([receipt.status, receipt.body.ok], [200, true]);
+  assert.equal(fake.count('PanelEditCommit'), 1);
+  // A decrease never needs stock.
+  const less = await call('POST', '/orders/1043/edit', { operationId: op(96), changes: [{ lineItemId: 'gid://shopify/LineItem/21', variantId: null, fromQuantity: 1, quantity: 0 }], additions: [], notify: false });
+  assert.equal(less.status, 200);
+  // A pending write whose retry would resend asks for stock again before resending.
+  const pending = setup();
+  pending.fake.next('PanelEditCommit', 'down');
+  await pending.call('POST', '/orders/1043/edit', { ...EDIT_LOST, operationId: op(97) }, STOCKED);
+  const retryAsk = await pending.call('POST', '/orders/1043/edit', { ...EDIT_LOST, operationId: op(97) });
+  assert.deepEqual([retryAsk.status, retryAsk.body.code], [409, 'STOCK_CHECK_REQUIRED']);
+  assert.equal(pending.fake.count('PanelEditCommit'), 1);
+});
+
+test('gateway: stockVerified is accepted only as true and only from the trusted actor', async () => {
+  assert.equal(portalOrdersActor(STOCKED, SHOP).stockVerified, true);
+  assert.equal(portalOrdersActor(ADMIN, SHOP).stockVerified, false);
+  assert.throws(() => portalOrdersActor({ ...ADMIN, stockVerified: 'yes' }, SHOP));
+  const { call, fake } = setup();
+  const sneaky = await call('POST', '/orders/1043/edit', { ...EDIT_LOST, operationId: op(98), stockVerified: true });
+  assert.equal(sneaky.body.code, 'STOCK_CHECK_REQUIRED');
+  assert.equal(fake.calls.length, 0);
 });
 
 test('dispatch with tracking and notify; pickup ready then delivered without a shipping email', async () => {

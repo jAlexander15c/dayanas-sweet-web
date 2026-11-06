@@ -137,11 +137,32 @@ test('editar: solo variantes con stock; sin stock se rechaza en Inventario antes
   assert.deepEqual([noStock.status, noStock.body.code], [409, 'NO_STOCK']);
   const unknown = await call('pedidos/orders/1043/edit', { session: admin.session, password, body: { operationId: op(41), changes: [{ lineItemId: 'gid://shopify/LineItem/22', variantId: null, fromQuantity: 1, quantity: 2 }], additions: [], notify: false } });
   assert.equal(unknown.body.code, 'NO_STOCK');
-  assert.equal(forwarded.length, 0);
+  // Celebraciones was only asked whether a write would be sent: no stock flag, no Shopify edit.
+  assert.ok(forwarded.length >= 2 && forwarded.every(input => input.actor.stockVerified === undefined));
+  assert.equal(fake.calls.filter(name => name.startsWith('PanelEdit')).length, 0);
   const ok = await call('pedidos/orders/1043/edit', { session: admin.session, password, body: { operationId: op(42), changes: [{ lineItemId: 'gid://shopify/LineItem/22', variantId: 'gid://shopify/ProductVariant/503', fromQuantity: 1, quantity: 2 }], additions: [], notify: true } });
   assert.equal(ok.status, 200);
   assert.equal(fake.count('PanelEditCommit'), 1);
   assert.ok(stockReads() >= 2);
+});
+
+test('reintento de una edición ya aplicada que consumió la última unidad: devuelve el recibo, no NO_STOCK', async () => {
+  const stock = new Map([['gid://shopify/ProductVariant/503', 1]]);
+  const { h, call, fake, forwarded } = await setup({ stock });
+  const admin = await h.activate('dayana', ['admin']);
+  const data = { session: admin.session, password, body: { operationId: op(60), changes: [{ lineItemId: 'gid://shopify/LineItem/22', variantId: 'gid://shopify/ProductVariant/503', fromQuantity: 1, quantity: 2 }], additions: [], notify: false } };
+  const first = await call('pedidos/orders/1043/edit', data);
+  assert.equal(first.status, 200);
+  assert.equal(forwarded.at(-1).actor.stockVerified, true);
+  stock.set('gid://shopify/ProductVariant/503', 0); // la edición se llevó la última unidad
+  const again = await call('pedidos/orders/1043/edit', data);
+  assert.deepEqual([again.status, again.body.ok], [200, true]);
+  assert.equal(forwarded.at(-1).actor.stockVerified, undefined);
+  assert.equal(fake.count('PanelEditCommit'), 1);
+  // El navegador no puede saltarse el chequeo: stockVerified en el cuerpo se ignora.
+  const sneaky = await call('pedidos/orders/1043/edit', { session: admin.session, password, body: { operationId: op(61), stockVerified: true, changes: [{ lineItemId: 'gid://shopify/LineItem/21', variantId: 'gid://shopify/ProductVariant/501', fromQuantity: 1, quantity: 2 }], additions: [], notify: false } });
+  assert.deepEqual([sneaky.status, sneaky.body.code], [409, 'NO_STOCK']);
+  assert.equal(fake.count('PanelEditCommit'), 1);
 });
 
 test('respuesta perdida a través del portal: el reintento con la misma clave concilia sin repetir el cobro', async () => {

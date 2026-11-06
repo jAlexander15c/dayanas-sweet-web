@@ -9,7 +9,7 @@ import { createOrdersStore, sqlFromStorage } from '../../celebraciones/src/order
 import { createOrdersService } from '../../celebraciones/src/orders-service.mjs';
 import { cancellableOrder, createFakeShopify, sampleOrders } from '../../celebraciones/test/fake-shopify-orders.mjs';
 
-const mock = createShopifyMock(), emails = [], orders = createFakeShopify({ orders: [...sampleOrders(), cancellableOrder()] });
+const mock = createShopifyMock(), emails = [], orders = createFakeShopify({ orders: [...sampleOrders(), cancellableOrder()], jobPolls: 1 });
 const forwarded = [];
 const stock = { 'gid://shopify/ProductVariant/503': 4, 'gid://shopify/ProductVariant/506': 5, 'gid://shopify/ProductVariant/501': 0 };
 const variantNodes = [

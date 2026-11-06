@@ -5,6 +5,9 @@
 //  - refundCreate requires @idempotent(key:) since 2026-04: https://shopify.dev/docs/api/admin-graphql/2026-10/mutations/refundCreate
 //  - orderMarkAsPaid / orderCancel / fulfillmentCreate / orderEditCommit have no idempotency key:
 //    the service reconciles by reading the order before any retry.
+//  - orderCancel is asynchronous: it returns a Job { id done } and the order is cancelled when the
+//    job finishes. https://shopify.dev/docs/api/admin-graphql/latest/mutations/orderCancel
+//    The job is read with the `job(id:)` query: https://shopify.dev/docs/api/admin-graphql/latest/queries/job
 
 export function orderError(status, code, message, extra = {}) {
   return Object.assign(new Error(message), { status, code, ...extra });
@@ -118,6 +121,11 @@ export function createShopifyOrdersClient({ transport }) {
     markAsPaid: id => graphql(`mutation PanelMarkAsPaid($input: OrderMarkAsPaidInput!) { orderMarkAsPaid(input: $input) { order { id displayFinancialStatus ${bag('totalOutstandingSet')} } userErrors { field message } } }`, { input: { id } }, 'orderMarkAsPaid', { mutation: true }),
     refund: (input, key) => graphql(`mutation PanelRefund($input: RefundInput!, $key: String!) { refundCreate(input: $input) @idempotent(key: $key) { refund { id note ${bag('totalRefundedSet')} } userErrors { field message } } }`, { input, key }, 'refundCreate', { mutation: true }),
     cancel: variables => graphql(`mutation PanelCancel($orderId: ID!, $reason: OrderCancelReason!, $restock: Boolean!, $notifyCustomer: Boolean, $staffNote: String, $refundMethod: OrderCancelRefundMethodInput) { orderCancel(orderId: $orderId, reason: $reason, restock: $restock, notifyCustomer: $notifyCustomer, staffNote: $staffNote, refundMethod: $refundMethod) { job { id done } orderCancelUserErrors { field message code } } }`, variables, 'orderCancel', { mutation: true, errorsField: 'orderCancelUserErrors' }),
+    /** Background job of an asynchronous mutation; null when Shopify no longer knows the id. */
+    async job(id) {
+      const value = await graphql(`query PanelJob($id: ID!) { job(id: $id) { id done } }`, { id }, 'job');
+      return value ? { id: value.id, done: value.done === true } : null;
+    },
     fulfill: fulfillment => graphql(`mutation PanelFulfill($fulfillment: FulfillmentInput!) { fulfillmentCreate(fulfillment: $fulfillment) { fulfillment { id status } userErrors { field message } } }`, { fulfillment }, 'fulfillmentCreate', { mutation: true }),
     preparedForPickup: fulfillmentOrderIds => graphql(`mutation PanelReady($input: FulfillmentOrderLineItemsPreparedForPickupInput!) { fulfillmentOrderLineItemsPreparedForPickup(input: $input) { userErrors { field message } } }`, { input: { lineItemsByFulfillmentOrder: fulfillmentOrderIds.map(fulfillmentOrderId => ({ fulfillmentOrderId })) } }, 'fulfillmentOrderLineItemsPreparedForPickup', { mutation: true }),
     async editBegin(id) {

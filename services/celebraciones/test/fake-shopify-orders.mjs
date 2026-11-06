@@ -36,8 +36,23 @@ export function cancellableOrder() {
     lines: [{ id: '61', title: 'Brownie Box', variantTitle: null, sku: 'SKU-61', unitCents: 2800, quantity: 1, current: 1, fulfilled: 0, variantId: 'gid://shopify/ProductVariant/502' }] };
 }
 
-export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026-11-06T15:20:00Z' } = {}) {
+export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026-11-06T15:20:00Z', jobPolls = 0 } = {}) {
   const state = new Map();
+  const jobs = new Map();
+  /** Finishes a cancel job. cancel:false = the job ends without cancelling; refund:false = cancelled, refund not shown yet. */
+  function finishJob(id, { cancel = true, refund = true } = {}) {
+    const job = jobs.get(id);
+    if (!job || job.done) return;
+    job.done = true;
+    const order = state.get(job.orderId);
+    order.cancelling = null;
+    if (!cancel) return;
+    order.cancelledAt = clock();
+    if (refund && job.input.refundMethod?.originalPaymentMethodsRefund) {
+      const cents = order.receivedCents - order.refundedCents;
+      if (cents > 0) { order.refunds.push({ id: `gid://shopify/Refund/${nextId++}`, createdAt: clock(), note: 'Cancel', cents }); order.refundedCents += cents; }
+    }
+  }
   let nextId = 9000;
   const queue = [];
   const calls = [];
@@ -141,13 +156,25 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
       idempotency.set(v.key, result);
       return { refundCreate: result };
     },
+    // orderCancel is asynchronous: it returns a Job and the order is cancelled (and
+    // refunded) only when that job finishes. The job finishes with fake.runJobs() or,
+    // with { jobPolls: n }, on the n-th `job(id)` query.
     PanelCancel: v => {
       const order = find(v.orderId);
       if (order.cancelledAt) return { orderCancel: { job: null, orderCancelUserErrors: [userError('Order is already cancelled')] } };
+      if (order.cancelling) return { orderCancel: { job: null, orderCancelUserErrors: [userError('Order is already being cancelled')] } };
       if (order.fulfillments.length) return { orderCancel: { job: null, orderCancelUserErrors: [userError('Cannot cancel an order with fulfillments')] } };
-      order.cancelledAt = clock(); order.cancelInput = v; moneyCalls++;
-      if (v.refundMethod?.originalPaymentMethodsRefund) { const cents = order.receivedCents - order.refundedCents; if (cents > 0) { order.refunds.push({ id: `gid://shopify/Refund/${nextId++}`, createdAt: clock(), note: 'Cancel', cents }); order.refundedCents += cents; } }
-      return { orderCancel: { job: { id: `gid://shopify/Job/${nextId++}`, done: false }, orderCancelUserErrors: [] } };
+      const id = `gid://shopify/Job/${nextId++}`;
+      order.cancelInput = v; order.cancelling = id; moneyCalls++;
+      jobs.set(id, { orderId: order.id, input: v, done: false, polls: 0 });
+      return { orderCancel: { job: { id, done: false }, orderCancelUserErrors: [] } };
+    },
+    PanelJob: v => {
+      const job = jobs.get(v.id);
+      if (!job) return { job: null };
+      job.polls++;
+      if (!job.done && jobPolls && job.polls >= jobPolls) finishJob(v.id);
+      return { job: { id: v.id, done: job.done } };
     },
     PanelFulfill: v => {
       const fo = v.fulfillment.lineItemsByFulfillmentOrder[0].fulfillmentOrderId;
@@ -197,6 +224,8 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
     fetch: fetchImpl, calls, state,
     get moneyCalls() { return moneyCalls; },
     next(op, mode) { queue.push({ op, mode }); },
+    runJobs(options) { for (const id of jobs.keys()) finishJob(id, options); },
+    pendingJobs: () => [...jobs.values()].filter(job => !job.done).length,
     order: id => render(state.get(String(id))),
     raw: id => state.get(String(id)),
     count: op => calls.filter(name => name === op).length,
