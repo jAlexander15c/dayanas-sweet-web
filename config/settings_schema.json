@@ -1500,7 +1500,7 @@
         "id": "ds_batch_ship",
         "label": "Fecha de envío",
         "placeholder": "Ej.: lunes 9 de noviembre",
-        "info": "Día en que los pedidos salen de Houston por USPS Priority. Es la fecha de salida; la llegada depende del transporte."
+        "info": "Día en que los pedidos salen de Houston por USPS Ground Advantage. Es la fecha de salida; la llegada depende del transporte."
       },
       {
         "type": "textarea",

@@ -23,7 +23,7 @@
       {%- else -%}
         {%- assign bake_text = settings.ds_batch_bake | strip -%}
         {%- if bake_text != blank %}Preparamos tu pedido el {{ bake_text | escape }}. {% endif -%}
-        Enviamos tu pedido el {{ settings.ds_batch_ship | strip | escape }} por USPS Priority. Envío gratis en pedidos desde $100; si no, ves el costo antes de pagar.
+        Antes de pagar, elige retiro gratis o envío a tu dirección. Para retirar, espera el aviso de que tu pedido está listo. Si eliges USPS Ground Advantage, despachamos el {{ settings.ds_batch_ship | strip | escape }}. Tránsito estimado: 2–5 días hábiles desde que USPS recibe el paquete, sin garantía de fecha de entrega. Envío gratis desde $100; en pedidos menores, el costo aparece antes del pago.
       {%- endif -%}
     </span>
   </p>
