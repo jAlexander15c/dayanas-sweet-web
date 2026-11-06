@@ -176,7 +176,7 @@ function openSheet({ eyebrow, title, danger = false, fields, confirm, backLabel 
   $('#sheet-back').onclick = () => { if (busy()) return; dialog.close(); };
   $('#sheet-form').onsubmit = async event => {
     event.preventDefault();
-    if (op?.sending) return;
+    if (op?.sending || op?.final) return;
     if (!op) {
       let body;
       try { body = build(); } catch (error) { $('#sheet-error').textContent = error.message; return; }
@@ -212,26 +212,37 @@ async function send(after) {
       error.textContent = failure.message;
       confirmButton.disabled = false; backButton.disabled = false; backButton.hidden = false;
       if ($('#sheet-password')) { $('#sheet-password').disabled = false; $('#sheet-password').value = ''; $('#sheet-password').focus(); }
-    } else if (failure.status && NOT_APPLIED.has(failure.code)) {
+    } else if (failure.status && (NOT_APPLIED.has(failure.code) || (failure.code === 'SHOPIFY_UNAVAILABLE' && failure.result?.final === true))) {
       // Rechazo que garantiza que no se aplicó nada: se corrige el formulario y el próximo intento usa una clave nueva.
       op = null; error.textContent = failure.message;
       confirmButton.disabled = false; backButton.disabled = false; backButton.hidden = false;
       for (const input of dialog.querySelectorAll('input,select,textarea')) input.disabled = false;
     } else {
-      // Puede ser de una operación ya aplicada: se conserva la clave y el reintento solo consulta ese mismo cambio.
-      // 4xx (p. ej. «Revisa el pedido en Shopify»): respuesta guardada; se puede cerrar. 5xx o sin respuesta: solo «Reintentar».
-      const uncertain = failure.result?.state === 'uncertain', review = !uncertain && failure.status >= 400 && failure.status < 500;
-      unconfirmed(uncertain || review ? failure.message : UNCONFIRMED, review);
+      // Pendiente: sin respuesta, 502 incierto o un 5xx que Celebraciones no marcó como definitivo (p. ej. la
+      // respuesta se perdió en el camino). Se conserva la clave y el reintento solo consulta ese mismo cambio.
+      const result = failure.result || {};
+      const pending = !failure.status || result.state === 'uncertain' || (failure.status >= 500 && result.final !== true);
+      if (pending) unconfirmed(result.state === 'uncertain' ? failure.message : UNCONFIRMED);
+      else reviewed(failure.message);
     }
   }
 }
-function unconfirmed(text, canClose = false) {
+/** Incertidumbre pendiente: solo «Reintentar», sin «Volver» ni Escape. */
+function unconfirmed(text) {
   op.unconfirmed = true;
   $('#sheet-error').textContent = text;
   $('#sheet-confirm').textContent = 'Reintentar';
   $('#sheet-confirm').disabled = false;
+  $('#sheet-back').hidden = true;
+}
+/** Resultado definitivo que pide revisar (CANCEL_FAILED, REVIEW_REQUIRED…): se cierra con «Volver» o Escape y esta hoja ya no escribe. */
+function reviewed(text) {
+  op.unconfirmed = false; op.final = true;
+  $('#sheet-error').textContent = text;
+  $('#sheet-confirm').hidden = true;
   $('#sheet-back').disabled = false;
-  $('#sheet-back').hidden = !canClose;
+  $('#sheet-back').hidden = false;
+  $('#sheet-back').focus();
 }
 function done(message) {
   return async result => { list = null; await showDetail(detail.id, result?.warning || message); };
@@ -451,7 +462,8 @@ if (portal?.mode && view()) {
   addEventListener('hashchange', () => { if (location.hash.startsWith('#pedidos') && canSee()) show(); });
   sheet().addEventListener('cancel', event => { if (busy()) event.preventDefault(); });
   // Escape está bloqueado mientras no hay confirmación; solo un cierre forzado (sesión vencida) llega aquí.
-  sheet().addEventListener('close', () => { if (op && !op.sending) op = null; });
+  // Al cerrar un resultado definitivo se vuelve a leer el pedido (solo lectura) para mostrar su estado real.
+  sheet().addEventListener('close', () => { const reread = op?.final && detail; if (op && !op.sending) op = null; if (reread) showDetail(detail.id); });
   // La lista se esconde si se abre otra sección; la sesión vencida la maneja staff-ui.
   for (const id of ['home', 'categories', 'history', 'users', 'celebraciones']) $(`#${id}`)?.addEventListener('click', () => { if (!busy()) view().hidden = true; });
   if (location.hash.startsWith('#pedidos') && canSee()) show();

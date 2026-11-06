@@ -115,16 +115,21 @@ Cómo se concilia cada acción:
 
 - Si `done` es `false`, el panel guarda el id del job, deja la operación en `pending` y responde 202 `{ state: 'processing', retryable: true }`.
 - En el reintento, y también al abrir el detalle, consulta primero [`job(id:)`](https://shopify.dev/docs/api/admin-graphql/latest/queries/job) y después el pedido. Nunca reenvía `orderCancel` mientras el job siga pendiente.
-- Job terminado y pedido con `cancelledAt` → éxito. Job terminado sin `cancelledAt` → fallo 409 `CANCEL_FAILED`: «Shopify terminó sin cancelar el pedido. Revisa el pedido en Shopify antes de repetir.». Job desconocido para Shopify y pedido sin cancelar → `REVIEW_REQUIRED`.
+- Job terminado y pedido con `cancelledAt` → éxito. Job terminado sin `cancelledAt` → fallo 409 `CANCEL_FAILED`: «Shopify terminó sin cancelar el pedido. Revisa el pedido en Shopify antes de repetir.». Job desconocido para Shopify y pedido sin cancelar → 409 `REVIEW_REQUIRED`.
 - **El reembolso de la cancelación** viaja en el mismo job. Si se pidió reembolso, el éxito exige además que el pago neto quede en 0. Si el pedido ya está cancelado pero el reembolso todavía no aparece, mientras el job siga en curso se espera. Con el job terminado, la operación termina con éxito y con el aviso «El pedido se canceló, pero Shopify todavía no muestra el reembolso. Revisa los pagos del pedido en Shopify.».
-- Si se perdió la respuesta y no se conoce el id del job, no se reenvía hasta 2 minutos después del último intento (`CANCEL_SETTLE_MS`). Antes de eso, el reintento responde «procesando». Pasado ese tiempo, si el pedido sigue sin cancelar, se reenvía una vez el mismo plan.
+- **El tiempo nunca habilita reenviar una cancelación de resultado desconocido.** Si se perdió la respuesta y no se conoce el id del job, la operación sigue en `pending` y cada reintento responde 202 «procesando» y solo consulta el pedido.
+  - Si 10 minutos después del último intento (`CANCEL_REVIEW_MS`) el pedido sigue sin `cancelledAt`, la operación se cierra como fallo 409 `REVIEW_REQUIRED`: «No pudimos confirmar la cancelación. Revisa el pedido en Shopify antes de intentarlo de nuevo.». También se cierra así al abrir el detalle.
+  - El cliente no puede distinguir un error de red antes de enviar de una respuesta perdida después de que Shopify la aplicó, así que los dos se tratan igual: sin reenvío. Solo un fallo antes de la mutación, como no poder obtener el token, es un rechazo definitivo; ahí no se guardó ningún efecto y el panel pide intentarlo de nuevo con una clave nueva.
+  - Ninguna otra acción reenvía por tiempo. Las demás reenvían solo cuando el pedido muestra que el cambio no se aplicó: saldo igual, cantidades en el punto de partida, sin número de seguimiento.
 - Mientras haya una cancelación en curso, el detalle muestra «Shopify está procesando la cancelación de este pedido.» y oculta «Cancelar pedido».
 
-En la interfaz, la clave solo se descarta ante un rechazo que garantiza que Shopify no recibió el cambio: validación, permisos, monto o pedido distinto, stock, `userErrors` de Shopify o `OPERATION_REUSED`. En ese caso se corrige el formulario y el próximo intento usa una clave nueva.
+Las respuestas definitivas de Celebraciones llevan `final: true`: un rechazo antes de escribir o un resultado guardado. Las pendientes, 202 «procesando» y 502 incierto, no lo llevan.
+
+En la interfaz, la clave solo se descarta ante un rechazo que garantiza que Shopify no recibió el cambio: validación, permisos, monto o pedido distinto, stock, `userErrors` de Shopify, `OPERATION_REUSED`, o `SHOPIFY_UNAVAILABLE` con `final: true`. En ese caso se corrige el formulario y el próximo intento usa una clave nueva.
 
 - Contraseña equivocada o faltante: se conserva el mismo cambio y la misma clave, y solo se vuelve a pedir la contraseña.
-- Sin respuesta, 5xx, 502 `REVIEW_REQUIRED` con `state: 'uncertain'` o 202 «procesando»: solo queda «Reintentar», sin «Volver» ni Escape. El reintento usa la misma clave y el mismo contenido. Es el mismo flujo que el resto del panel, con el plazo de 30 s de `staff-ui.js`.
-- Otro 4xx que pueda venir de una operación ya registrada, como `REVIEW_REQUIRED` o `CANCEL_FAILED`: muestra el mensaje y conserva la clave. Se puede cerrar.
+- **Incertidumbre pendiente** (sin respuesta, 502 incierto, 202 «procesando», o un 5xx sin `final`, por ejemplo una respuesta RPC perdida entre Inventario y Celebraciones): solo queda «Reintentar», sin «Volver» ni Escape. El reintento usa la misma clave y el mismo contenido. Es el mismo flujo que el resto del panel, con el plazo de 30 s de `staff-ui.js`.
+- **Resultado definitivo que pide revisar** (por ejemplo `REVIEW_REQUIRED` o `CANCEL_FAILED`): muestra el mensaje, oculta el botón de confirmar y deja cerrar con «Volver» o Escape. Esa hoja ya no escribe nada. Al cerrarla, el panel vuelve a leer el pedido, solo lectura, para mostrar el historial real.
 
 Qué dice Shopify sobre la idempotencia (consultado en shopify.dev, 2026-10):
 
@@ -164,7 +169,9 @@ Qué dice Shopify sobre la idempotencia (consultado en shopify.dev, 2026-10):
 - `services/celebraciones/test/orders-service.test.mjs`: cliente, servicio y pasarela contra un Shopify simulado (`test/fake-shopify-orders.mjs`). En el simulador, `orderCancel` devuelve un job pendiente y cancela solo cuando el job termina. Cubre:
   - doble toque
   - respuesta perdida después de que Shopify aplicó el cambio
-  - cancelación asíncrona: job pendiente sin reenvío, job terminado sin cancelar, reembolso que no aparece, job leído antes que el pedido, reenvío solo pasado el tiempo de espera
+  - cancelación asíncrona: job pendiente sin reenvío, job terminado sin cancelar, reembolso que no aparece, job leído antes que el pedido
+  - respuesta perdida o red caída con job desconocido: nunca un segundo `orderCancel` por tiempo; a los 10 minutos, `REVIEW_REQUIRED` (también desde el detalle)
+  - `final: true` solo en respuestas definitivas
   - conciliación de edición por variante y cantidad, con mezcla y cambios ajenos → `REVIEW_REQUIRED`
   - stock pedido solo antes de escribir, nunca para un recibo
   - misma clave con otro contenido
@@ -179,4 +186,4 @@ Qué dice Shopify sobre la idempotencia (consultado en shopify.dev, 2026-10):
   - que la contraseña no se reenvíe
   - stock al editar
   - reintento de una edición ya aplicada que consumió la última unidad: devuelve el recibo, no `NO_STOCK`
-- `services/inventario/test/pedidos-ui-check.mjs`: navegador a 390×844 y 1440×1000 con las acciones a–g, la respuesta perdida en el cobro, un 503 en el reembolso que conserva la clave y la cancelación asíncrona («procesando» → «Reintentar» con la misma clave). Las capturas quedan en `docs/inventario/evidence/pedidos-*.png`.
+- `services/inventario/test/pedidos-ui-check.mjs`: navegador a 390×844 y 1440×1000 con las acciones a–g, la respuesta perdida en el cobro, una respuesta RPC perdida en el reembolso que conserva la clave, la cancelación asíncrona («procesando» → «Reintentar» con la misma clave, Escape bloqueado) y un fallo definitivo (`CANCEL_FAILED`) que se cierra con «Volver» y con Escape. Las capturas quedan en `docs/inventario/evidence/pedidos-*.png`.

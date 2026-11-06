@@ -11,6 +11,7 @@ import { cancellableOrder, createFakeShopify, sampleOrders } from '../../celebra
 
 const mock = createShopifyMock(), emails = [], orders = createFakeShopify({ orders: [...sampleOrders(), cancellableOrder()], jobPolls: 1 });
 const forwarded = [];
+let rpcLost = false;
 const stock = { 'gid://shopify/ProductVariant/503': 4, 'gid://shopify/ProductVariant/506': 5, 'gid://shopify/ProductVariant/501': 0 };
 const variantNodes = [
   { id: 'gid://shopify/ProductVariant/503', title: 'Caja de 6', price: '12.00', inventoryQuantity: 4, inventoryItem: { tracked: true }, product: { title: 'Galletas de avena', status: 'ACTIVE' } },
@@ -33,7 +34,13 @@ export class InventoryStore extends ProductionInventoryStore {
     const transport = createShopifyAdminTransport({ shop: env.SHOPIFY_SHOP, clientId: 'synthetic-celebraciones', secret: 'synthetic-secret', fetchImpl: orders.fetch });
     const ordersService = createOrdersService({ client: createShopifyOrdersClient({ transport }), store: createOrdersStore(sqlFromStorage(ctx.storage)) });
     // Same contract as the RPC service binding: a structured clone of the input, nothing else.
-    const binding = { handle: async input => { const copy = JSON.parse(JSON.stringify(input)); forwarded.push(copy); return handleStaffGateway(copy, { config: { shop: env.SHOPIFY_SHOP }, ordersService }); } };
+    // rpcLost: Celebraciones handles the call (and may apply it), then the RPC answer is lost.
+    const binding = { handle: async input => {
+      const copy = JSON.parse(JSON.stringify(input)); forwarded.push(copy);
+      const result = await handleStaffGateway(copy, { config: { shop: env.SHOPIFY_SHOP }, ordersService });
+      if (rpcLost && copy.method === 'POST') { rpcLost = false; throw new Error('RPC answer lost'); }
+      return result;
+    } };
     super(ctx, { ...env, CELEBRACIONES: binding });
   }
 }
@@ -42,6 +49,9 @@ export default { async fetch(request, env, ctx) {
   const url = new URL(request.url), path = url.pathname;
   if (path === '/__test/emails') return Response.json(emails);
   if (path === '/__test/pedidos') return Response.json({ calls: orders.calls, moneyCalls: orders.moneyCalls, forwarded: forwarded.map(input => ({ actor: input.actor, path: input.path, body: input.body })) });
-  if (path === '/__test/pedidos-next') { orders.next(url.searchParams.get('op'), url.searchParams.get('mode')); return Response.json({ ok: true }); }
+  if (path === '/__test/pedidos-next') {
+    if (url.searchParams.get('op') === 'RPC') rpcLost = true; else orders.next(url.searchParams.get('op'), url.searchParams.get('mode'));
+    return Response.json({ ok: true });
+  }
   return worker.fetch(request, env, ctx);
 } };

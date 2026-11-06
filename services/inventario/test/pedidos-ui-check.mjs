@@ -209,8 +209,8 @@ try {
   await screenshots(page, 'reembolso');
   await page.getByRole('button', { name: 'Revisar y reembolsar $29.00' }).click();
   await page.getByRole('heading', { name: 'Revisa el reembolso' }).waitFor();
-  // Un 503 ambiguo (Shopify no respondió al leer el pedido) no descarta la clave: solo «Reintentar».
-  await worker.fetch('/__test/pedidos-next?op=PanelOrder&mode=down');
+  // Celebraciones aplica el reembolso pero se pierde la respuesta RPC: error ambiguo, se conserva la clave; solo «Reintentar».
+  await worker.fetch('/__test/pedidos-next?op=RPC&mode=lost');
   await page.locator('#order-sheet').getByRole('button', { name: 'Reembolsar $29.00', exact: true }).click();
   await page.locator('#order-sheet').getByText('No pudimos confirmar si se guardó.', { exact: false }).waitFor();
   assert.equal(await page.locator('#sheet-back').isHidden(), true, 'sin salida mientras no se confirme');
@@ -226,7 +226,26 @@ try {
   // g) Cancelar un pedido abierto: motivo, reembolso, stock y aviso, con contraseña.
   await page.evaluate(() => { location.hash = 'pedidos/1046'; });
   await page.getByRole('heading', { name: 'Pedido #1046' }).waitFor();
-  await page.getByRole('button', { name: 'Cancelar pedido' }).click();
+  const orderSheet = page.locator('#order-sheet');
+  // Un resultado definitivo que exige revisión (job terminado sin cancelar) se puede cerrar con «Volver» o Escape.
+  for (const close of ['volver', 'escape']) {
+    await page.locator('#pedidos-view').getByRole('button', { name: 'Cancelar pedido' }).click();
+    await page.getByLabel('Motivo').selectOption('INVENTORY');
+    await page.getByLabel('Tu contraseña').fill(password);
+    await orderSheet.getByRole('button', { name: 'Cancelar pedido' }).click();
+    await orderSheet.getByText('Shopify todavía está procesando la cancelación.', { exact: false }).waitFor();
+    await page.keyboard.press('Escape');
+    assert.equal(await sheetOpen(page), true, 'pendiente: Escape no cierra');
+    assert.equal(await page.locator('#sheet-back').isHidden(), true, 'pendiente: sin «Volver»');
+    await worker.fetch('/__test/pedidos-next?op=PanelJob&mode=fail');
+    await orderSheet.getByRole('button', { name: 'Reintentar', exact: true }).click();
+    await orderSheet.getByText('Shopify terminó sin cancelar el pedido.', { exact: false }).waitFor();
+    assert.equal(await page.locator('#sheet-confirm').isHidden(), true, 'definitivo: sin escrituras nuevas desde esta hoja');
+    if (close === 'volver') await page.locator('#sheet-back').click(); else await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('#order-sheet').open);
+    await page.locator('#pedidos-view').getByText('no se aplicó', { exact: false }).first().waitFor();
+  }
+  await page.locator('#pedidos-view').getByRole('button', { name: 'Cancelar pedido' }).click();
   await page.getByText('Pedido #1046 · Elena Vidal · $37.00').waitFor();
   await page.getByText('Reembolsar $37.00 a la forma de pago original').waitFor();
   await page.getByText('Regresar las cajas al stock').waitFor();
@@ -242,10 +261,11 @@ try {
   await page.getByText('Pedido cancelado.').waitFor();
   await page.getByText('Este pedido está cancelado.').waitFor();
   shop = await state();
-  assert.equal(shop.calls.filter(c => c === 'PanelCancel').length, 1);
+  assert.equal(shop.calls.filter(c => c === 'PanelCancel').length, 3, 'una cancelación por intento, nunca un reenvío');
   assert.ok(shop.calls.includes('PanelJob'), 'se consultó el job de Shopify');
   const cancelKeys = shop.forwarded.filter(f => f.path === '/orders/1046/cancel').map(f => f.body.operationId);
-  assert.deepEqual([cancelKeys.length, new Set(cancelKeys).size], [2, 1]);
+  assert.deepEqual([cancelKeys.length, new Set(cancelKeys).size], [6, 3]);
+  for (const key of new Set(cancelKeys)) assert.equal(cancelKeys.filter(k => k === key).length, 2, 'cada reintento con su misma clave');
 
   // Rol inventario: ve, anota y despacha; el dinero queda oculto y el servidor responde 403.
   const kitchen = await newPage(kitchenSession);
@@ -262,5 +282,5 @@ try {
   assert.equal(await events.locator('#pedidos').isHidden(), true);
 
   assert.deepEqual(errors, []);
-  console.log('PASS pedidos-ui-check: lista, detalle, nota, efectivo con respuesta perdida (1 cobro, misma clave), retiro listo/entregado, edición con stock, Celebraciones sin dinero, despacho con aviso de permiso, reembolso con tope y 503 con la misma clave, cancelación asíncrona (job) con la misma clave, roles; 390/1440 sin desbordes, 44 px, 0 errores JS.');
+  console.log('PASS pedidos-ui-check: lista, detalle, nota, efectivo con respuesta perdida (1 cobro, misma clave), retiro listo/entregado, edición con stock, Celebraciones sin dinero, despacho con aviso de permiso, reembolso con tope y respuesta RPC perdida con la misma clave, cancelación asíncrona (job) con la misma clave, fallo definitivo que se cierra con Volver/Escape, roles; 390/1440 sin desbordes, 44 px, 0 errores JS.');
 } finally { await browser?.close(); await worker.stop(); }

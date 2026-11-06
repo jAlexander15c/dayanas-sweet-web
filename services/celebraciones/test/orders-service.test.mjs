@@ -298,19 +298,53 @@ test('cancel: cancelled but the refund is not shown yet is reported, never assum
   assert.equal(fake.count('PanelCancel'), 1);
 });
 
-test('cancel: a request that never reached Shopify is resent once, only after the settle time', async () => {
-  const { call, fake, advance } = setup({ orders: [cancellableOrder()] });
-  const body = { operationId: op(85), reason: 'CUSTOMER', refund: false, restock: true, notify: false };
-  fake.next('PanelCancel', 'down');
+test('cancel: time never allows resending a cancellation whose job id was lost (lost or down)', async () => {
+  for (const mode of ['lost', 'down']) {
+    const { call, fake, advance, store } = setup({ orders: [cancellableOrder()] });
+    const body = { operationId: op(85), reason: 'CUSTOMER', refund: false, restock: true, notify: false };
+    fake.next('PanelCancel', mode);
+    assert.equal((await call('POST', '/orders/1046/cancel', body)).body.state, 'uncertain', mode);
+    advance(3 * 60_000); // more than the old 2-minute threshold, the job (if any) still pending
+    const later = await call('POST', '/orders/1046/cancel', body);
+    assert.deepEqual([later.status, later.body.state, later.body.final], [202, 'processing', undefined], mode);
+    advance(6 * 60_000);
+    assert.equal((await call('POST', '/orders/1046/cancel', body)).status, 202, mode);
+    assert.equal(fake.count('PanelCancel'), 1, mode);
+    assert.equal(store.getOperation(op(85)).state, 'pending', mode);
+  }
+});
+
+test('cancel: an unknown job still not cancelled after 10 minutes is closed as REVIEW_REQUIRED, with no second mutation', async () => {
+  const { call, fake, advance, store } = setup({ orders: [cancellableOrder()] });
+  const body = { operationId: op(88), reason: 'CUSTOMER', refund: true, restock: true, notify: false };
+  fake.next('PanelCancel', 'lost');
   assert.equal((await call('POST', '/orders/1046/cancel', body)).body.state, 'uncertain');
-  assert.equal((await call('POST', '/orders/1046/cancel', body)).status, 202);
+  advance(10 * 60_000 + 1);
+  const closed = await call('POST', '/orders/1046/cancel', body);
+  assert.deepEqual([closed.status, closed.body.code, closed.body.message, closed.body.final], [409, 'REVIEW_REQUIRED', MESSAGES.cancelUnknown, true]);
+  assert.equal(MESSAGES.cancelUnknown, 'No pudimos confirmar la cancelación. Revisa el pedido en Shopify antes de intentarlo de nuevo.');
+  assert.equal(store.getOperation(op(88)).state, 'failed');
+  assert.deepEqual((await call('POST', '/orders/1046/cancel', body)).body.code, 'REVIEW_REQUIRED');
   assert.equal(fake.count('PanelCancel'), 1);
-  advance(3 * 60_000);
-  assert.equal((await call('POST', '/orders/1046/cancel', body)).status, 202);
-  assert.equal(fake.count('PanelCancel'), 2);
-  fake.runJobs();
-  assert.equal((await call('POST', '/orders/1046/cancel', body)).status, 200);
-  assert.equal(fake.count('PanelCancel'), 2);
+  // Reading the detail closes it too, without any mutation.
+  const other = setup({ orders: [cancellableOrder()] });
+  other.fake.next('PanelCancel', 'lost');
+  await other.call('POST', '/orders/1046/cancel', { ...body, operationId: op(89) });
+  assert.equal((await other.call('GET', '/orders/1046')).body.cancelPending, true);
+  other.advance(10 * 60_000 + 1);
+  const detail = await other.call('GET', '/orders/1046');
+  assert.deepEqual([detail.body.cancelPending, detail.body.canCancel], [false, true]);
+  assert.equal(other.store.getOperation(op(89)).state, 'failed');
+  assert.equal(other.fake.count('PanelCancel'), 1);
+});
+
+test('definitive answers are marked final; pending ones are not', async () => {
+  const { call, fake } = setup({ orders: [cancellableOrder()] });
+  const rejected = await call('POST', '/orders/1046/cash', { operationId: op(110), expectedAmountCents: 100 });
+  assert.deepEqual([rejected.status, rejected.body.final], [409, true]);
+  fake.next('PanelCancel', 'lost');
+  const lost = await call('POST', '/orders/1046/cancel', { operationId: op(111), reason: 'CUSTOMER', refund: false, restock: true, notify: false });
+  assert.deepEqual([lost.status, lost.body.state, lost.body.final], [502, 'uncertain', undefined]);
 });
 
 test('edit: changes and additions commit once; lost commit is reconciled; stale quantities are rejected', async () => {

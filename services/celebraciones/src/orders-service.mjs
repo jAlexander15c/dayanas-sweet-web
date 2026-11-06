@@ -18,10 +18,12 @@ export const MESSAGES = Object.freeze({
   cancelFailed: 'Shopify terminó sin cancelar el pedido. Revisa el pedido en Shopify antes de repetir.',
   cancelRefund: 'El pedido se canceló, pero Shopify todavía no muestra el reembolso. Revisa los pagos del pedido en Shopify.',
   stockCheck: 'Hay que confirmar el stock antes de guardar.',
+  cancelUnknown: 'No pudimos confirmar la cancelación. Revisa el pedido en Shopify antes de intentarlo de nuevo.',
 });
-// orderCancel runs as a background job. When its id is unknown (the answer was lost) the
-// panel waits this long after the last attempt before it may resend.
-export const CANCEL_SETTLE_MS = 120_000;
+// orderCancel runs as a background job. When its id is unknown (the answer was lost) time never
+// allows a resend: the operation stays pending and, if the order still is not cancelled this long
+// after the last attempt, it is closed as REVIEW_REQUIRED for a person to check in Shopify.
+export const CANCEL_REVIEW_MS = 600_000;
 const REFUND_REASONS = { damaged: 'Llegó dañado', missing: 'Faltó un producto', customer: 'Pedido de la clienta', other: 'Otro motivo' };
 const CANCEL_REASONS = { CUSTOMER: 'La clienta lo pidió', INVENTORY: 'Sin stock para la tanda', DECLINED: 'Pago rechazado o fraude', OTHER: 'Otro motivo' };
 const MONEY_ACTIONS = new Set(['cash', 'refund', 'edit', 'cancel']);
@@ -274,26 +276,27 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
       },
       async reconcile(order, plan, operation) {
         const jobId = operation.progress?.jobId;
-        if (!jobId) return cancelVerdict(order, plan, undefined, settled(operation));
+        if (!jobId) return cancelVerdict(order, plan, undefined, expired(operation));
         // Job first, then the order: a job that finished after the first read must be judged on a fresh order.
         const job = await client.job(jobId);
-        return cancelVerdict(job?.done ? await client.order(plan.variables.orderId) : order, plan, job, settled(operation));
+        return cancelVerdict(job?.done ? await client.order(plan.variables.orderId) : order, plan, job, expired(operation));
       },
     },
   };
 
-  const settled = operation => now() - (operation.progress?.attemptedAt ?? operation.createdAt) >= CANCEL_SETTLE_MS;
+  const expired = operation => now() - (operation.progress?.attemptedAt ?? operation.createdAt) >= CANCEL_REVIEW_MS;
   // job: undefined = id unknown (answer lost); null = Shopify no longer knows it; { done }.
-  function cancelVerdict(order, plan, job, settledNow) {
+  // A cancellation of unknown outcome is never resent: no verdict here is 'retry'.
+  function cancelVerdict(order, plan, job, expiredNow) {
     const refundShown = !plan.refundCents || optionalCents(order.netPaymentSet) <= 0;
-    const running = job === undefined ? !settledNow : job?.done === false;
+    const running = job === undefined ? !expiredNow : job?.done === false;
     if (order.cancelledAt) {
       if (refundShown) return 'done';
       return running ? 'processing' : { done: true, warning: MESSAGES.cancelRefund };
     }
-    if (job === undefined) return settledNow ? 'retry' : 'processing';
+    if (job === undefined) return expiredNow ? conflict('REVIEW_REQUIRED', MESSAGES.cancelUnknown) : 'processing';
     if (job?.done === false) return 'processing';
-    return job?.done === true ? conflict('CANCEL_FAILED', MESSAGES.cancelFailed) : conflict('REVIEW_REQUIRED', MESSAGES.review);
+    return job?.done === true ? conflict('CANCEL_FAILED', MESSAGES.cancelFailed) : conflict('REVIEW_REQUIRED', MESSAGES.cancelUnknown);
   }
 
   function refundLines(value) {
@@ -416,16 +419,19 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
     async detail(id) {
       try {
         let operations = store.history(id);
-        // A cancellation still running in Shopify is settled here too: job first, then the order (cancelledAt).
-        const running = operations.filter(op => op.action === 'cancel' && op.state === 'pending' && op.progress?.jobId);
+        // A pending cancellation is settled here too (never resent): job first, then the order (cancelledAt).
+        const running = operations.filter(op => op.action === 'cancel' && op.state === 'pending');
         const jobs = new Map();
-        for (const op of running) { try { jobs.set(op.operationId, await client.job(op.progress.jobId)); } catch { /* asked again on the next read or retry */ } }
+        for (const op of running) {
+          if (!op.progress?.jobId) { jobs.set(op.operationId, undefined); continue; }
+          try { jobs.set(op.operationId, await client.job(op.progress.jobId)); } catch { /* asked again on the next read or retry */ }
+        }
         const order = await readOrder(id);
         const variants = await client.lineVariants(order.id);
         for (const op of running) {
           if (!jobs.has(op.operationId)) continue;
-          const verdict = cancelVerdict(order, op.plan, jobs.get(op.operationId), settled(op));
-          if (verdict !== 'processing' && verdict !== 'retry') conclude(op.operationId, verdict, true);
+          const verdict = cancelVerdict(order, op.plan, jobs.get(op.operationId), expired(op));
+          if (verdict !== 'processing') conclude(op.operationId, verdict, true);
         }
         if (running.length) operations = store.history(id);
         const pickup = isPickup(order), cancelPending = operations.some(op => op.action === 'cancel' && op.state === 'pending');
@@ -470,6 +476,15 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
       } catch (error) { return failure(error); }
     },
     async execute(action, id, body, actor) {
+      // final: true marks a definitive answer (rejected before any write, or a stored final result).
+      // Pending answers (202 processing, 502 uncertain) never carry it: the panel keeps the key and only retries.
+      const response = await run(action, id, body, actor);
+      const pending = response.status < 400 || ['uncertain', 'processing'].includes(response.body?.state) || response.body?.code === 'STOCK_CHECK_REQUIRED';
+      return pending ? response : { ...response, body: { ...response.body, final: true } };
+    },
+  });
+
+  async function run(action, id, body, actor) {
       const def = ACTIONS[action];
       try {
         if (!def || !/^\d{1,20}$/.test(id)) throw orderError(404, 'NOT_FOUND', 'No encontramos esa acción.');
@@ -496,6 +511,5 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
           } catch (error) { return failure(error); }
         });
       } catch (error) { return failure(error); }
-    },
-  });
+  }
 }

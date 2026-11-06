@@ -169,7 +169,9 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
       jobs.set(id, { orderId: order.id, input: v, done: false, polls: 0 });
       return { orderCancel: { job: { id, done: false }, orderCancelUserErrors: [] } };
     },
-    PanelJob: v => {
+    // fake.next('PanelJob', 'fail'): the job finishes without cancelling the order.
+    PanelJob: (v, mode) => {
+      if (mode === 'fail' && jobs.has(v.id)) finishJob(v.id, { cancel: false });
       const job = jobs.get(v.id);
       if (!job) return { job: null };
       job.polls++;
@@ -215,7 +217,7 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
     if (mode === 'denied') return Response.json({ errors: [{ message: 'Access denied', extensions: { code: 'ACCESS_DENIED' } }] });
     if (!handlers[op]) return Response.json({ errors: [{ message: 'unknown', extensions: { code: 'UNKNOWN' } }] });
     if (mode === 'reject') return Response.json({ data: { [ROOTS[op]]: { userErrors: [userError('Rejected by test')], orderCancelUserErrors: [userError('Rejected by test')] } } });
-    const data = handlers[op](variables);
+    const data = handlers[op](variables, mode);
     if (data.__errors) return Response.json({ errors: data.__errors });
     if (mode === 'lost') throw new TypeError('response lost after Shopify applied it');
     return Response.json({ data });
