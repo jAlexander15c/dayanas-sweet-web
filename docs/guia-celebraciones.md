@@ -10,7 +10,7 @@ Las fotos de referencia se pueden abrir tocando la miniatura o **Ampliar foto**.
 
 ## Agenda y recogida
 
-Recogida en **4319 Freya Point Dr, Fulshear, TX 77441**, todos los días entre **8:00 a. m. y 6:00 p. m.**, hora de Houston. Los pasteles se entregan únicamente en su caja.
+Recogida en **4319 Freya Pointe Dr, Fulshear, TX 77441**, todos los días entre **8:00 a. m. y 6:00 p. m.**, hora de Houston. Los pasteles se entregan únicamente en su caja.
 
 La pastelera puede cerrar o volver a abrir una fecha en **Agenda**. Cerrar una fecha bloquea solicitudes nuevas para ese día; no cancela solicitudes o reservas existentes. No hay un cupo numérico diario fijo.
 
