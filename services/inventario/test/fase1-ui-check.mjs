@@ -77,25 +77,38 @@ try {
   await portal.waitForFunction(() => document.querySelector('.stock-number')?.textContent === '10');
   // R09: el filtro secundario tiene un área táctil de 44 px.
   assert.ok(await portal.locator('label.filter').evaluate(n => n.getBoundingClientRect().height) >= 44);
-  // R04 (revisión de Codex): escritura enviada sin respuesta -> se conserva el mismo intento, sin Volver ni Escape.
+  // R04 (revisión de Codex): el primer guardado SÍ llega al Worker y se aplica, pero su respuesta se pierde.
+  // Debe quedar solo «Reintentar» (sin Volver ni Escape), con la misma clave real, y el stock debe sumar una sola vez.
   const opIds = [];
-  portal.on('request', r => { if (r.url().includes('/api/inventory/operations') && r.method() === 'POST') opIds.push(JSON.parse(r.postData()).operationId); });
-  let releaseWrite;
-  await portal.route('**/apps/inventario/api/inventory/operations', async route => { await new Promise(r => { releaseWrite = r; }); await route.abort().catch(() => {}); });
+  portal.on('request', r => { if (r.url().includes('/api/inventory/operations') && r.method() === 'POST') opIds.push(JSON.parse(r.postData())?.body?.operationId); });
+  let releaseWrite, firstStatus;
+  await portal.route('**/apps/inventario/api/inventory/operations', async route => {
+    const request = route.request();
+    const saved = await worker.fetch(signedProxy('/proxy/api/inventory/operations'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: request.postData() });
+    firstStatus = saved.status; await saved.arrayBuffer();
+    await new Promise(r => { releaseWrite = r; }); // la respuesta nunca llega al navegador
+    await route.abort().catch(() => {});
+  });
   await portal.getByRole('button', { name: 'Agregar producción', exact: true }).click();
   await portal.getByLabel('¿Cuántas cajas preparaste?').fill('2');
   await portal.getByRole('button', { name: 'Revisar cambio' }).click();
   await portal.getByRole('button', { name: 'Confirmar y guardar' }).click();
   await portal.getByText('No pudimos confirmar si se guardó', { exact: false }).waitFor({ timeout: 40000 });
+  assert.equal(firstStatus, 200, 'el primer intento se guardó en el Worker');
   assert.equal(await portal.locator('#back').isHidden(), true, 'Volver queda oculto');
   await portal.keyboard.press('Escape');
   assert.equal(await portal.locator('#confirmation').evaluate(d => d.open), true, 'Escape no descarta el intento');
   await screenshots(portal, 'fase1-r04-escritura-sin-confirmar');
-  releaseWrite?.();
   await portal.unroute('**/apps/inventario/api/inventory/operations');
+  releaseWrite?.();
   await portal.getByRole('button', { name: 'Reintentar', exact: true }).click();
-  await portal.waitForFunction(() => document.querySelector('.stock-number')?.textContent === '12');
-  assert.equal(opIds.length, 2); assert.equal(opIds[0], opIds[1], 'Reintentar usa el mismo operationId');
+  await portal.locator('#confirmation').waitFor({ state: 'hidden' });
+  await portal.getByRole('button', { name: 'Buscar', exact: true }).click();
+  await portal.waitForFunction(() => /^\d+$/.test(document.querySelector('.stock-number')?.textContent || ''));
+  assert.equal(await portal.locator('.stock-number').first().textContent(), '12', 'una sola suma: 10 + 2');
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  assert.equal(opIds.length, 2); assert.ok(opIds.every(id => uuid.test(id || '')), `claves reales: ${opIds}`);
+  assert.equal(opIds[0], opIds[1], 'Reintentar usa el mismo operationId');
   // R02: sesión caducada con la confirmación abierta -> ninguna capa encima del acceso y foco en el usuario.
   await portal.getByRole('button', { name: 'Agregar producción', exact: true }).click();
   await portal.getByLabel('¿Cuántas cajas preparaste?').fill('1');
