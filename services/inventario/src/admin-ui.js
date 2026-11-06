@@ -45,7 +45,11 @@ async function api(path, body) {
   if (window.inventarioPortal?.mode) return window.inventarioAccess.inventory(path, body);
   if (!window.shopify?.idToken) throw new Error('Abre Dayana Inventario desde Shopify para entrar con tu cuenta.');
   const token = await window.shopify.idToken();
-  const response = await fetch(path, { method: body ? 'POST' : 'GET', headers: { Authorization: `Bearer ${token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
+  // R04: mismo plazo que el portal; un corte se trata como resultado sin confirmar, igual que una caída de red.
+  let response;
+  try {
+  response = await fetch(path, { signal: globalThis.AbortSignal?.timeout?.(30000), method: body ? 'POST' : 'GET', headers: { Authorization: `Bearer ${token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
+  } catch (error) { if (error?.name === 'TimeoutError') throw new Error('La conexión tardó demasiado. Revisa tu internet e inténtalo otra vez.'); throw error; }
   const result = await response.json();
   if (!response.ok) throw Object.assign(new Error(result.message || 'No pudimos cargar los datos. Actualiza la pantalla.'), { status: response.status, result });
   return result;
@@ -101,7 +105,7 @@ function openEditor(action, product = null, variant = null, level = null) {
   } else {
     const single = !product || product.variants.nodes.length === 1;
     const formatted = product && formattedDescription(product.descriptionHtml);
-    html = `${field('Nombre', 'title', product?.title, 'required maxlength="200"')}${categoryField(product)}<label for="product-description">Descripción</label><textarea id="product-description" name="description" maxlength="5000" ${formatted ? 'readonly' : ''}>${esc(descriptionText(product))}</textarea>${formatted ? '<p>Esta descripción tiene formato; edítala en Shopify</p>' : ''}`;
+    html = `${field('Nombre', 'title', product?.title, `required maxlength="${Math.max(200, product?.title?.length || 0)}"`)}${categoryField(product)}<label for="product-description">Descripción</label><textarea id="product-description" name="description" maxlength="5000" ${formatted ? 'readonly' : ''}>${esc(descriptionText(product))}</textarea>${formatted ? '<p>Esta descripción tiene formato; edítala en Shopify</p>' : ''}`;
     if (single) html += `<div class="actions">${field('Precio', 'price', product ? Number(product.variants.nodes[0].price).toFixed(2) : '', 'required type="number" min="0" max="9999999.99" step="0.01" inputmode="decimal"')}${field('Código del producto (opcional)', 'sku', product?.variants.nodes[0].sku || '', 'maxlength="100"')}</div>`;
     else html += `<p>Este producto tiene varias opciones. Sus precios y códigos se cambian desde Shopify para evitar confusiones.</p>${product.variants.nodes.map(v => `<p>${esc(v.title)}: ${esc(money(v.price))} · ${esc(v.sku || 'Sin código')}</p>`).join('')}`;
     html += '<label>Agregar fotos (hasta 3)<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" multiple></label><p class="muted">Puedes usar la cámara del celular. JPG, PNG o WebP; hasta 5 MB por foto.</p>';
@@ -303,8 +307,14 @@ async function confirm() {
     $('#editor').close();
     pending = null;
     $('#workspace').hidden = false; $('#history-view').hidden = true; $('#categories-view').hidden = true;
-    try { await search(); } catch { /* The mutation receipt remains a success. */ }
-    feedback(`${result.message} ${result.steps.map(s => s.label + ': ' + stepText(s)).join('. ')}`);
+    // R01: el recibo sigue siendo un éxito; si la lista no se puede recargar, no se deja el conteo anterior a la vista.
+    let reloaded = true;
+    try { await search(); } catch {
+      reloaded = false; searchGeneration++; products = []; cursor = null; $('#more').hidden = true;
+      $('#products').innerHTML = '<p class="stale-list" role="status">La lista no se pudo actualizar. Toca «Buscar» para ver el conteo nuevo.</p>';
+    }
+    const saved = `${result.message} ${result.steps.map(s => s.label + ': ' + stepText(s)).join('. ')}`.trim();
+    feedback(reloaded ? saved : `${saved.replace(/\.?$/, '.')} No pudimos actualizar la lista: toca «Buscar» para ver el conteo nuevo.`);
   } catch (error) {
     const steps = error.result?.steps?.map(s => `${s.label}: ${stepText(s)}.`).join(' ') || '';
     $('#confirm-error').textContent = `${error.message} ${steps}`;

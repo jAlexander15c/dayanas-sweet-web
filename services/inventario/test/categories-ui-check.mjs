@@ -77,7 +77,8 @@ try {
   await screenshot('category-edit-mobile');
   await page.getByRole('button', { name: 'Revisar categoría', exact: true }).click();
   await save();
-  assert.match(await tortas.innerText(), /Se ve en la portada: No/);
+  // Espera la lista recargada: el aviso de guardado aparece antes de que termine la recarga de categorías.
+  await tortas.filter({ hasText: 'Se ve en la portada: No' }).waitFor({ timeout: 15000 });
   await page.getByRole('button', { name: 'Productos', exact: true }).click();
   await page.getByRole('button', { name: '+ Nuevo producto' }).click();
   await page.getByLabel('Nombre', { exact: true }).fill('Brownie para compartir');

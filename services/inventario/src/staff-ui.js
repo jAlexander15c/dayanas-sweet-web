@@ -12,12 +12,20 @@ const rules = '<ul class="password-rules"><li>Al menos 10 caracteres</li><li>Dis
 function forgetLegacySession() { try { localStorage.removeItem(storageKey); } catch { /* almacenamiento bloqueado */ } }
 function clearSession() { credential = null; currentUser = null; try { sessionStorage.removeItem(storageKey); } catch { /* almacenamiento bloqueado */ } forgetLegacySession(); }
 function saveSession(result) { credential = { session: result.session, expiresAt: result.expiresAt }; try { sessionStorage.setItem(storageKey, JSON.stringify(credential)); } catch { /* la sesión sigue en memoria */ } forgetLegacySession(); currentUser = result.user; }
+const REQUEST_TIMEOUT_MS = 30000;
+// R04: si la conexión se queda colgada, la petición se corta y se informa; las escrituras inciertas siguen el flujo de "consultar la misma operación".
+async function timedFetch(url, options) {
+  const controller = new AbortController(), timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try { return await fetch(url, { ...options, signal: controller.signal }); }
+  catch (error) { if (controller.signal.aborted) throw Object.assign(new Error('La conexión tardó demasiado. Revisa tu internet e inténtalo otra vez.'), { code: 'TIMEOUT' }); throw error; }
+  finally { clearTimeout(timer); }
+}
 async function request(action, body = {}) {
   let response;
-  if (portal) response = await fetch(`${base}api/${action}`, { method: 'POST', credentials: 'omit', referrerPolicy: 'no-referrer', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, session: credential?.session }) });
+  if (portal) response = await timedFetch(`${base}api/${action}`, { method: 'POST', credentials: 'omit', referrerPolicy: 'no-referrer', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, session: credential?.session }) });
   else {
     if (!window.shopify?.idToken) throw new Error('Abre Dayana Inventario desde Shopify.');
-    response = await fetch(`/api/staff/${action}`, { method: 'POST', headers: { Authorization: `Bearer ${await window.shopify.idToken()}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    response = await timedFetch(`/api/staff/${action}`, { method: 'POST', headers: { Authorization: `Bearer ${await window.shopify.idToken()}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   }
   const result = await response.json();
   if (!response.ok) {
@@ -28,6 +36,8 @@ async function request(action, body = {}) {
 }
 function message(text, error = false) { const element = $('#staff-message') || $('#access-message'); if (element) { element.textContent = text; element.classList.toggle('error', error); } }
 function showAccess(screen, notice = '') {
+  // R02: cierra confirmaciones y editores abiertos para que la pantalla de entrada quede usable con teclado.
+  for (const dialog of document.querySelectorAll('dialog[open]')) dialog.close();
   $('#celebraciones-frame')?.remove();
   $('#panel-view').hidden = true; $('#access-view').hidden = false; $('#staff-who').replaceChildren();
   let title, description = '', fields, submit, links;
@@ -49,6 +59,7 @@ function showAccess(screen, notice = '') {
   }
   $('#access-view').innerHTML = `<div class="access-card"><p class="eyebrow">${screen === 'invitation' ? 'Invitación' : 'Panel de la pastelera'}</p><h1>${title}</h1><p class="muted">${description}</p><form id="access-form">${fields}<button class="primary" id="access-submit">${submit}</button></form>${links}<p id="access-message" role="status" aria-live="polite"></p></div>`;
   message(notice);
+  if (!$('#access-view').hidden) $('#access-form input:not([readonly])')?.focus();
   $('#access-form').onsubmit = async event => {
     event.preventDefault(); if (busy) return; busy = true; $('#access-submit').disabled = true;
     const data = Object.fromEntries(new FormData(event.currentTarget));

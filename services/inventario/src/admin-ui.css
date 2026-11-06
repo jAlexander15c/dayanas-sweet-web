@@ -8,3 +8,5 @@
 .danger{color:#912c27;border-color:#c99a95}button.danger:hover{background:#fbeeec}
 
 #celebraciones-frame{display:block;width:100%;height:85vh;min-height:600px;border:0;border-radius:16px;background:#fff7fa}
+/* R09: áreas táctiles de 44 px en controles secundarios. */
+.filter{display:inline-flex;align-items:center;gap:8px;min-height:44px}

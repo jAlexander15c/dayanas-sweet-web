@@ -68,7 +68,10 @@ export function operation(input) {
     base.reason = text(input.reason ?? (input.action === 'production' ? 'Producción preparada' : ''), 500, true);
     return base;
   }
-  base.title = text(input.title, 200, true);
+  // R03: un nombre que no cambia se conserva tal cual (Shopify admite 255); el límite de 200 es solo para nombres nuevos.
+  const sameTitle = input.action !== 'create' && input.expectedProduct && typeof input.expectedProduct === 'object' && typeof input.title === 'string' && input.title === input.expectedProduct.title;
+  if (!sameTitle) requireValue(typeof input.title !== 'string' || input.title.trim().length <= 200, 'El nombre puede tener hasta 200 caracteres.');
+  base.title = sameTitle ? exactText(input.title, 255, true) : text(input.title, 200, true);
   if (input.action === 'create' || input.descriptionChanged === true) base.description = text(input.description, 5000);
   if (input.price !== undefined) {
     requireValue(typeof input.price === 'string' && /^(0|[1-9]\d{0,6})\.\d{2}$/.test(input.price), 'Escribe el precio con dos decimales, por ejemplo 12.50.');

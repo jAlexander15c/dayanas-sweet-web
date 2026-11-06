@@ -97,7 +97,7 @@ form button{justify-self:start}
 .ds-staff-alert p{margin-top:8px}
 .ds-staff-alert.is-unread{border-left:3px solid var(--ds-accent,#b72959);padding-left:16px}
 #ds-staff-alerts{max-height:560px;overflow:auto}
-details summary{font-weight:600;cursor:pointer;min-height:30px}
+details summary{font-weight:600;cursor:pointer;min-height:44px;padding-block:10px;box-sizing:border-box}
 #ds-history{margin-top:20px}
 #ds-history h4{margin-top:0}
 #ds-request-title:focus{outline:0}
