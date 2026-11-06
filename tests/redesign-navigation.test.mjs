@@ -52,7 +52,7 @@ test('how-to CTA stays closed until the shared state permits ordering', async ()
   const closed = await render('header');
   assert.match(closed, /href="\/es\/#ds-r-email"[^>]*data-ds-r-signup/);
   assert.match(closed, /Así llega tu antojo\./);
-  assert.match(closed, /Todos los pedidos de esa apertura salen juntos por USPS Priority, con envíos a todo Estados Unidos\./);
+  assert.match(closed, /El retiro normalmente está listo en 24 horas; espera nuestro aviso antes de venir\. Los pasteles personalizados se retiran en la fecha acordada\. USPS Ground Advantage estima 2–5 días hábiles desde que recibe el paquete, sin garantía de fecha de entrega\./);
   const open = await render('header', {settings:{ds_batch_open:true, ds_batch_close:'viernes', ds_batch_ship:'lunes'}});
   assert.doesNotMatch(open, /data-ds-r-signup/);
   assert.match(open, /href="\/es\/#menu"[^>]*data-ds-r-close-link[^>]*>Elegir mis favoritos/);
