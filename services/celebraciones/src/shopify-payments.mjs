@@ -141,16 +141,13 @@ function calculatedSnapshot(value) {
   };
 }
 
-/** No retries: a lost mutation response must be reconciled by the caller.
- * now() is epoch milliseconds; timeoutMs is a bounded request/body timeout.
- * The caller owns durable operationId uniqueness, authorization and eligibility.
+/** Shared Admin API transport: one client-credentials token cache per shop/app.
+ * Payments and staff orders reuse it; it never interprets GraphQL results.
  */
-export function createShopifyPaymentClient({ shop, clientId, secret, storefrontOrigin, fetchImpl = (...args) => globalThis.fetch(...args), now = Date.now, timeoutMs = 10_000 } = {}) {
+export function createShopifyAdminTransport({ shop, clientId, secret, fetchImpl = (...args) => globalThis.fetch(...args), now = Date.now, timeoutMs = 10_000 } = {}) {
   requireValue(typeof shop === 'string' && shopPattern.test(shop) && typeof clientId === 'string' && clientId.trim() && typeof secret === 'string' && secret.trim() && typeof fetchImpl === 'function' && typeof now === 'function' && Number.isSafeInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= 60_000, 'CONFIGURATION');
   let cachedToken;
   let pendingToken;
-  let storefrontHost=null;
-  if(storefrontOrigin){try{const origin=new URL(storefrontOrigin);requireValue(origin.protocol==='https:'&&!origin.username&&!origin.password&&!origin.port&&origin.origin===storefrontOrigin,'CONFIGURATION');storefrontHost=origin.hostname;}catch{throw fail('CONFIGURATION');}}
   const epoch = () => { const value = now(); requireValue(Number.isSafeInteger(value) && value >= 0, 'CONFIGURATION'); return value; };
 
   async function requestJson(url, init, errorCode, stage) {
@@ -195,6 +192,19 @@ export function createShopifyPaymentClient({ shop, clientId, secret, storefrontO
     })().finally(() => { pendingToken = undefined; });
     return pendingToken;
   }
+  return Object.freeze({ shop, token, requestJson, graphqlUrl: `https://${shop}/admin/api/${API_VERSION}/graphql.json` });
+}
+
+/** No retries: a lost mutation response must be reconciled by the caller.
+ * now() is epoch milliseconds; timeoutMs is a bounded request/body timeout.
+ * The caller owns durable operationId uniqueness, authorization and eligibility.
+ */
+export function createShopifyPaymentClient({ shop, clientId, secret, storefrontOrigin, fetchImpl = (...args) => globalThis.fetch(...args), now = Date.now, timeoutMs = 10_000, transport } = {}) {
+  requireValue(typeof shop === 'string' && shopPattern.test(shop) && typeof clientId === 'string' && clientId.trim() && typeof secret === 'string' && secret.trim() && typeof fetchImpl === 'function' && typeof now === 'function' && Number.isSafeInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= 60_000, 'CONFIGURATION');
+  if (transport !== undefined) requireValue(transport?.shop === shop && typeof transport.token === 'function' && typeof transport.requestJson === 'function', 'CONFIGURATION');
+  const { token, requestJson } = transport || createShopifyAdminTransport({ shop, clientId, secret, fetchImpl, now, timeoutMs });
+  let storefrontHost=null;
+  if(storefrontOrigin){try{const origin=new URL(storefrontOrigin);requireValue(origin.protocol==='https:'&&!origin.username&&!origin.password&&!origin.port&&origin.origin===storefrontOrigin,'CONFIGURATION');storefrontHost=origin.hostname;}catch{throw fail('CONFIGURATION');}}
 
   async function graphql(query, variables, root, mutation = false) {
     // Token failures occur before sending the mutation and are not ambiguous.

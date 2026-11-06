@@ -1,10 +1,13 @@
 import { runStaffAlertJobs } from './staff-alerts.mjs';
 import { DurableObject, WorkerEntrypoint } from 'cloudflare:workers';
-import { handleStaffGateway, portalStaffActor } from './staff-gateway.mjs';
+import { handleStaffGateway, isOrdersPath, trustedPortalActor } from './staff-gateway.mjs';
 import { createDurableStore } from './durable-store.mjs';
 import { createHandler } from './http.mjs';
 import { renderAdminPage } from './admin-page.mjs';
-import { createShopifyPaymentClient } from './shopify-payments.mjs';
+import { createShopifyAdminTransport, createShopifyPaymentClient } from './shopify-payments.mjs';
+import { createShopifyOrdersClient } from './orders-shopify.mjs';
+import { createOrdersStore, sqlFromStorage } from './orders-store.mjs';
+import { createOrdersService } from './orders-service.mjs';
 import { createPaymentService } from './payment-service.mjs';
 import { createPaymentScheduler } from './payment-scheduler.mjs';
 import { createQuoteEmail, runQuoteEmailJobs } from './quote-email.mjs';
@@ -29,7 +32,12 @@ export class CelebrationStore extends DurableObject {
     super(ctx, env);
     this.env = env;
     this.store = createDurableStore(ctx.storage);
-    const shopifyClient=createShopifyPaymentClient({shop:env.SHOPIFY_SHOP,clientId:env.SHOPIFY_CLIENT_ID,secret:env.SHOPIFY_APP_SECRET,storefrontOrigin:env.STOREFRONT_ORIGIN});
+    // One Admin API transport (one token cache) shared by payments and the orders panel.
+    let transport;
+    try {transport=createShopifyAdminTransport({shop:env.SHOPIFY_SHOP,clientId:env.SHOPIFY_CLIENT_ID,secret:env.SHOPIFY_APP_SECRET});} catch {transport=undefined;}
+    const shopifyClient=createShopifyPaymentClient({shop:env.SHOPIFY_SHOP,clientId:env.SHOPIFY_CLIENT_ID,secret:env.SHOPIFY_APP_SECRET,storefrontOrigin:env.STOREFRONT_ORIGIN,...(transport?{transport}:{})});
+    let ordersService;
+    try {ordersService=createOrdersService({client:createShopifyOrdersClient({transport}),store:createOrdersStore(sqlFromStorage(ctx.storage))});} catch {ordersService=undefined;}
     const paymentService=env.PAYMENTS_ENABLED==='true'?createPaymentService({store:this.store,mode:env.PAYMENTS_MODE||'TEST',storefrontOrigin:env.STOREFRONT_ORIGIN,onDiagnostic:diagnostic=>console.warn('payment-diagnostic '+JSON.stringify(diagnostic)),client:shopifyClient}):undefined;
     let email=null,sendEmail=null;
     try {sendEmail=createResendTransport({apiKey:env.RESEND_API_KEY});email=createQuoteEmail({key:env.GUEST_ACCESS_KEY,storefrontOrigin:env.STOREFRONT_ORIGIN,send:sendEmail});} catch { /* Guest creation stays disabled until configured. */ }
@@ -43,7 +51,7 @@ export class CelebrationStore extends DurableObject {
         await runNotificationJobs({store:this.store,shop:env.SHOPIFY_SHOP,email,resolveCustomer:id=>shopifyClient.getCustomerContact(id)});
       }}:{})}):null;
     if(this.scheduler)ctx.blockConcurrencyWhile(()=>this.scheduler.ensure());
-    this.handlerOptions = { store: this.store, paymentService,
+    this.handlerOptions = { store: this.store, paymentService, ordersService,
       mailTest:env.GUEST_QA_ENABLED==='true'&&email?createAdminMailTest({storage:ctx.storage,lock:fn=>ctx.blockConcurrencyWhile(fn),send:sendEmail,transport:'resend'}):undefined,
       guestEmail:email?{seal:email.seal,wake:()=>this.scheduler.ensure()}:undefined, config: {
       guestEnabled: env.GUEST_ENABLED==='true' && email!==null,
@@ -59,7 +67,9 @@ export class CelebrationStore extends DurableObject {
   }
   async staffHandle(input) {
     if(this.env.EXTERNAL_STAFF_ENABLED!=='true'||!configured(this.env))return {status:503,body:{code:'UNAVAILABLE'}};
-    try {portalStaffActor(input?.actor,this.env.SHOPIFY_SHOP);}catch{return {status:401,body:{code:'AUTH_REQUIRED'}};}
+    try {trustedPortalActor(input,this.env.SHOPIFY_SHOP);}catch{return {status:401,body:{code:'AUTH_REQUIRED'}};}
+    // Orders writes are reconciled by operationId, not by the payments scheduler.
+    if(isOrdersPath(input?.path))return handleStaffGateway(input,this.handlerOptions);
     if(this.scheduler)await this.scheduler.begin();
     try {return await handleStaffGateway(input,this.handlerOptions);}
     finally {if(this.scheduler)await this.scheduler.end();}
@@ -85,7 +95,7 @@ export class CelebrationStore extends DurableObject {
 export class StaffGateway extends WorkerEntrypoint {
   async handle(input) {
     if(this.env.EXTERNAL_STAFF_ENABLED!=='true'||!configured(this.env))return {status:503,body:{code:'UNAVAILABLE'}};
-    try {portalStaffActor(input?.actor,this.env.SHOPIFY_SHOP);}catch{return {status:401,body:{code:'AUTH_REQUIRED'}};}
+    try {trustedPortalActor(input,this.env.SHOPIFY_SHOP);}catch{return {status:401,body:{code:'AUTH_REQUIRED'}};}
     const id=this.env.CELEBRATIONS.idFromName(this.env.SHOPIFY_SHOP);
     return this.env.CELEBRATIONS.get(id).staffHandle(input);
   }

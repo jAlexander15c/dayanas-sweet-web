@@ -10,8 +10,58 @@ export function portalStaffActor(actor,shop) {
   return {shop,role:'staff',staffId:`user:${actor.userId}`};
 }
 
+// Orders panel actor: set only by Inventario after its own session check.
+// stepUp is true only after Inventario verified the admin password for this request.
+export function portalOrdersActor(actor,shop) {
+  if(!actor||actor.shop!==shop||actor.aud!=='pedidos'||typeof actor.userId!=='string'
+    ||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(actor.userId)||typeof actor.name!=='string'||!actor.name.trim()||actor.name.length>120
+    ||!Array.isArray(actor.roles)||!actor.roles.some(role=>role==='inventario'||role==='admin')
+    ||!actor.roles.every(role=>['admin','inventario','celebraciones'].includes(role))
+    ||(actor.stepUp!==undefined&&actor.stepUp!==true)||Object.hasOwn(actor,'password')
+    ||!Number.isSafeInteger(actor.sessionVersion)||actor.sessionVersion<1)throw denied();
+  return {shop,staffId:`user:${actor.userId}`,staffName:actor.name.trim(),roles:[...actor.roles],stepUp:actor.stepUp===true};
+}
+export const isOrdersPath=path=>typeof path==='string'&&/^\/orders(?:[/?#]|$)/.test(path);
+/** Audience is chosen by path: an orders actor never reaches Celebraciones routes and vice versa. */
+export function trustedPortalActor(input,shop) {
+  return isOrdersPath(input?.path)?portalOrdersActor(input?.actor,shop):portalStaffActor(input?.actor,shop);
+}
+
+const ORDER_WRITES=new Set(['note','fulfill','ready','delivered','refund-preview','cash','refund','edit','cancel']);
+const ADMIN_ONLY=new Set(['refund-preview','cash','refund','edit','cancel']);
+const STEP_UP=new Set(['cash','refund','edit','cancel']);
+export async function handleOrdersGateway(input,options) {
+  let actor;
+  try {actor=portalOrdersActor(input?.actor,options.config.shop);} catch {return {status:401,body:{code:'AUTH_REQUIRED'}};}
+  const service=options.ordersService;
+  if(!service)return {status:503,body:{code:'UNAVAILABLE'}};
+  const path=input.path;
+  if(path.length>200||/[\\\r\n?#]/.test(path))return {status:404,body:{code:'NOT_FOUND'}};
+  if(input.method==='GET'){
+    if(path==='/orders')return service.list(actor);
+    const match=/^\/orders\/(\d{1,20})$/.exec(path);
+    return match?service.detail(match[1],actor):{status:404,body:{code:'NOT_FOUND'}};
+  }
+  const match=input.method==='POST'&&/^\/orders\/(\d{1,20})\/([a-z-]+)$/.exec(path);
+  if(!match||!ORDER_WRITES.has(match[2]))return {status:404,body:{code:'NOT_FOUND'}};
+  const [,id,action]=match;
+  const body=input.body;
+  let size=0;
+  try {size=new TextEncoder().encode(JSON.stringify(body)).length;} catch {size=Infinity;}
+  if(!body||typeof body!=='object'||Array.isArray(body)||size>32768||Object.hasOwn(body,'password'))return {status:422,body:{code:'VALIDATION'}};
+  if(ADMIN_ONLY.has(action)&&!actor.roles.includes('admin'))return {status:403,body:{code:'ROLE_REQUIRED',message:'Solo la administradora puede hacer esto.'}};
+  if(STEP_UP.has(action)&&actor.stepUp!==true)return {status:403,body:{code:'STEP_UP_REQUIRED',message:'Esta acción necesita la contraseña de la administradora.'}};
+  if(action==='note')return service.note(id,body,actor);
+  if(action==='refund-preview')return service.refundPreview(id,body,actor);
+  return service.execute(action,id,body,actor);
+}
+
 // Only called by the named RPC entrypoint. Never populated from HTTP headers.
 export async function handleStaffGateway(input,options) {
+  if(isOrdersPath(input?.path)){
+    if(!['GET','POST'].includes(input.method))return {status:404,body:{code:'NOT_FOUND'}};
+    try {return await handleOrdersGateway(input,options);} catch {return {status:503,body:{code:'UNAVAILABLE'}};}
+  }
   try {
     const trustedStaff=portalStaffActor(input?.actor,options.config.shop);
     if(!['GET','POST'].includes(input.method)||typeof input.path!=='string'||input.path.length>1000

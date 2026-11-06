@@ -6,9 +6,56 @@ import { requireRole } from './staff-identity.mjs';
 export const portalCsp = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: https://cdn.shopify.com https://*.shopifycdn.com; connect-src 'self'; frame-src 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'; form-action 'self'";
 export const portalHeaders = () => ({ 'Content-Security-Policy': portalCsp, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff', 'X-Robots-Tag': 'noindex, nofollow', 'Permissions-Policy': 'camera=(self), microphone=(), geolocation=()' });
 // Extension seam: never accepts actor identity or Shopify credentials from the browser.
-export async function forwardToCelebraciones(env, actor, method, path, body) {
+export async function forwardToCelebraciones(env, actor, method, path, body, aud = 'celebraciones') {
   if (!env.CELEBRACIONES) return { status: 501, body: { code: 'NOT_AVAILABLE' } };
-  return env.CELEBRACIONES.handle({ actor: { ...actor, aud: 'celebraciones' }, method, path, body });
+  return env.CELEBRACIONES.handle({ actor: { ...actor, aud }, method, path, body });
+}
+const ORDER_ROUTE = /^orders(?:\/(\d{1,20})(?:\/(note|fulfill|ready|delivered|refund-preview|cash|refund|edit|cancel))?)?$/;
+const ORDER_ADMIN = new Set(['refund-preview', 'cash', 'refund', 'edit', 'cancel']);
+const ORDER_MONEY = new Set(['cash', 'refund', 'edit', 'cancel']);
+const VARIANT_GID = /^gid:\/\/shopify\/ProductVariant\/\d{1,20}$/;
+// Pedidos: Inventario authenticates, checks roles, verifies the admin password for
+// money actions and forwards only {actor, stepUp}. The password never leaves this Worker.
+async function handlePedidos({ env, identity, offline, clientFactory }, action, data) {
+  const actor = await identity.authenticate(data.session);
+  if (!actor.roles.includes('inventario') && !actor.roles.includes('admin')) throw fail(403, 'ROLE_REQUIRED', 'Tu cuenta no tiene permiso para esta acción.');
+  requireValue(!Object.hasOwn(data, 'actor'), 'Esta acción no acepta identidad del navegador.');
+  const route = action.slice('pedidos/'.length);
+  if (route === 'variants') {
+    requireRole(actor, 'admin');
+    await offline.get();
+    return { status: 200, body: { variants: await clientFactory().variantsWithStock() } };
+  }
+  const match = ORDER_ROUTE.exec(route);
+  if (!match || (match[2] && !match[1])) throw fail(404, 'NOT_FOUND', 'Esta acción no existe.');
+  const [, id, write] = match;
+  const body = write ? data.body : undefined;
+  if (write) requireValue(body && typeof body === 'object' && !Array.isArray(body) && !Object.hasOwn(body, 'password') && !Object.hasOwn(body, 'actor'));
+  if (write && ORDER_ADMIN.has(write)) requireRole(actor, 'admin');
+  let forwarded = actor;
+  if (write && ORDER_MONEY.has(write)) {
+    if (typeof data.password !== 'string' || !data.password) throw fail(401, 'PASSWORD_REQUIRED', 'Escribe tu contraseña para confirmar.');
+    forwarded = await identity.stepUp(data.session, data.password);
+    if (write === 'edit') await checkEditStock(offline, clientFactory, body);
+  }
+  const { stepUp, ...plain } = forwarded;
+  const result = await forwardToCelebraciones(env, { ...plain, ...(stepUp === true ? { stepUp: true } : {}) }, write ? 'POST' : 'GET', `/${route}`, body, 'pedidos');
+  return result;
+}
+// Additions and increases must have stock now; Celebraciones re-checks the order itself.
+async function checkEditStock(offline, clientFactory, body) {
+  const wanted = new Map();
+  const add = (variantId, quantity) => { requireValue(VARIANT_GID.test(variantId || '') && Number.isSafeInteger(quantity) && quantity > 0 && quantity <= 99, 'Producto inválido.'); wanted.set(variantId, (wanted.get(variantId) || 0) + quantity); };
+  for (const item of Array.isArray(body.additions) ? body.additions : []) add(item?.variantId, item?.quantity);
+  for (const change of Array.isArray(body.changes) ? body.changes : []) {
+    if (!Number.isSafeInteger(change?.quantity) || !Number.isSafeInteger(change?.fromQuantity) || change.quantity <= change.fromQuantity) continue;
+    if (!change.variantId) throw fail(409, 'NO_STOCK', 'No podemos confirmar el stock de ese producto. Quítalo y agrégalo de nuevo.');
+    add(change.variantId, change.quantity - change.fromQuantity);
+  }
+  if (!wanted.size) return;
+  await offline.get();
+  const stock = await clientFactory().variantStock([...wanted.keys()]);
+  for (const [variantId, quantity] of wanted) if (!(stock.get(variantId) >= quantity)) throw fail(409, 'NO_STOCK', 'Ese producto ya no tiene stock suficiente en esta tanda.');
 }
 export function createPortalHandler({ env, identity, offline, service, clientFactory }) {
   return async request => {
@@ -39,6 +86,10 @@ export function createPortalHandler({ env, identity, offline, service, clientFac
         const handler = createHandler({ env, service, clientFactory, authenticateRequest: async () => staff });
         const response = await handler(new Request(target, { method: operation ? 'POST' : 'GET', ...(operation ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data.body) } : {}) }));
         return new Response(response.body, { status: response.status, headers: { ...headers, 'Content-Type': 'application/json' } });
+      }
+      if (action.startsWith('pedidos/')) {
+        const result = await handlePedidos({ env, identity, offline, clientFactory }, action, data);
+        return Response.json(result.body, { status: result.status, headers });
       }
       if (action.startsWith('celebraciones/')) {
         const actor = await identity.authenticate(data.session); requireRole(actor, 'celebraciones');

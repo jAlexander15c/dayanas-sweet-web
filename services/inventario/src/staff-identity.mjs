@@ -186,8 +186,28 @@ export function createStaffIdentity({ env, store, sendEmail, waitUntil = task =>
       }
       throw fail(404, 'NOT_FOUND', 'Esta acción no existe.');
     });
+  // Money actions in Pedidos: re-check the admin password for this one request.
+  // Same hash, same `login:user:<id>` counter and 15-minute lock as login; 5 misses
+  // also end the sessions, as in change-password. The password is never stored or returned.
+  const stepUp = (session, password) => run(async () => {
+    purge();
+    const actor = await authenticate(session);
+    requireRole(actor, 'admin');
+    if (typeof password !== 'string' || !password) throw fail(401, 'PASSWORD_REQUIRED', 'Escribe tu contraseña para confirmar.');
+    const user = store.get('users', actor.userId);
+    const key = await sha256(`login:user:${user.id}`), local = attempt(key);
+    const denied = () => fail(401, 'PASSWORD_INVALID', 'Contraseña incorrecta. Si el acceso está pausado, espera 15 minutos e inténtalo otra vez.');
+    if (local.locked_until > now()) throw denied();
+    if (password.length > 256 || !await verifyPassword(password, user.password_hash)) {
+      store.transaction(() => { failedAttempt(local); if (local.failures >= 5) invalidate(user); });
+      throw denied();
+    }
+    store.remove('login_attempts', key);
+    return { ...actor, stepUp: true };
+  });
   return {
     authenticate: session => authenticate(session),
+    stepUp,
     async handle(action, data = {}, master = null) {
       if (action === 'recover') {
         // Same response path and HMAC work for every identifier, independent of queue/provider latency.

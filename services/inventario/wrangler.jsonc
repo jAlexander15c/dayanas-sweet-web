@@ -7,7 +7,7 @@
   "workers_dev": true,
   "preview_urls": false,
   "observability": { "enabled": false },
-  "rules": [{ "type": "Text", "globs": ["**/admin-ui.js", "**/admin-ui.css", "**/staff-ui.js"], "fallthrough": false }],
+  "rules": [{ "type": "Text", "globs": ["**/admin-ui.js", "**/admin-ui.css", "**/staff-ui.js", "**/orders-ui.js"], "fallthrough": false }],
   "vars": {
     "SHOPIFY_SHOP": "2n36xt-3a.myshopify.com",
     "SHOPIFY_CLIENT_ID": "e6ec575bff08e846c7b213c8f3b350db",

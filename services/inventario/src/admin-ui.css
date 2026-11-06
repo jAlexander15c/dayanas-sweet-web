@@ -10,3 +10,67 @@
 #celebraciones-frame{display:block;width:100%;height:85vh;min-height:600px;border:0;border-radius:16px;background:#fff7fa}
 /* R09: áreas táctiles de 44 px en controles secundarios. */
 .filter{display:inline-flex;align-items:center;gap:8px;min-height:44px}
+
+/* Pedidos: lista, detalle y hojas de acción (maqueta aprobada). Táctiles de 44 px o más. */
+.orders{display:grid;gap:18px;max-width:760px}
+.orders-head .orders-title{font-family:Georgia,serif;font-weight:500;font-size:34px;margin:4px 0 0}
+.bake{display:grid;gap:10px}.bake p{margin:0}
+.bake-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.bake-tile{background:#f4ede4;border-radius:12px;padding:12px;font-size:14px;overflow-wrap:anywhere}
+.bake-number{font-size:30px;font-weight:650;line-height:1.1}
+.bake h4{margin:12px 0 6px;font-size:16px}
+.bake-list,.packing,.summary-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.bake-list li{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #eee4da;padding:6px 0;overflow-wrap:anywhere}
+.packing li{border-bottom:1px solid #eee4da;padding:8px 0;overflow-wrap:anywhere}
+.summary-list li{padding:8px 0;border-bottom:1px solid var(--border);overflow-wrap:anywhere}
+.order-chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{min-height:44px;padding:0 14px;border-radius:22px;font-weight:400}
+.chip[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.order-search{margin:0}.order-search input{margin-top:6px}
+.order-cards{display:grid;gap:12px}
+.order-card{display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid var(--border);border-radius:18px;padding:16px;min-height:44px;overflow-wrap:anywhere}
+.order-card:hover{border-color:#b9a593}
+.order-card-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.order-card-head strong{font-size:18px;min-width:0}
+.order-card .muted{margin:4px 0 10px}
+.badges{display:flex;gap:6px;flex-wrap:wrap}
+.badge-ship{background:#e3eef7;color:#1f4a6b}
+.badge-paid{background:#e6f2e6;color:#245b2a}
+.badge-pickup{background:#f4ede4;color:#5a4234}
+.badge-due{background:#fbe7d6;color:#7a3a10}
+.badge-refund{background:#f3e4e3;color:#912c27}
+.order-top{display:flex;align-items:center;gap:8px}
+.order-top h2{margin:0;font-size:22px;overflow-wrap:anywhere;min-width:0}
+.order-back{display:inline-grid;place-items:center;min-width:44px;min-height:44px;border-radius:12px;color:var(--accent)}
+.order-row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #eee4da;overflow-wrap:anywhere}
+.order-row>span:first-child{min-width:0}
+.order-total{font-weight:650}
+.order-due{color:#7a3a10;font-weight:650}
+.order-actions{display:grid;gap:10px}
+.order-event{margin:6px 0;font-size:15px;overflow-wrap:anywhere}
+.order-card a,.orders a{min-height:44px}
+.orders .card{overflow-wrap:anywhere}
+.check{display:flex;gap:10px;align-items:flex-start;min-height:44px;font-weight:400}
+.check input[type=checkbox]{flex:none;width:24px;min-height:24px;margin:2px 0 0}
+.check small{display:block}
+.amount-box{background:#f4ede4;border-radius:12px;padding:14px;display:grid;gap:4px}
+.amount{font-size:30px;font-weight:650;line-height:1.1}
+.refund-line,.edit-line{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #eee4da}
+.refund-line>div,.edit-line>div:first-child{min-width:0;overflow-wrap:anywhere}
+.refund-line label{margin:0;flex:none;width:110px;font-size:14px}
+.stepper{display:flex;align-items:center;gap:6px;flex:none}
+.stepper button{min-width:44px;min-height:44px;padding:0;font-size:20px}
+.stepper span{min-width:24px;text-align:center;font-weight:650}
+.wide{width:100%}
+.order-sheet .sheet-head{margin-bottom:8px}
+.order-sheet h2{margin:4px 0 8px}
+.danger-title{color:#912c27}
+button.danger-fill{background:#912c27;border-color:#912c27;color:#fff}
+button.danger-fill:hover{background:#7a2420}
+.sheet-foot{margin-top:16px}
+#sheet-error:empty{display:none}
+#note-status:empty,#edit-status:empty,#refund-status:empty{display:none}
+@media(max-width:600px){.orders-head .orders-title{font-size:30px}
+.order-sheet{width:100%;max-width:none;margin:auto 0 0;border-radius:20px 20px 0 0;max-height:94dvh}
+.refund-line,.edit-line{flex-wrap:wrap}
+.refund-line label{width:100%}}

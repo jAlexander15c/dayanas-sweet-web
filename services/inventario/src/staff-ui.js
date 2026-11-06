@@ -85,12 +85,13 @@ function showAccess(screen, notice = '') {
   });
   if (screen === 'invitation') request('invitation-info', { token: invitationToken }).then(result => { if (!$('#invitation-name')) return; $('#invitation-name').textContent = `Hola, ${result.name}.`; $('#access-form [name=username]').value = result.username; }).catch(e => { message(e.message, true); if ($('#access-submit')) $('#access-submit').disabled = true; });
 }
-function hideViews() { for (const id of ['workspace', 'categories-view', 'history-view', 'users-view', 'celebraciones-view']) $(`#${id}`).hidden = true; }
+function hideViews() { for (const id of ['workspace', 'categories-view', 'history-view', 'users-view', 'celebraciones-view', 'pedidos-view']) { const view = $(`#${id}`); if (view) view.hidden = true; } }
 async function showPanel() {
   $('#access-view').hidden = true; $('#access-view').replaceChildren(); $('#panel-view').hidden = false;
   const roles = currentUser.roles;
   $('#staff-who').innerHTML = `<span>${esc(currentUser.name)}${roles.includes('admin') ? ' · Administradora' : ''}</span><button id="change-password">Cambiar contraseña</button><button id="sign-out">Salir</button>`;
   $('#users').hidden = !roles.includes('admin'); $('#celebraciones').hidden = !roles.includes('celebraciones');
+  if ($('#pedidos')) $('#pedidos').hidden = !(roles.includes('inventario') || roles.includes('admin'));
   for (const id of ['home', 'categories', 'history']) $(`#${id}`).hidden = !roles.includes('inventario');
   $('#sign-out').onclick = async () => {
     // Start server revocation with the current token, then always clear this device immediately.
@@ -106,6 +107,7 @@ async function showPanel() {
   if (roles.includes('inventario')) await initializeInventory();
   else { hideViews(); $('#feedback').textContent = 'Elige una sección para continuar.'; if (roles.includes('admin')) await showUsers(); }
   if (location.hash.startsWith('#celebraciones') && roles.includes('celebraciones')) showCelebraciones();
+  if (location.hash.startsWith('#pedidos') && $('#pedidos') && !$('#pedidos').hidden) window.inventarioOrders?.show();
 }
 const roleFields = roles => `<fieldset><legend>Permisos</legend>${[['admin','Administrador (maneja usuarios)'],['inventario','Inventario (productos, fotos, stock, categorías)'],['celebraciones','Celebraciones']].map(([role,label]) => `<label class="role-option"><input type="checkbox" name="roles" value="${role}" ${roles.includes(role) ? 'checked' : ''}>${label}</label>`).join('')}</fieldset>`;
 async function showUsers() {
@@ -113,7 +115,7 @@ async function showUsers() {
   const { users } = await request('users');
   const first = !users.some(u => u.status === 'active' && u.roles.includes('admin'));
   $('#feedback').textContent = '';
-  $('#users-view').innerHTML = `<h2>${portal ? 'Usuarios' : 'Usuarios de /inventarios'}</h2>${portal ? '' : '<p class="notice">Llave maestra: aquí entras con tu cuenta de Shopify. Desde aquí se crea el primer usuario y se recupera el acceso si se pierden las contraseñas.</p><button id="connect-external">Conectar acceso externo</button>'}<form id="invite-form" class="card user-form"><h3>${first ? 'Invitar al primer administrador' : 'Invitar a alguien'}</h3>${field('Nombre', 'name', 'text', 'maxlength="100"')}${field('Usuario', 'username', 'text', 'pattern="[a-z0-9._-]{3,32}" minlength="3" maxlength="32" autocomplete="off"')}${field('Correo', 'email', 'email', 'maxlength="254"')}${roleFields(first ? ['admin', 'inventario'] : ['inventario'])}<button class="primary">Enviar invitación</button></form><p id="staff-message" role="status" aria-live="polite"></p><div class="user-list">${users.map(u => `<article class="card user-card"><div><h3>${esc(u.name)}</h3><p>${esc(u.email)} · usuario: ${esc(u.username)}</p></div><div class="actions">${u.status === 'invited' ? `<button data-user="${esc(u.id)}" data-action="resend-invitation">Reenviar</button><button data-user="${esc(u.id)}" data-action="cancel-invitation">Cancelar</button>` : `<button data-user="${esc(u.id)}" data-action="edit">Editar permisos</button><button data-user="${esc(u.id)}" data-action="${u.status === 'disabled' ? 'active' : 'disabled'}">${u.status === 'disabled' ? 'Reactivar' : 'Desactivar'}</button>`}</div><div class="chips"><span class="badge">${u.status === 'active' ? 'Activa' : u.status === 'disabled' ? 'Desactivado' : `Invitación pendiente${u.invitationExpiresAt ? ' · vence ' + new Date(u.invitationExpiresAt).toLocaleString('es') : ' · pendiente de envío'}`}</span>${u.roles.map(r => `<span class="badge">${esc(r)}</span>`).join('')}${u.lastLoginAt ? `<span class="muted">Entró ${esc(new Date(u.lastLoginAt).toLocaleString('es'))}</span>` : ''}</div></article>`).join('')}</div><p class="muted">Desactivar cierra sus sesiones abiertas. Siempre debe quedar al menos un administrador activo.</p>`;
+  $('#users-view').innerHTML = `<h2>${portal ? 'Usuarios' : 'Usuarios de /inventarios'}</h2>${portal ? '' : '<p class="notice">Llave maestra: aquí entras con tu cuenta de Shopify. Desde aquí se crea el primer usuario y se recupera el acceso si se pierden las contraseñas.</p><button id="connect-external">Conectar acceso externo</button>'}<form id="invite-form" class="card user-form"><h3>${first ? 'Invitar al primer administrador' : 'Invitar a alguien'}</h3>${field('Nombre', 'name', 'text', 'maxlength="100"')}${field('Usuario', 'username', 'text', 'pattern="[a-z0-9._\\-]{3,32}" minlength="3" maxlength="32" autocomplete="off"')}${field('Correo', 'email', 'email', 'maxlength="254"')}${roleFields(first ? ['admin', 'inventario'] : ['inventario'])}<button class="primary">Enviar invitación</button></form><p id="staff-message" role="status" aria-live="polite"></p><div class="user-list">${users.map(u => `<article class="card user-card"><div><h3>${esc(u.name)}</h3><p>${esc(u.email)} · usuario: ${esc(u.username)}</p></div><div class="actions">${u.status === 'invited' ? `<button data-user="${esc(u.id)}" data-action="resend-invitation">Reenviar</button><button data-user="${esc(u.id)}" data-action="cancel-invitation">Cancelar</button>` : `<button data-user="${esc(u.id)}" data-action="edit">Editar permisos</button><button data-user="${esc(u.id)}" data-action="${u.status === 'disabled' ? 'active' : 'disabled'}">${u.status === 'disabled' ? 'Reactivar' : 'Desactivar'}</button>`}</div><div class="chips"><span class="badge">${u.status === 'active' ? 'Activa' : u.status === 'disabled' ? 'Desactivado' : `Invitación pendiente${u.invitationExpiresAt ? ' · vence ' + new Date(u.invitationExpiresAt).toLocaleString('es') : ' · pendiente de envío'}`}</span>${u.roles.map(r => `<span class="badge">${esc(r)}</span>`).join('')}${u.lastLoginAt ? `<span class="muted">Entró ${esc(new Date(u.lastLoginAt).toLocaleString('es'))}</span>` : ''}</div></article>`).join('')}</div><p class="muted">Desactivar cierra sus sesiones abiertas. Siempre debe quedar al menos un administrador activo.</p>`;
   $('#invite-form').onsubmit = async event => {
     event.preventDefault(); const form = event.currentTarget, button = form.querySelector('button'); button.disabled = true;
     try { const data = new FormData(form); await request('invite', { ...Object.fromEntries(data), roles: data.getAll('roles') }); await showUsers(); message('Invitación enviada. Vence en 48 horas.'); }
@@ -142,13 +144,13 @@ function showCelebraciones() {
   if (frame.getAttribute('src') !== source) frame.src = source;
   $('#feedback').textContent = '';
 }
-window.inventarioPortal = { mode: portal, request };
+window.inventarioPortal = { mode: portal, request, hideViews, user: () => currentUser };
 window.inventarioAccess = {
   async inventory(path, body) { const url = new URL(path, location.origin); return request(`inventory/${url.pathname.slice('/api/'.length)}`, { params: Object.fromEntries(url.searchParams), ...(body ? { body } : {}) }); },
   async boot(start) {
     initializeInventory = start;
     $('#users').onclick = () => showUsers().catch(e => { $('#feedback').textContent = e.message; });
-    for (const id of ['home', 'categories', 'history']) $(`#${id}`).addEventListener('click', () => { $('#users-view').hidden = true; $('#celebraciones-view').hidden = true; });
+    for (const id of ['home', 'categories', 'history']) $(`#${id}`).addEventListener('click', () => { $('#users-view').hidden = true; $('#celebraciones-view').hidden = true; if ($('#pedidos-view')) $('#pedidos-view').hidden = true; });
     if (!portal) return start();
     $('#celebraciones').onclick = () => { location.hash = 'celebraciones'; showCelebraciones(); };
     addEventListener('hashchange', () => { if (currentUser?.roles.includes('celebraciones') && location.hash.startsWith('#celebraciones')) showCelebraciones(); });

@@ -16,6 +16,7 @@ import { verifyAppProxy } from './proxy-auth.mjs';
 import adminJavaScript from './admin-ui.js';
 import adminCss from './admin-ui.css';
 import staffJavaScript from './staff-ui.js';
+import ordersJavaScript from './orders-ui.js';
 const identityStub = env => env.IDENTITY.get(env.IDENTITY.idFromName('identity:' + env.SHOPIFY_SHOP));
 export class StaffIdentityStore extends DurableObject {
   constructor(ctx, env) {
@@ -26,6 +27,11 @@ export class StaffIdentityStore extends DurableObject {
   // RPC only; session validation never waits behind password hashing or mail delivery.
   async authenticate(session) {
     try { return { actor: await this.identity.authenticate(session) }; }
+    catch (error) { return { error: errorResult(error) }; }
+  }
+  // RPC only: verifies the admin password (shared login lock); returns the actor without the password.
+  async stepUp(session, password) {
+    try { return { actor: await this.identity.stepUp(session, password) }; }
     catch (error) { return { error: errorResult(error) }; }
   }
   fetch(request) { return this.handler(request); }
@@ -39,12 +45,12 @@ export class InventoryStore extends DurableObject {
     const clientFactory = (sessionToken, staffId) => createShopifyClient({ env, sessionToken, staffId, ...(sessionToken === null ? { tokenProvider: () => offline.get() } : {}) });
     const service = createInventoryService({ store, clientFactory });
     this.handler = createHandler({ env, service, clientFactory });
-    const identity = { authenticate: async session => {
-      const result = await identityStub(env).authenticate(session);
-      // RPC errors do not preserve custom Error fields; carry the public status/code as plain data.
-      if (result.error) throw Object.assign(new Error(result.error.body.message), { status: result.error.status, ...result.error.body });
-      return result.actor;
-    } };
+    // RPC errors do not preserve custom Error fields; carry the public status/code as plain data.
+    const unwrap = result => { if (result.error) throw Object.assign(new Error(result.error.body.message), { status: result.error.status, ...result.error.body }); return result.actor; };
+    const identity = {
+      authenticate: async session => unwrap(await identityStub(env).authenticate(session)),
+      stepUp: async (session, password) => unwrap(await identityStub(env).stepUp(session, password)),
+    };
     const offlineFactory = () => createShopifyClient({ env, tokenProvider: () => offline.get() });
     this.portalHandler = createPortalHandler({ env, identity, offline, service, clientFactory: offlineFactory });
   }
@@ -61,9 +67,9 @@ export default {
       if (request.method === 'GET') { const response = celebrationsView(path, env); if (response) return response; }
       if (request.method === 'GET' && (path === '/proxy' || path === '/proxy/')) return renderAdminPage(env, { portal: true });
       const asset = path.slice('/proxy/assets/'.length);
-      if (request.method === 'GET' && path.startsWith('/proxy/assets/') && ['admin-ui.js', 'admin-ui.css', 'staff-ui.js'].includes(asset)) return new Response(asset === 'admin-ui.css' ? adminCss : asset === 'staff-ui.js' ? staffJavaScript : adminJavaScript, { headers: { ...headers, 'Content-Type': asset.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8' } });
+      if (request.method === 'GET' && path.startsWith('/proxy/assets/') && ['admin-ui.js', 'admin-ui.css', 'staff-ui.js', 'orders-ui.js'].includes(asset)) return new Response(asset === 'admin-ui.css' ? adminCss : asset === 'staff-ui.js' ? staffJavaScript : asset === 'orders-ui.js' ? ordersJavaScript : adminJavaScript, { headers: { ...headers, 'Content-Type': asset.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8' } });
       if (path.startsWith('/proxy/api/')) {
-        const inventory = path.startsWith('/proxy/api/inventory/') || path.startsWith('/proxy/api/celebraciones/');
+        const inventory = path.startsWith('/proxy/api/inventory/') || path.startsWith('/proxy/api/celebraciones/') || path.startsWith('/proxy/api/pedidos/');
         return (inventory ? env.INVENTARIO.get(env.INVENTARIO.idFromName(env.SHOPIFY_SHOP)) : identityStub(env)).fetch(request);
       }
       return Response.json({ code: 'NOT_FOUND' }, { status: 404, headers });

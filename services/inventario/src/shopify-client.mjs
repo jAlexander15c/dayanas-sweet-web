@@ -270,6 +270,25 @@ export function createShopifyClient({ env, sessionToken, staffId, tokenProvider,
       if (!job?.done) throw fail(502, 'REVIEW_REQUIRED', 'Sin confirmar: Shopify sigue cambiando la categoría. Revisa antes de repetir.');
       return result;
     },
+    // Pedidos: variants that can be added to an order now (active, tracked, stock > 0).
+    async variantsWithStock() {
+      const variants = []; let after = null;
+      for (let page = 0; page < 8; page++) {
+        const result = await graphql('query PedidosVariants($after: String) { productVariants(first: 100, after: $after) { nodes { id title price inventoryQuantity inventoryItem { tracked } product { title status } } pageInfo { hasNextPage endCursor } } }', { after }, 'productVariants');
+        for (const v of result.nodes) {
+          if (v.product?.status !== 'ACTIVE' || !v.inventoryItem?.tracked || !(v.inventoryQuantity > 0) || !/^\d{1,9}(?:\.\d{1,2})?$/.test(v.price || '')) continue;
+          const [whole, fraction = ''] = v.price.split('.');
+          variants.push({ id: v.id, productTitle: v.product.title, title: v.title === 'Default Title' ? null : v.title, priceCents: Number(whole) * 100 + Number(fraction.padEnd(2, '0')), available: v.inventoryQuantity });
+        }
+        if (!result.pageInfo?.hasNextPage) break;
+        after = result.pageInfo.endCursor;
+      }
+      return variants.sort((a, b) => a.productTitle.localeCompare(b.productTitle) || String(a.title).localeCompare(String(b.title)));
+    },
+    async variantStock(ids) {
+      const nodes = await graphql('query PedidosStock($ids: [ID!]!) { nodes(ids: $ids) { ... on ProductVariant { id inventoryQuantity inventoryItem { tracked } product { status } } } }', { ids }, 'nodes');
+      return new Map((nodes || []).filter(v => v?.id).map(v => [v.id, v.product?.status === 'ACTIVE' && v.inventoryItem?.tracked ? v.inventoryQuantity : 0]));
+    },
     async search(query = '', after = null) {
       // Literal title matching; never execute caller-supplied Shopify search syntax.
       const result = await graphql(`query InventorySearch($query: String, $after: String) { products(first: 12, after: $after, query: $query, sortKey: TITLE) { nodes { ${productFields(5, 3)} } ${page} } }`, { query: titleSearch(query), after }, 'products');
