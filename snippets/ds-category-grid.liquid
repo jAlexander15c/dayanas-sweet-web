@@ -51,6 +51,10 @@
               {%- assign image_alt = category.image.alt -%}
               {%- if image_alt == category.title -%}{%- assign image_alt = '' -%}{%- endif -%}
               {{ category.image | image_url: width: 1600 | image_tag: class: 'ds-r-category-photo', widths: '400, 600, 800, 1200, 1600', sizes: '(min-width: 990px) 50vw, (min-width: 601px) 50vw, 100vw', alt: image_alt, loading: 'lazy' }}
+            {%- elsif category.handle == 'galletas' or category.handle == 'brownies' -%}
+              {%- comment -%} Sin imagen en el admin: se usa la foto de marca incluida en el tema para no dejar la tarjeta vacía. {%- endcomment -%}
+              {%- if category.handle == 'galletas' -%}{%- assign category_asset = 'ds-r-cookies-category.png' -%}{%- else -%}{%- assign category_asset = 'ds-r-brownie-category.png' -%}{%- endif -%}
+              <img class="ds-r-category-photo" src="{{ category_asset | asset_url }}" width="1200" height="1200" alt="" loading="lazy">
             {%- endif -%}
             <div class="ds-r-category-caption">
               <{{ heading_tag }}>{{ category.title | escape }}</{{ heading_tag }}>

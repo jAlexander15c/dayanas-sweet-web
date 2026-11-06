@@ -123,7 +123,7 @@ rendered('semantic single-link cards, escaped name, actual image alt and optiona
   assert.deepEqual(names(html), ['Café &amp; té']);
   assert.match(html, /alt="Frascos artesanales"/);
   assert.match(html, /1 productos/);
-  assert.doesNotMatch(await render([category('Brownies', 1)]), /ds-r-category-count|class="ds-r-category-photo"/);
+  assert.doesNotMatch(await render([category('Postres', 1)]), /ds-r-category-count|class="ds-r-category-photo"/);
   assert.match(await render([category('Brownies', 1, { image: { id: 1, alt: 'Brownies' } })]), /alt=""/);
 });
 
@@ -174,3 +174,12 @@ for (const count of [1, 2, 3, 5, 12]) {
     assert.match(html, new RegExp(`data-category-count="${count}"`));
   });
 }
+
+rendered('automatic cards fall back to bundled brand photos for Galletas and Brownies without admin images', async () => {
+  const html = await render([category('Galletas', 1), category('Brownies', 2), category('Jugos', 3)]);
+  assert.match(html, /aria-label="Galletas">\s*<img class="ds-r-category-photo" src="[^"]*ds-r-cookies-category\.png"/);
+  assert.match(html, /aria-label="Brownies">\s*<img class="ds-r-category-photo" src="[^"]*ds-r-brownie-category\.png"/);
+  assert.doesNotMatch(html, /aria-label="Jugos">\s*<img class="ds-r-category-photo"/);
+  const withImage = await render([category('Galletas', 1, {image: {id: 'admin', alt: 'Galletas reales'}})]);
+  assert.doesNotMatch(withImage, /ds-r-cookies-category\.png/);
+});
