@@ -1,5 +1,6 @@
 import { runStaffAlertJobs } from './staff-alerts.mjs';
-import { DurableObject } from 'cloudflare:workers';
+import { DurableObject, WorkerEntrypoint } from 'cloudflare:workers';
+import { handleStaffGateway, portalStaffActor } from './staff-gateway.mjs';
 import { createDurableStore } from './durable-store.mjs';
 import { createHandler } from './http.mjs';
 import { renderAdminPage } from './admin-page.mjs';
@@ -37,12 +38,12 @@ export class CelebrationStore extends DurableObject {
         const due=[this.store.nextGuestEmailDue(env.SHOPIFY_SHOP),this.store.nextNotificationDue(env.SHOPIFY_SHOP),this.store.nextStaffAlertDue(env.SHOPIFY_SHOP)].filter(value=>value!==null);
         return due.length?Math.min(...due):null;
       },additionalRun:async()=>{
-        await runStaffAlertJobs({store:this.store,shop:env.SHOPIFY_SHOP,clientId:env.SHOPIFY_CLIENT_ID,send:sendEmail});
+        await runStaffAlertJobs({store:this.store,shop:env.SHOPIFY_SHOP,clientId:env.SHOPIFY_CLIENT_ID,send:sendEmail,portalEnabled:env.EXTERNAL_STAFF_ENABLED==='true'});
         await runQuoteEmailJobs({store:this.store,shop:env.SHOPIFY_SHOP,email});
         await runNotificationJobs({store:this.store,shop:env.SHOPIFY_SHOP,email,resolveCustomer:id=>shopifyClient.getCustomerContact(id)});
       }}:{})}):null;
     if(this.scheduler)ctx.blockConcurrencyWhile(()=>this.scheduler.ensure());
-    this.handler = createHandler({ store: this.store, paymentService,
+    this.handlerOptions = { store: this.store, paymentService,
       mailTest:env.GUEST_QA_ENABLED==='true'&&email?createAdminMailTest({storage:ctx.storage,lock:fn=>ctx.blockConcurrencyWhile(fn),send:sendEmail,transport:'resend'}):undefined,
       guestEmail:email?{seal:email.seal,wake:()=>this.scheduler.ensure()}:undefined, config: {
       guestEnabled: env.GUEST_ENABLED==='true' && email!==null,
@@ -53,7 +54,15 @@ export class CelebrationStore extends DurableObject {
       requireDetails: true,
       testCustomerIds: env.PAYMENTS_MODE === 'TEST' ? (env.TEST_CUSTOMER_IDS || '').split(',').map(s => s.trim()).filter(Boolean) : undefined,
       staffIds: (env.SHOPIFY_STAFF_IDS || '').split(',').map(s => s.trim()).filter(Boolean)
-    } });
+    } };
+    this.handler = createHandler(this.handlerOptions);
+  }
+  async staffHandle(input) {
+    if(this.env.EXTERNAL_STAFF_ENABLED!=='true'||!configured(this.env))return {status:503,body:{code:'UNAVAILABLE'}};
+    try {portalStaffActor(input?.actor,this.env.SHOPIFY_SHOP);}catch{return {status:401,body:{code:'AUTH_REQUIRED'}};}
+    if(this.scheduler)await this.scheduler.begin();
+    try {return await handleStaffGateway(input,this.handlerOptions);}
+    finally {if(this.scheduler)await this.scheduler.end();}
   }
   async fetch(request) {
     if (!configured(this.env)) return unavailable();
@@ -70,6 +79,15 @@ export class CelebrationStore extends DurableObject {
   async alarm(){
     if(!configured(this.env)||!this.scheduler){await this.ctx.storage.deleteAlarm();return;}
     await this.scheduler.run();
+  }
+}
+
+export class StaffGateway extends WorkerEntrypoint {
+  async handle(input) {
+    if(this.env.EXTERNAL_STAFF_ENABLED!=='true'||!configured(this.env))return {status:503,body:{code:'UNAVAILABLE'}};
+    try {portalStaffActor(input?.actor,this.env.SHOPIFY_SHOP);}catch{return {status:401,body:{code:'AUTH_REQUIRED'}};}
+    const id=this.env.CELEBRATIONS.idFromName(this.env.SHOPIFY_SHOP);
+    return this.env.CELEBRATIONS.get(id).staffHandle(input);
   }
 }
 

@@ -1,0 +1,11 @@
+{
+  "name": "dayanas-inventario-service",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "dev": "wrangler dev",
+    "check": "wrangler deploy --dry-run --outdir .wrangler/dry-run"
+  },
+  "devDependencies": { "wrangler": "4.157.0" }
+}

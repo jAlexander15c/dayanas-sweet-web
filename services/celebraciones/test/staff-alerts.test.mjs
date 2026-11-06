@@ -10,6 +10,39 @@ function setup(t) {
   const request=store.createRequest(customer,{requestText:'Pastel',pickup:{label:'Recoger'}},'create');
   return {db,store,id:request.id};
 }
+test('comment burst is limited per request, grouped durably, and payments take priority',async t=>{
+ const {db,store,id}=setup(t),time=Date.now();
+ for(let n=0;n<5;n++)store.comment(customer,id,`Mensaje ${n}`,`burst-${n}`);
+ assert.throws(()=>store.comment(customer,id,'Sexto','burst-5'),{code:'RATE_LIMITED'});
+ assert.equal(store.getTracking(customer,id).comments.length,5);
+ const restored=createStoreWithDatabase(db);
+ restored.comment(customer,id,'Mensaje 0','burst-0');
+ assert.throws(()=>restored.comment(customer,id,'Sexto','burst-5'),{code:'RATE_LIMITED'});
+ const alerts=restored.listStaffAlerts(staff).alerts;assert.equal(alerts.length,1);assert.equal(alerts[0].commentCount,5);
+ assert.equal(restored.claimStaffAlert(shop,time),null);
+ db.prepare('INSERT INTO staff_alerts(shop,id,request_id,event_key,event,due_at) VALUES(?,?,?,?,?,?)').run(shop,'00000000-0000-0000-0000-000000000001',id,'payment-test',JSON.stringify({kind:'payment'}),time);
+ const deliveryTime=Date.now()+60001;
+ assert.equal(restored.claimStaffAlert(shop,deliveryTime).kind,'payment');
+ assert.equal(restored.claimStaffAlert(shop,deliveryTime).commentCount,5);
+ db.prepare('UPDATE staff_comment_events SET created_at=?').run(time-300001);
+ restored.comment(customer,id,'Después de esperar','later');
+ assert.equal(restored.getTracking(customer,id).comments.length,6);
+});
+test('grouping never changes an attempted email and another request has its own quota',t=>{
+ const {db,store,id}=setup(t);
+ store.comment(customer,id,'Primero','first');
+ const claim=store.claimStaffAlert(shop,Date.now()+60001);
+ const before=db.prepare('SELECT event FROM staff_alerts WHERE id=?').get(claim.id).event;
+ store.comment(customer,id,'Segundo','second');
+ assert.equal(db.prepare('SELECT event FROM staff_alerts WHERE id=?').get(claim.id).event,before);
+ for(let n=0;n<3;n++)store.comment(customer,id,`Otro ${n}`,`extra-${n}`);
+ assert.throws(()=>store.comment(customer,id,'Limite','limit'),{code:'RATE_LIMITED'});
+ store.comment(staff,id,'Respuesta de pastelera','staff-reply');
+ const other=store.createRequest(customer,{requestText:'Otro pastel',pickup:{label:'Recoger'}},'other');
+ store.comment(customer,other.id,'Otra solicitud','other-comment');
+ assert.equal(store.getTracking(customer,other.id).comments.length,1);
+ assert.equal(store.listStaffAlerts(staff).alerts.find(a=>a.id===claim.id).commentCount,1);
+});
 test('customer comment queues one private alert, replays and staff replies do not duplicate it',t=>{
   const {store,id}=setup(t);
   store.comment(customer,id,'Hola','comment');store.comment(customer,id,'Hola','comment');
@@ -27,7 +60,7 @@ test('guest replies also notify staff; an outbox failure rolls back the customer
   const guest=store.createGuestRequest({shop},{requestText:'Pastel',pickup:{label:'Recoger'}},{name:'Ana',email:'ana@example.test',phone:'5551234567'},capability,'guest',{encryptedAccess:'fixture',now:Date.now()});
   const actor=store.authenticateGuest(shop,guest.id,capability);
   store.comment(actor,guest.id,'Hola','guest-comment');assert.equal(store.listStaffAlerts(staff).unread,1);
-  db.exec("CREATE TRIGGER fail_staff_outbox BEFORE INSERT ON staff_alerts BEGIN SELECT RAISE(ABORT,'failed'); END");
+  db.exec("CREATE TRIGGER fail_staff_outbox BEFORE UPDATE ON staff_alerts BEGIN SELECT RAISE(ABORT,'failed'); END");
   assert.throws(()=>store.comment(actor,guest.id,'No debe guardarse','failed-comment'),{code:'UNAVAILABLE'});
   assert.equal(store.getTracking(actor,guest.id).comments.length,1);
 });
@@ -70,7 +103,7 @@ test('existing pre-feature payments are baselined and never notified retroactive
 });
 test('email uses confirmed staff recipient and authenticated admin link, never customer message or capability',async t=>{
   const {store,id}=setup(t);store.comment(customer,id,'PRIVATE-CONTENT','message');let sent;
-  await runStaffAlertJobs({store,shop,clientId:'app',send:async value=>{sent=value;return {status:'sent'};}});
+  await runStaffAlertJobs({store,shop,clientId:'app',now:()=>Date.now()+60001,send:async value=>{sent=value;return {status:'sent'};}});
   assert.equal(sent.recipient,staffRecipient);assert.equal(sent.recipient,'Dayanaoramasgalano@gmail.com');
   const body=Buffer.from(sent.message.split('\r\n\r\n')[1],'base64').toString();
   assert.match(body,/admin\.shopify\.com\/store\/sweet\/apps\/app/);assert.ok(body.includes(id));assert.ok(!body.includes('PRIVATE-CONTENT'));assert.ok(!body.includes('#acceso='));
@@ -93,6 +126,6 @@ test('staff messages pass existing Resend validation and use stable provider ide
   const {store,id}=setup(t);store.comment(customer,id,'Nuevo','new');let payload;
   const send=createResendTransport({apiKey:'re_fixture',fetchImpl:async(url,options)=>{payload=JSON.parse(options.body);assert.ok(options.headers['Idempotency-Key']);return new Response(JSON.stringify({id:'sent'}),{status:200});}});
   // Verify through the same transport without sending a real message.
-  await runStaffAlertJobs({store,shop,clientId:'app',send});
+  await runStaffAlertJobs({store,shop,clientId:'app',now:()=>Date.now()+60001,send});
   assert.deepEqual(payload.to,[staffRecipient]);assert.match(payload.html,/Abrir en Shopify/);assert.match(payload.html,/href="https:\/\/admin.shopify.com/);assert.equal(store.listStaffAlerts(staff).alerts[0].emailStatus,'sent');
 });

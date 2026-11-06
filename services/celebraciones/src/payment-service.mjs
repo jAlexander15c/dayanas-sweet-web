@@ -476,6 +476,7 @@ export function createPaymentService({ store, client, mode='TEST', storefrontOri
       // Re-read after fetching the URL to detect concurrent payments/edits.
       executionPhase='verify-payment-link';
       const checked=await client.getOrder(state.orderId), latest=ledger(checked,context,id);representation(checked);
+      if(checked.cancelledAt)return finish('review',null,true,'ORDER_CANCELLED');
       failureReason='PAYMENT_STATE_CHANGED';
       requireValue(checked.totalCents===target && latest.net===paid.net && !latest.pending);
       failureReason=null;

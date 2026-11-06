@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "dayanas-inventario",
+  "main": "src/cloudflare-worker.mjs",
+  "compatibility_date": "2026-11-03",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": { "enabled": false },
+  "rules": [{ "type": "Text", "globs": ["**/admin-ui.js", "**/admin-ui.css", "**/staff-ui.js"], "fallthrough": false }],
+  "vars": {
+    "SHOPIFY_SHOP": "2n36xt-3a.myshopify.com",
+    "SHOPIFY_CLIENT_ID": "e6ec575bff08e846c7b213c8f3b350db",
+    "INVENTARIO_STAFF_IDS": "164797317424",
+    "INVENTARIO_STAFF_NAMES": "{}",
+    "SERVICE_ENABLED": "true",
+    "EXTERNAL_LOGIN_ENABLED": "true",
+    "PORTAL_PUBLIC_URL": "https://dayanassweet.com/apps/inventario"
+  },
+  // SHOPIFY_APP_SECRET: secret binding, set with wrangler secret put; never a var.
+  "services": [{ "binding": "CELEBRACIONES", "service": "dayanas-celebraciones", "entrypoint": "StaffGateway" }],
+  "durable_objects": { "bindings": [{ "name": "INVENTARIO", "class_name": "InventoryStore" }, { "name": "IDENTITY", "class_name": "StaffIdentityStore" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["InventoryStore"] }, { "tag": "v2", "new_sqlite_classes": ["StaffIdentityStore"] }]
+}

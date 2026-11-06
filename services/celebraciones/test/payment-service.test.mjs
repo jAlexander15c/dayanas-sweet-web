@@ -61,6 +61,15 @@ function editPersistedSnapshot(f,apply){
  try{const snapshot=JSON.parse(db.prepare('SELECT snapshot FROM requests WHERE shop=? AND id=?').get(shop,f.id).snapshot);apply(snapshot);db.prepare('UPDATE requests SET snapshot=? WHERE shop=? AND id=?').run(JSON.stringify(snapshot),shop,f.id);}finally{db.close();}
 }
 
+for(const guest of [false,true])test(`final balance read rejects an order cancelled after URL lookup (${guest?'guest':'account'})`,async t=>{
+ const f=setup(t,{guest});await f.service.pay(f.actor,f.id,'pay');f.paid();
+ f.client.getAdditionalPaymentUrl=async()=>{f.order.cancelledAt=new Date().toISOString();return `https://${shop}/balance/one`;};
+ const result=await f.service.sync(f.actor,f.id,'cancel-race');
+ assert.equal(result.payment.url,null);
+ assert.equal(result.payment.reviewRequired,true);
+ assert.equal(result.payment.stage,'review');
+});
+
 for(const guest of [false,true])for(const totalCents of [9000,10000,11000])test(`legacy ${guest?'guest':'account'} unpaid initial checkout blocks revised ${totalCents} and later reconciles actual paid money`,async t=>{
  const f=setup(t,{guest,durable:true,totalCents:10000});await f.service.pay(f.actor,f.id,'pay-v1');
  // Trusted historical fixture: simulate an acceptance saved before CHECKOUT_PENDING existed.

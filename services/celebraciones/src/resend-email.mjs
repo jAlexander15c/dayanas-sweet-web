@@ -8,10 +8,11 @@ export function renderEmailHtml({subject,text}) {
  // Only the exact first-party tracking URL becomes an actionable button. No
  // customer-supplied markup, external assets, tracking pixels or URL rewriting.
  const adminLink=text.match(/^https:\/\/admin\.shopify\.com\/store\/[a-z0-9][a-z0-9-]*\/apps\/[a-zA-Z0-9_-]+\?solicitud=[a-f0-9-]{36}$/m)?.[0];
- const link=adminLink||text.match(/^https:\/\/dayanassweet\.com\/pages\/seguimiento-de-tu-pastel\?solicitud=[a-f0-9-]{36}(?:#acceso=[a-f0-9]{64})?$/m)?.[0];
+ const portalLink=text.match(/^https:\/\/dayanassweet\.com\/apps\/inventario#celebraciones\/[a-f0-9-]{36}$/m)?.[0];
+ const link=portalLink||adminLink||text.match(/^https:\/\/dayanassweet\.com\/pages\/seguimiento-de-tu-pastel\?solicitud=[a-f0-9-]{36}(?:#acceso=[a-f0-9]{64})?$/m)?.[0];
  const reference=subject.match(/\bDS-\d{6,12}\b/)?.[0];
  const title=subject.replace(/(?:\s+—)?\s+DS-\d{6,12}$/,'');
- const button=link?`<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:26px 0"><tr><td bgcolor="#b72c60" style="border-radius:28px;text-align:center"><a href="${escape(link)}" style="display:inline-block;padding:16px 26px;border:1px solid #b72c60;border-radius:28px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:22px;font-weight:bold;color:#ffffff;text-decoration:none">${adminLink?'Abrir en Shopify':'Ver mi cotización'}&nbsp; →</a></td></tr></table>`:'';
+ const button=link?`<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:26px 0"><tr><td bgcolor="#b72c60" style="border-radius:28px;text-align:center"><a href="${escape(link)}" style="display:inline-block;padding:16px 26px;border:1px solid #b72c60;border-radius:28px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:22px;font-weight:bold;color:#ffffff;text-decoration:none">${portalLink?'Abrir en el panel':adminLink?'Abrir en Shopify':'Ver mi cotización'}&nbsp; →</a></td></tr></table>`:'';
  const content=text.trim().split(/\n\n+/).filter(p=>p.trim()!=='Dayana’s Sweet').map(paragraph=>{
   const hasLink=link&&paragraph.split('\n').includes(link);
   const clean=hasLink?paragraph.replace(link,'').trim().replace(/:$/ ,'.'):paragraph;

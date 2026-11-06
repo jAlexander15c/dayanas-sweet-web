@@ -131,9 +131,29 @@ export function createAdminApi({ shopify = globalThis.shopify, fetch: transport 
   };
 }
 
+export function createPortalApi(request) {
+  return async(path,body,asBlob=false)=>{
+    if(typeof request!=='function')throw failure('AUTH_REQUIRED');
+    if(typeof path!=='string'||!path.startsWith('/admin/')||/[\\#\r\n]/.test(path))throw failure('VALIDATION');
+    let result;
+    try {result=await request(`celebraciones/${path.slice(7)}`,{method:body===undefined?'GET':'POST',body:body??null});}
+    catch(error) {throw failure(['SESSION_REQUIRED','ROLE_REQUIRED'].includes(error?.code)?'AUTH_REQUIRED':['AUTH_REQUIRED','NOT_FOUND','CONFLICT','QUOTE_EXPIRED','CHECKOUT_PENDING','VALIDATION','UNAVAILABLE'].includes(error?.code)?error.code:'UNAVAILABLE');}
+    if(asBlob) {
+      if(!['image/jpeg','image/png','image/webp'].includes(result?.mimeType)||typeof result.base64!=='string'||result.base64.length>2796204)throw failure('UNAVAILABLE');
+      try {return new Blob([Uint8Array.from(atob(result.base64),c=>c.charCodeAt(0))],{type:result.mimeType});}catch{throw failure('UNAVAILABLE');}
+    }
+    return result;
+  };
+}
+
 function startPanel() {
   const q = selector => document.querySelector(selector);
-  const api = createAdminApi(), operations = createOperationBook(), snapshots = new Map(), drafts = new Map();
+  const portal=document.body.dataset.dsPortal==='true';
+  const portalRequest=(path,body)=>{
+    try {if(parent===window||parent.location.origin!==location.origin||!parent.inventarioPortal?.request)throw failure('AUTH_REQUIRED');return parent.inventarioPortal.request(path,body);}
+    catch{throw failure('AUTH_REQUIRED');}
+  };
+  const api = portal?createPortalApi(portalRequest):createAdminApi(), operations = createOperationBook(), snapshots = new Map(), drafts = new Map();
   const proposalForm = q('#ds-proposal-form'), commentForm = q('#ds-comment-form'), calendarForm = q('#ds-calendar-form');
   let calendarDays = new Map(), calendarLoaded = false;
   let selected = null, busy = false, denied = false, photoGeneration = 0;
@@ -203,6 +223,7 @@ function startPanel() {
     q('#ds-calendar-days').replaceChildren(); calendarForm.reset();
     q('#ds-payment-check-result').replaceChildren();
     proposalForm.reset(); commentForm.reset(); feedback('Acceso no autorizado.', true);
+    if(portal){q('#ds-access').replaceChildren(node('h2','Vuelve a iniciar sesión'),node('p','Tu sesión terminó o no tienes permiso para Celebraciones. Regresa al acceso del panel.'));return;}
     try {
       const session = await api('/admin/session');
       if (session.authorized === false && typeof session.staffId === 'string') {

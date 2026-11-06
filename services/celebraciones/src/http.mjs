@@ -28,7 +28,7 @@ async function readPhoto(request) {
   return {bytes,name,mimeType};
 }
 function shape(body, keys) { if (Object.keys(body).some(key => !keys.includes(key)) || keys.some(key => !(key in body))) throw error('VALIDATION'); }
-export function createHandler({ store, config, paymentService, guestEmail, mailTest }) {
+export function createHandler({ store, config, paymentService, guestEmail, mailTest, trustedStaff }) {
   return async request => {
     try {
       const guestUrl=new URL(request.url);
@@ -68,6 +68,7 @@ export function createHandler({ store, config, paymentService, guestEmail, mailT
         throw error('NOT_FOUND');
       }
       if(new URL(request.url).pathname==='/admin/session' && request.method==='GET') {
+        if(trustedStaff)return json({staffId:trustedStaff.staffId,authorized:true});
         const header=request.headers.get('authorization')||'';
         if(!header.startsWith('Bearer ')) throw error('AUTH_REQUIRED');
         const identity=await verifyAdminSession(header.slice(7),{secret:config.secret,shop:config.shop,clientId:config.clientId});
@@ -90,6 +91,8 @@ export function createHandler({ store, config, paymentService, guestEmail, mailT
         actor = await verifyAppProxy(url.href, { secret: config.secret, shop: config.shop });
         if (config.testCustomerIds !== undefined && !config.testCustomerIds.includes(actor.customerId)) throw error('UNAVAILABLE');
         if (request.method !== 'GET' && request.headers.get('origin') !== config.storefrontOrigin) return json({ code: 'AUTH_REQUIRED' }, 403);
+      } else if(trustedStaff) {
+        actor=trustedStaff;
       } else {
         const header = request.headers.get('authorization') || '';
         if (!header.startsWith('Bearer ')) throw error('AUTH_REQUIRED');

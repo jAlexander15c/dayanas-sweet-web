@@ -12,6 +12,7 @@
     "GUEST_ENABLED": "true",
     "GUEST_QA_ENABLED": "false",
     "SERVICE_ENABLED": "true",
+    "EXTERNAL_STAFF_ENABLED": "true",
     "PAYMENTS_ENABLED": "true",
     "PAYMENTS_MODE": "REAL",
     "TEST_CUSTOMER_IDS": "",

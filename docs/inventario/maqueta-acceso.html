@@ -1,0 +1,274 @@
+<title>Acceso a Inventarios</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+/* Layout: barra de pantallas arriba + "aparato" centrado (celular o computadora) que muestra la pantalla elegida. Mismo lenguaje visual del panel actual. */
+:root{
+  --bg:#efe9df; --paper:#fbf7f0; --card:#ffffff; --ink:#2b211c; --muted:#6f625a;
+  --line:#e2d8cb; --brand:#6e3b2a; --brand-ink:#fff8f2; --ok:#2f6b45; --ok-bg:#e5f1e8;
+  --warn:#8a4b12; --warn-bg:#fbeedd; --bad:#9b2c2c; --bad-bg:#f9e3e1; --focus:#c9783f;
+  --display:"Literata",Georgia,"Times New Roman",serif;
+  --body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#1b1613; --paper:#241d19; --card:#2c2420; --ink:#f3ebe3; --muted:#b9aca2;
+  --line:#40352f; --brand:#c98a6a; --brand-ink:#1f1410; --ok:#8fd0a5; --ok-bg:#20352a;
+  --warn:#f0b878; --warn-bg:#3a2a1a; --bad:#f0a49c; --bad-bg:#3d2220; --focus:#e9a06a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1b1613; --paper:#241d19; --card:#2c2420; --ink:#f3ebe3; --muted:#b9aca2;
+  --line:#40352f; --brand:#c98a6a; --brand-ink:#1f1410; --ok:#8fd0a5; --ok-bg:#20352a;
+  --warn:#f0b878; --warn-bg:#3a2a1a; --bad:#f0a49c; --bad-bg:#3d2220; --focus:#e9a06a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+h1,h2,h3{font-family:var(--display);font-weight:600;text-wrap:balance;margin:0}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;gap:20px}
+.intro{display:grid;gap:6px;max-width:70ch}
+.intro h1{font-size:1.7rem}
+.intro p{margin:0;color:var(--muted)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.tab{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 14px;cursor:pointer;font-size:.92rem}
+.tab[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.dev{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--card)}
+.dev button{border:0;background:none;padding:6px 14px;cursor:pointer;font-size:.92rem}
+.dev button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}
+@media (max-width:900px){.stage{grid-template-columns:minmax(0,1fr)}}
+.device{margin:0 auto;width:100%;background:var(--paper);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgb(0 0 0 / .08)}
+.device.phone{max-width:390px;border-radius:30px;border-width:8px;border-color:var(--ink)}
+.url{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--card);font-size:.85rem;color:var(--muted);min-width:0}
+.url span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lock{width:12px;height:12px;flex:none}
+.screen{min-height:560px;display:flex;flex-direction:column}
+.brandbar{padding:16px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--card)}
+.logo{font-family:var(--display);font-size:1.35rem}
+.logo i{font-style:italic}
+.who{display:flex;align-items:center;gap:10px;font-size:.9rem;color:var(--muted)}
+.content{padding:28px 22px;display:grid;gap:18px;align-content:start;flex:1}
+.narrow{max-width:400px;width:100%;margin:0 auto}
+.eyebrow{font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.lead{color:var(--muted);margin:0}
+.field{display:grid;gap:6px}
+.field label{font-weight:600;font-size:.95rem}
+.field input,.field select{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:11px 12px;min-height:46px;width:100%}
+.hint{font-size:.85rem;color:var(--muted)}
+.btn{border:0;border-radius:10px;padding:12px 18px;min-height:46px;cursor:pointer;background:var(--brand);color:var(--brand-ink);font-weight:600}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.small{min-height:40px;padding:8px 14px;font-weight:600}
+.link{background:none;border:0;padding:0;color:var(--brand);text-decoration:underline;cursor:pointer;font-size:.95rem;justify-self:start}
+.note{border-radius:10px;padding:10px 12px;font-size:.92rem}
+.note.ok{background:var(--ok-bg);color:var(--ok)}
+.note.warn{background:var(--warn-bg);color:var(--warn)}
+.note.bad{background:var(--bad-bg);color:var(--bad)}
+.code{display:flex;gap:8px}
+.code input{width:46px;height:54px;text-align:center;font-size:1.4rem;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.rules{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:.88rem}
+.rules li::before{content:"✓ ";color:var(--ok);font-weight:600}
+.rules li.no::before{content:"○ ";color:var(--muted)}
+.cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.cat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;gap:12px;align-items:center}
+.thumb{width:56px;height:56px;border-radius:10px;flex:none}
+.cat b{font-family:var(--display);font-weight:600;display:block}
+.cat small{color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.users{display:grid;gap:10px}
+.user{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center}
+.user .meta{min-width:0}
+.user b{display:block}
+.user .mail{color:var(--muted);font-size:.9rem;overflow-wrap:anywhere}
+.chips{display:flex;gap:6px;flex-wrap:wrap;grid-column:1/-1}
+.chip{font-size:.78rem;padding:2px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.chip.ok{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.chip.warn{background:var(--warn-bg);color:var(--warn);border-color:transparent}
+.chip.off{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:12px}
+.shopify{display:grid;grid-template-columns:180px minmax(0,1fr);min-height:560px}
+.shopify nav{background:#1a1a1a;color:#e6e6e6;padding:16px 12px;font-size:.88rem;display:grid;gap:8px;align-content:start}
+.shopify nav .on{background:#303030;border-radius:8px;padding:6px 8px;color:#fff}
+.device.phone .shopify{grid-template-columns:minmax(0,1fr)}
+.device.phone .shopify nav{display:none}
+.side{display:grid;gap:12px;align-content:start}
+.side .panel h3{font-size:1.05rem}
+.side ol{margin:0;padding-left:20px;display:grid;gap:6px;color:var(--muted);font-size:.93rem}
+.side p{margin:0;color:var(--muted);font-size:.93rem}
+.tag{display:inline-block;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;background:var(--warn-bg);color:var(--warn);padding:2px 8px;border-radius:6px}
+@media (prefers-reduced-motion:no-preference){.screen{animation:in .18s ease-out}@keyframes in{from{opacity:.4}to{opacity:1}}}
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <span class="eyebrow">Maqueta para aprobar · no es la página real</span>
+    <h1>dayanassweet.com/inventarios</h1>
+    <p>Las pantallas de entrada con usuario y contraseña, recuperación por código al correo, invitación y la sección de usuarios. Toca cada pantalla arriba y cambia entre celular y computadora.</p>
+  </header>
+
+  <div class="bar">
+    <div class="tabs" role="group" aria-label="Pantallas" id="tabs"></div>
+    <div class="dev" role="group" aria-label="Tamaño">
+      <button id="dPhone" aria-pressed="true">Celular</button>
+      <button id="dDesk" aria-pressed="false">Computadora</button>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="device phone" id="device">
+      <div class="url"><svg class="lock" viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="5" width="8" height="6" rx="1.5" fill="currentColor"/><path d="M4 5V3.6a2 2 0 0 1 4 0V5" stroke="currentColor" fill="none" stroke-width="1.3"/></svg><span id="url">dayanassweet.com/inventarios</span></div>
+      <div id="screen" class="screen"></div>
+    </div>
+    <aside class="side" id="side"></aside>
+  </div>
+</div>
+
+<script>
+const brand = `<div class="brandbar"><span class="logo">Dayana’s <i>Sweet</i></span>__WHO__</div>`;
+const who = (n, admin) => `<div class="who"><span>${n}${admin ? " · Administradora" : ""}</span><button class="btn ghost small" data-go="entrar">Salir</button></div>`;
+
+const S = {
+  entrar: {
+    tab: "Entrar", url: "dayanassweet.com/inventarios",
+    html: () => brand.replace("__WHO__", "") + `
+    <div class="content"><div class="narrow" style="display:grid;gap:18px">
+      <div style="display:grid;gap:6px"><span class="eyebrow">Panel de la pastelera</span><h2 style="font-size:1.9rem">Entrar al inventario</h2>
+      <p class="lead">Solo para el equipo de Dayana’s Sweet.</p></div>
+      <form class="field-group" style="display:grid;gap:14px" onsubmit="event.preventDefault();go('panel')">
+        <div class="field"><label for="u1">Usuario</label><input id="u1" autocomplete="username" value="dayana"></div>
+        <div class="field"><label for="p1">Contraseña</label><input id="p1" type="password" autocomplete="current-password" value="••••••••••"></div>
+        <button class="btn" type="submit">Entrar</button>
+      </form>
+      <button class="link" data-go="olvide">Olvidé mi contraseña</button>
+      <div class="note bad"><b>Ejemplo de error:</b> Usuario o contraseña incorrectos. Te quedan 3 intentos antes de que el acceso se pause 15 minutos.</div>
+    </div></div>`,
+    side: `<div class="panel"><h3>Entrar</h3><p>Usuario y contraseña. La sesión dura 12 horas en ese aparato; después vuelve a pedir la contraseña.</p></div>
+      <div class="panel"><h3>Protección</h3><ol><li>La contraseña se guarda cifrada; nadie puede leerla.</li><li>5 intentos fallidos pausan el acceso 15 minutos.</li><li>El mensaje de error no dice si el usuario existe.</li></ol></div>`
+  },
+  olvide: {
+    tab: "Olvidé mi contraseña", url: "dayanassweet.com/inventarios/recuperar",
+    html: () => brand.replace("__WHO__", "") + `
+    <div class="content"><div class="narrow" style="display:grid;gap:18px">
+      <h2 style="font-size:1.6rem">Recuperar contraseña</h2>
+      <p class="lead">Escribe tu usuario o tu correo. Si está registrado, te enviamos un código de 6 números a tu correo.</p>
+      <div class="field"><label for="r1">Usuario o correo</label><input id="r1" value="dayana"></div>
+      <button class="btn" data-go="codigo">Enviar código</button>
+      <button class="link" data-go="entrar">Volver a entrar</button>
+    </div></div>`,
+    side: `<div class="panel"><h3>Paso 1 de 2</h3><p>El código llega solo al correo que ese usuario tiene registrado. No se puede mandar a otro correo desde aquí.</p></div>`
+  },
+  codigo: {
+    tab: "Código y nueva contraseña", url: "dayanassweet.com/inventarios/recuperar",
+    html: () => brand.replace("__WHO__", "") + `
+    <div class="content"><div class="narrow" style="display:grid;gap:18px">
+      <h2 style="font-size:1.6rem">Revisa tu correo</h2>
+      <p class="lead">Enviamos un código a <b>d•••••@gmail.com</b>. Vence en 10 minutos.</p>
+      <div class="field"><label for="c1">Código</label>
+        <div class="code" id="c1"><input value="4" aria-label="Número 1"><input value="8" aria-label="Número 2"><input value="2" aria-label="Número 3"><input value="0" aria-label="Número 4"><input value="1" aria-label="Número 5"><input value="7" aria-label="Número 6"></div></div>
+      <div class="field"><label for="n1">Nueva contraseña</label><input id="n1" type="password" value="••••••••••••"></div>
+      <ul class="rules"><li>Al menos 10 caracteres</li><li>No es igual a tu usuario</li><li class="no">No es una contraseña muy común</li></ul>
+      <button class="btn" data-go="panel">Guardar y entrar</button>
+      <button class="link">Enviar otro código</button>
+    </div></div>`,
+    side: `<div class="panel"><h3>Paso 2 de 2</h3><p>Al guardar la nueva contraseña se cierran las sesiones abiertas en otros aparatos.</p></div>`
+  },
+  invitacion: {
+    tab: "Crear contraseña (invitación)", url: "dayanassweet.com/inventarios/invitacion",
+    html: () => brand.replace("__WHO__", "") + `
+    <div class="content"><div class="narrow" style="display:grid;gap:18px">
+      <span class="eyebrow">Invitación</span>
+      <h2 style="font-size:1.6rem">Hola, María. Crea tu acceso</h2>
+      <p class="lead">Dayana te invitó a manejar el inventario de la tienda. Elige tu contraseña; tu usuario ya está listo.</p>
+      <div class="field"><label for="i0">Usuario</label><input id="i0" value="maria" readonly></div>
+      <div class="field"><label for="i1">Contraseña</label><input id="i1" type="password" value="••••••••••••"></div>
+      <div class="field"><label for="i2">Repite la contraseña</label><input id="i2" type="password" value="••••••••••••"></div>
+      <ul class="rules"><li>Al menos 10 caracteres</li><li>Las dos coinciden</li></ul>
+      <button class="btn" data-go="panel">Crear contraseña y entrar</button>
+      <div class="note warn">El enlace de invitación sirve una sola vez y vence en 48 horas.</div>
+    </div></div>`,
+    side: `<div class="panel"><h3>Cómo llega aquí</h3><ol><li>Un administrador escribe nombre y correo en “Usuarios” e invita.</li><li>A la persona le llega un correo con un enlace.</li><li>Ella misma crea su contraseña. Nadie más la conoce.</li></ol></div>`
+  },
+  panel: {
+    tab: "Panel (después de entrar)", url: "dayanassweet.com/inventarios",
+    html: () => brand.replace("__WHO__", who("Dayana", true)) + `
+    <div class="content">
+      <div class="row"><div style="display:grid;gap:4px"><span class="eyebrow">Panel de la pastelera</span><h2 style="font-size:1.9rem">Inventario</h2></div>
+        <div class="actions"><button class="btn ghost small">Productos</button><button class="btn ghost small">Categorías</button><button class="btn ghost small" data-go="usuarios">Usuarios</button></div></div>
+      <p class="lead">Lo mismo que hoy haces dentro de Shopify: productos, fotos, precios, stock y categorías.</p>
+      <div class="cats">
+        <div class="cat"><div class="thumb" style="background:linear-gradient(135deg,#c99a6b,#7a4a2c)"></div><div><b>Galletas</b><small>2 productos · Orden 1</small></div></div>
+        <div class="cat"><div class="thumb" style="background:linear-gradient(135deg,#6b3e2a,#2f1b12)"></div><div><b>Brownies</b><small>3 productos · Orden 2</small></div></div>
+        <div class="cat"><div class="thumb" style="background:linear-gradient(135deg,#d9583b,#7d8f3a)"></div><div><b>Conservas saladas</b><small>1 producto · Orden 3</small></div></div>
+        <div class="cat"><div class="thumb" style="background:linear-gradient(135deg,#8fbf4d,#f0a04b)"></div><div><b>Jugos y bebidas</b><small>4 productos · Orden 4</small></div></div>
+      </div>
+    </div>`,
+    side: `<div class="panel"><h3>Igual que el panel actual</h3><p>Las pantallas de productos y categorías son las mismas de hoy. Cambia solo la entrada y se suma “Usuarios” para administradores.</p></div>
+      <div class="panel"><h3>Arriba a la derecha</h3><p>Quién está conectado y el botón “Salir”, que cierra la sesión en ese aparato.</p></div>`
+  },
+  usuarios: {
+    tab: "Usuarios", url: "dayanassweet.com/inventarios/usuarios",
+    html: () => brand.replace("__WHO__", who("Dayana", true)) + `
+    <div class="content">
+      <div class="row"><h2 style="font-size:1.7rem">Usuarios</h2><button class="btn ghost small" data-go="panel">Volver al inventario</button></div>
+      <div class="panel">
+        <h3 style="font-size:1.1rem">Invitar a alguien</h3>
+        <div class="field"><label for="v1">Nombre</label><input id="v1" value="Carlos"></div>
+        <div class="field"><label for="v2">Correo</label><input id="v2" value="carlos@ejemplo.com"></div>
+        <div class="field"><label for="v3">Permiso</label><select id="v3"><option>Inventario (productos, fotos, stock, categorías)</option><option>Administrador (además, maneja usuarios)</option></select></div>
+        <button class="btn">Enviar invitación</button>
+      </div>
+      <div class="users">
+        <div class="user"><div class="meta"><b>Dayana</b><span class="mail">dayana@ejemplo.com · usuario: dayana</span></div><div class="actions"><button class="btn ghost small">Editar</button></div>
+          <div class="chips"><span class="chip ok">Activa</span><span class="chip">Administradora</span><span class="chip">Entró hoy 17:40</span></div></div>
+        <div class="user"><div class="meta"><b>María</b><span class="mail">maria@ejemplo.com · usuario: maria</span></div><div class="actions"><button class="btn ghost small">Editar</button><button class="btn ghost small">Desactivar</button></div>
+          <div class="chips"><span class="chip ok">Activa</span><span class="chip">Inventario</span><span class="chip">Entró ayer</span></div></div>
+        <div class="user"><div class="meta"><b>Carlos</b><span class="mail">carlos@ejemplo.com</span></div><div class="actions"><button class="btn ghost small">Reenviar</button><button class="btn ghost small">Cancelar</button></div>
+          <div class="chips"><span class="chip warn">Invitación pendiente · vence en 47 h</span><span class="chip">Inventario</span></div></div>
+        <div class="user"><div class="meta"><b>Luis</b><span class="mail">luis@ejemplo.com · usuario: luis</span></div><div class="actions"><button class="btn ghost small">Reactivar</button></div>
+          <div class="chips"><span class="chip off">Desactivado</span><span class="chip">Inventario</span></div></div>
+      </div>
+      <p class="hint">Nombres y correos de ejemplo. Desactivar cierra al instante sus sesiones abiertas. Siempre debe quedar al menos un administrador activo.</p>
+    </div>`,
+    side: `<div class="panel"><h3>Solo administradores</h3><p>Quien tiene permiso “Inventario” no ve esta sección.</p></div>
+      <div class="panel"><h3>Desactivar en vez de borrar</h3><p>Así queda el historial y se puede reactivar si vuelve.</p></div>`
+  },
+  shopify: {
+    tab: "Primer usuario (desde Shopify)", url: "admin.shopify.com · Apps · Dayana Inventario",
+    html: () => `<div class="shopify"><nav><span>Inicio</span><span>Pedidos</span><span>Productos</span><span>Clientes</span><span style="margin-top:10px;opacity:.7">Apps</span><span class="on">Dayana Inventario</span></nav>
+      <div style="display:flex;flex-direction:column">${brand.replace("__WHO__", "")}
+      <div class="content">
+        <div class="row"><h2 style="font-size:1.6rem">Usuarios de /inventarios</h2><span class="tag">Llave maestra</span></div>
+        <div class="note ok">Aquí entras con tu cuenta de Shopify. Desde aquí se crea el primer usuario y se recupera el acceso si se pierden todas las contraseñas.</div>
+        <div class="panel">
+          <h3 style="font-size:1.1rem">Invitar al primer administrador</h3>
+          <div class="field"><label for="s1">Nombre</label><input id="s1" value="Dayana"></div>
+          <div class="field"><label for="s2">Usuario</label><input id="s2" value="dayana"></div>
+          <div class="field"><label for="s3">Correo</label><input id="s3" value="dayana@ejemplo.com"></div>
+          <div class="field"><label for="s4">Permiso</label><select id="s4"><option>Administrador</option><option>Inventario</option></select></div>
+          <button class="btn" data-go="invitacion">Enviar invitación</button>
+        </div>
+      </div></div></div>`,
+    side: `<div class="panel"><h3>Cómo nace el primero</h3><ol><li>Abres Dayana Inventario dentro de Shopify, como hoy.</li><li>En “Usuarios” invitas a Dayana como administradora.</li><li>Le llega el correo y crea su contraseña.</li><li>Desde ahí, ella invita a los demás en /inventarios.</li></ol></div>
+      <div class="panel"><h3>Por qué aquí</h3><p>Ya está protegido por el inicio de sesión de Shopify, así que no hace falta una contraseña inicial que alguien tenga que pasarte.</p></div>`
+  }
+};
+const order = ["shopify","invitacion","entrar","panel","usuarios","olvide","codigo"];
+const tabs = document.getElementById("tabs");
+order.forEach(k => { const b = document.createElement("button"); b.className = "tab"; b.textContent = S[k].tab; b.dataset.k = k; b.onclick = () => go(k); tabs.appendChild(b); });
+function go(k){
+  if(!S[k]) k = "shopify";
+  document.getElementById("screen").innerHTML = S[k].html();
+  document.getElementById("side").innerHTML = S[k].side;
+  document.getElementById("url").textContent = S[k].url;
+  tabs.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === k));
+  document.querySelectorAll("#screen [data-go]").forEach(b => b.addEventListener("click", e => { e.preventDefault(); go(b.dataset.go); }));
+  if(location.hash.slice(1) !== k) history.replaceState(null, "", "#" + k);
+}
+const dev = document.getElementById("device");
+const setDev = p => { dev.classList.toggle("phone", p); document.getElementById("dPhone").setAttribute("aria-pressed", p); document.getElementById("dDesk").setAttribute("aria-pressed", !p); };
+document.getElementById("dPhone").onclick = () => setDev(true);
+document.getElementById("dDesk").onclick = () => setDev(false);
+window.addEventListener("hashchange", () => go(location.hash.slice(1)));
+go(location.hash.slice(1) || "shopify");
+</script>

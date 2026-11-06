@@ -1,7 +1,7 @@
 const escape = value => String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
 /** Public app shell. Private data is loaded only with an authorized App Bridge session. */
-export function renderAdminPage({ clientId, shop } = {}) {
+export function renderAdminPage({ clientId, shop, portal=false, storefrontOrigin='https://dayanassweet.com' } = {}) {
   const valid = typeof shop === 'string' && /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.myshopify\.com$/.test(shop)
     && typeof clientId === 'string' && clientId.trim().length > 0;
   const headers = {
@@ -11,16 +11,21 @@ export function renderAdminPage({ clientId, shop } = {}) {
     'Referrer-Policy': 'no-referrer',
     'Content-Security-Policy': `default-src 'self'; script-src 'self' https://cdn.shopify.com; style-src 'self'; img-src 'self' blob:; connect-src 'self' https://admin.shopify.com https://cdn.shopify.com${valid ? ` https://${shop}` : ''}; frame-ancestors ${valid ? `https://${shop} https://admin.shopify.com` : "'none'"}; base-uri 'none'; object-src 'none'; form-action 'self'`,
   };
+  if(portal) {
+    if(!/^https:\/\/[^/]+$/.test(storefrontOrigin))throw new Error('UNAVAILABLE');
+    headers['Content-Security-Policy']=`default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; connect-src 'self'; frame-ancestors ${storefrontOrigin}; base-uri 'none'; object-src 'none'; form-action 'self'`;
+    headers['X-Robots-Tag']='noindex, nofollow';
+  }
   if (!valid) return new Response('<!doctype html><html lang="es"><meta charset="utf-8"><title>Panel no disponible</title><p>El panel no está disponible. Revisa la configuración de la aplicación.</p></html>', { status: 503, headers });
   return new Response(`<!doctype html>
 <html lang="es"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="shopify-api-key" content="${escape(clientId)}">
+${portal?'<meta name="robots" content="noindex,nofollow"><meta http-equiv="Content-Security-Policy" content="default-src &apos;self&apos;; script-src &apos;self&apos;; style-src &apos;self&apos;; img-src &apos;self&apos; blob:; connect-src &apos;self&apos;; base-uri &apos;none&apos;; object-src &apos;none&apos;; form-action &apos;self&apos;">':`<meta name="shopify-api-key" content="${escape(clientId)}">`}
 <title>Celebraciones · Dayana's Sweet</title>
-<link rel="stylesheet" href="/admin/assets/admin-ui.css">
-<script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
-<script type="module" src="/admin/assets/admin-ui.js"></script>
-</head><body>
+<link rel="stylesheet" href="${portal?'/apps/inventario/assets/celebraciones.css':'/admin/assets/admin-ui.css'}">
+${portal?'':'<script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>'}
+<script type="module" src="${portal?'/apps/inventario/assets/celebraciones.js':'/admin/assets/admin-ui.js'}"></script>
+</head><body${portal?' data-ds-portal="true"':''}>
 <header class="ds-head"><span class="ds-brand">Dayana’s <em>Sweet</em></span><span>Panel de la pastelera</span></header>
 <main>
   <p class="ds-eyebrow">Celebraciones</p><h1>Una propuesta <em>con cada detalle.</em></h1>
@@ -41,7 +46,7 @@ export function renderAdminPage({ clientId, shop } = {}) {
       <section class="ds-calendar ds-card" aria-labelledby="ds-calendar-title"><h2 id="ds-calendar-title">Agenda</h2><p class="ds-muted">Abre o cierra la recepción de solicitudes para cada fecha. Los pedidos existentes se conservan.</p>
         <form id="ds-calendar-form" class="ds-stack"><fieldset id="ds-calendar-fields" class="ds-stack"><label>Fecha de recogida<input name="date" type="date" required></label><p id="ds-calendar-status" class="ds-note" aria-live="polite">Cargando agenda…</p><div class="ds-stack"><button name="closed" value="true" type="submit">Cerrar fecha</button><button name="closed" value="false" type="submit">Abrir fecha</button></div></fieldset></form>
         <details><summary>Fechas cerradas</summary><ul id="ds-calendar-days"></ul></details>
-        <p class="ds-muted">Recogida todos los días de 8:00 a 18:00, horario de Houston (America/Chicago).</p><p class="ds-muted">4319 Freya Point Dr, Fulshear, TX 77441</p>
+        <p class="ds-muted">Recogida todos los días de 8:00 a 18:00, horario de Houston (America/Chicago).</p><p class="ds-muted">4319 Freya Pointe Dr, Fulshear, TX 77441</p>
       </section>
       <section class="ds-calendar ds-card" aria-labelledby="ds-payment-check-title"><h2 id="ds-payment-check-title">Conexión de pagos</h2><p class="ds-muted">Comprueba la conexión, los permisos y las ubicaciones de Shopify.</p><button id="ds-payment-check" type="button">Verificar conexión de pagos</button><div id="ds-payment-check-result" aria-live="polite"></div></section>
     </aside>
