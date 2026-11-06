@@ -39,7 +39,7 @@ const detailFields = `id name createdAt cancelledAt closed email phone note disp
   shippingLine { title code source deliveryCategory }
   lineItems(first: 100) { nodes { id title variantTitle sku quantity currentQuantity unfulfilledQuantity refundableQuantity
     ${bag('originalUnitPriceSet')} ${bag('discountedUnitPriceAfterAllDiscountsSet')} } pageInfo { hasNextPage } }
-  transactions(first: 50) { id kind status gateway createdAt manualPaymentGateway ${bag('amountSet')} }
+  transactions { id kind status gateway createdAt manualPaymentGateway ${bag('amountSet')} }
   refunds(first: 30) { id createdAt note ${bag('totalRefundedSet')} }
   fulfillments(first: 20) { id status displayStatus createdAt trackingInfo(first: 3) { company number url } }`;
 

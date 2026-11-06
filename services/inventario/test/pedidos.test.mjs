@@ -59,6 +59,30 @@ test('Pedidos se ve con inventario o admin; celebraciones solo no lo ve ni lo pu
   assert.doesNotMatch(await renderAdminPage(staffEnv).text(), /orders-ui\.js|id="pedidos"/);
 });
 
+test('el portal bloquea el efectivo de tarjeta y exige confirmar el envío con saldo', async () => {
+  const { h, call, fake, forwarded } = await setup();
+  const admin = await h.activate('dayana', ['admin']);
+  const kitchen = await h.activate('cocina', ['inventario']);
+  fake.raw(1043).transactions.push({ id: 'gid://shopify/OrderTransaction/8001', kind: 'AUTHORIZATION', status: 'SUCCESS', gateway: 'shopify_payments', manualPaymentGateway: false, cents: 3600 });
+  assert.equal((await call('pedidos/orders/1043', { session: admin.session })).body.cashAllowed, false);
+  const cash = await call('pedidos/orders/1043/cash', { session: admin.session, password, body: { operationId: op(901), expectedAmountCents: 3600 } });
+  assert.deepEqual([cash.status, cash.body.code], [409, 'CASH_NOT_ALLOWED']);
+  assert.equal(fake.count('PanelMarkAsPaid'), 0);
+  fake.raw(1042).outstandingCents = 100;
+  const data = { session: kitchen.session, body: { operationId: op(902), trackingNumber: '9400100000000', carrier: 'USPS', notify: true } };
+  const blocked = await call('pedidos/orders/1042/fulfill', data);
+  assert.deepEqual([blocked.status, blocked.body.code], [409, 'UNPAID_SHIPMENT']);
+  assert.equal(fake.count('PanelFulfill'), 0);
+  data.body.confirmUnpaid = true;
+  const sent = await call('pedidos/orders/1042/fulfill', data);
+  assert.equal(sent.status, 200);
+  assert.deepEqual(await call('pedidos/orders/1042/fulfill', data), sent);
+  assert.equal(fake.count('PanelFulfill'), 1);
+  assert.equal(forwarded.at(-1).body.confirmUnpaid, true);
+  assert.equal((await call('pedidos/orders/1043/ready', { session: kitchen.session, body: { operationId: op(903) } })).status, 200);
+  assert.equal((await call('pedidos/orders/1043/delivered', { session: kitchen.session, body: { operationId: op(904) } })).status, 200);
+});
+
 test('inventario ve, anota y despacha; las acciones de dinero responden 403 sin tocar Shopify ni la contraseña', async () => {
   const { h, call, fake, forwarded } = await setup();
   await h.activate('dayana', ['admin']);

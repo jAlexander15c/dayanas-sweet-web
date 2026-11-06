@@ -9,7 +9,11 @@ import { createOrdersStore, sqlFromStorage } from '../../celebraciones/src/order
 import { createOrdersService } from '../../celebraciones/src/orders-service.mjs';
 import { cancellableOrder, createFakeShopify, sampleOrders } from '../../celebraciones/test/fake-shopify-orders.mjs';
 
-const mock = createShopifyMock(), emails = [], orders = createFakeShopify({ orders: [...sampleOrders(), cancellableOrder()], jobPolls: 1 });
+const cardOrder = { ...cancellableOrder(), id: '1047', name: '#1047', paid: false,
+  transactions: [{ id: 'gid://shopify/OrderTransaction/10471', kind: 'AUTHORIZATION', status: 'SUCCESS', gateway: 'shopify_payments', manualPaymentGateway: false, cents: 3700, createdAt: '2026-11-02T12:00:00Z' }] };
+const unpaidShipment = { ...cancellableOrder(), id: '1048', name: '#1048', gateway: 'manual', paid: false,
+  transactions: [{ id: 'gid://shopify/OrderTransaction/10481', kind: 'SALE', status: 'PENDING', gateway: 'manual', manualPaymentGateway: true, cents: 3700, createdAt: '2026-11-02T12:00:00Z' }] };
+const mock = createShopifyMock(), emails = [], orders = createFakeShopify({ orders: [...sampleOrders(), cancellableOrder(), cardOrder, unpaidShipment], jobPolls: 1 });
 const forwarded = [];
 let rpcLost = false;
 const stock = { 'gid://shopify/ProductVariant/503': 4, 'gid://shopify/ProductVariant/506': 5, 'gid://shopify/ProductVariant/501': 0 };

@@ -6,7 +6,7 @@ import { createShopifyOrdersClient } from '../src/orders-shopify.mjs';
 import { createOrdersStore } from '../src/orders-store.mjs';
 import { createOrdersService, MESSAGES } from '../src/orders-service.mjs';
 import { handleStaffGateway, portalOrdersActor, trustedPortalActor } from '../src/staff-gateway.mjs';
-import { cancellableOrder, createFakeShopify } from './fake-shopify-orders.mjs';
+import { cancellableOrder, createFakeShopify, sampleOrders } from './fake-shopify-orders.mjs';
 
 const SHOP = 'dayanas-test.myshopify.com';
 const USER = '11111111-2222-4333-8444-555555555555';
@@ -35,6 +35,125 @@ function setup(options) {
 // Inventario sets stockVerified only after checking stock itself, when Celebraciones asks for it.
 const STOCKED = { ...ADMIN, stockVerified: true };
 const mutations = fake => fake.calls.filter(name => /^Panel(MarkAsPaid|Refund|Cancel|Fulfill|Ready|Edit)/.test(name)).length;
+
+const payment = (kind, status, gateway = 'shopify_payments', manualPaymentGateway = false) => ({
+  id: 'gid://shopify/OrderTransaction/8001', kind, status, gateway, manualPaymentGateway, createdAt: '2026-11-05T15:00:00Z', cents: 3600,
+});
+
+test('cash rejects electronic authorizations and pending gateways, even on an otherwise manual order', async () => {
+  for (const transaction of [payment('AUTHORIZATION', 'SUCCESS'), payment('SALE', 'PENDING', 'paypal'), payment('SALE', 'PENDING', 'cash_app_pay'), payment('SALE', 'PENDING', 'cash'), payment('CAPTURE', 'AWAITING_RESPONSE'), payment('SALE', 'UNKNOWN')]) {
+    const { call, fake } = setup();
+    fake.raw(1043).transactions = [transaction];
+    const result = await call('POST', '/orders/1043/cash', { operationId: op(901), expectedAmountCents: 3600 });
+    assert.deepEqual([result.status, result.body.code, result.body.message, result.body.final], [409, 'CASH_NOT_ALLOWED', 'Este pedido se paga con tarjeta. Cóbralo o captúralo desde Shopify.', true]);
+    assert.equal(fake.count('PanelMarkAsPaid'), 0);
+    assert.equal(fake.raw(1043).outstandingCents, 3600);
+    assert.equal((await call('GET', '/orders/1043')).body.cashAllowed, false);
+  }
+});
+
+test('cash permits pending manual gateways, named manual methods, and orders with no transactions', async () => {
+  for (const [gateway, transactions] of [
+    ['manual', [payment('SALE', 'PENDING', 'manual', true)]],
+    ['manual', [{ kind: 'SALE', status: 'PENDING', gateway: 'manual' }]],
+    ['Efectivo al retirar', [payment('SALE', 'PENDING', 'Efectivo al retirar', true)]],
+    ['Bank Deposit', [payment('SALE', 'PENDING', 'Bank Deposit', true)]],
+    ['Método de la tienda', [payment('SALE', 'PENDING', 'Método de la tienda', true)]],
+    ['shopify_payments', []],
+  ]) {
+    const orders = sampleOrders();
+    Object.assign(orders[1], { gateway, transactions });
+    const { call, fake } = setup({ orders });
+    assert.equal((await call('GET', '/orders/1043')).body.cashAllowed, true);
+    const body = { operationId: op(902), expectedAmountCents: 3600 };
+    const paid = await call('POST', '/orders/1043/cash', body);
+    assert.equal(paid.status, 200);
+    assert.equal(fake.raw(1043).outstandingCents, 0);
+    assert.deepEqual(await call('POST', '/orders/1043/cash', body), paid);
+    assert.equal(fake.count('PanelMarkAsPaid'), 1);
+  }
+});
+
+test('manual gateway names allow a failed electronic attempt but cannot mask a live electronic payment', async () => {
+  const { call, fake } = setup();
+  fake.raw(1043).paymentGatewayNames = ['Cash on Delivery (COD)'];
+  fake.raw(1043).transactions = [payment('SALE', 'FAILURE', 'paypal')];
+  assert.equal((await call('GET', '/orders/1043')).body.cashAllowed, true);
+  fake.raw(1043).transactions[0].status = 'PENDING';
+  const result = await call('POST', '/orders/1043/cash', { operationId: op(907), expectedAmountCents: 3600 });
+  assert.deepEqual([result.status, result.body.code], [409, 'CASH_NOT_ALLOWED']);
+  assert.equal(fake.count('PanelMarkAsPaid'), 0);
+});
+
+test('cash refuses electronic orders with a partial successful payment and reads beyond the first 50 transactions', async () => {
+  for (const transactions of [
+    [payment('SALE', 'SUCCESS')],
+    [...Array.from({ length: 50 }, () => payment('SALE', 'FAILURE', 'manual')), payment('AUTHORIZATION', 'SUCCESS')],
+  ]) {
+    const { call, fake } = setup();
+    fake.raw(1043).transactions = transactions;
+    const result = await call('POST', '/orders/1043/cash', { operationId: op(903), expectedAmountCents: 3600 });
+    assert.deepEqual([result.status, result.body.code], [409, 'CASH_NOT_ALLOWED']);
+    assert.equal(fake.count('PanelMarkAsPaid'), 0);
+  }
+});
+
+test('a pending cash retry rechecks payment safety before resending', async () => {
+  const { call, fake } = setup();
+  const body = { operationId: op(904), expectedAmountCents: 3600 };
+  fake.next('PanelMarkAsPaid', 'down');
+  assert.equal((await call('POST', '/orders/1043/cash', body)).body.state, 'uncertain');
+  fake.raw(1043).transactions = [payment('AUTHORIZATION', 'SUCCESS')];
+  const retry = await call('POST', '/orders/1043/cash', body);
+  assert.deepEqual([retry.status, retry.body.code, retry.body.final], [409, 'CASH_NOT_ALLOWED', true]);
+  assert.equal(fake.count('PanelMarkAsPaid'), 1, 'only the original failed request, never a capture on retry');
+});
+
+test('unpaid shipping requires explicit boolean confirmation and fingerprints that choice', async () => {
+  const { call, fake } = setup();
+  fake.raw(1042).outstandingCents = 8500;
+  const body = { operationId: op(905), trackingNumber: '9400100000000', carrier: 'USPS', notify: true };
+  for (const confirmUnpaid of [undefined, false]) {
+    const result = await call('POST', '/orders/1042/fulfill', { ...body, confirmUnpaid }, INVENTARIO);
+    assert.deepEqual([result.status, result.body.code, result.body.message, result.body.final], [409, 'UNPAID_SHIPMENT', 'Este pedido tiene saldo por cobrar. Cóbralo antes de enviarlo.', true]);
+    assert.equal(fake.count('PanelFulfill'), 0);
+    assert.equal(fake.count('PanelFulfillmentOrders'), 0);
+  }
+  assert.equal((await call('POST', '/orders/1042/fulfill', { ...body, confirmUnpaid: 'true' }, INVENTARIO)).status, 422);
+  fake.next('PanelFulfill', 'lost');
+  const confirmed = { ...body, confirmUnpaid: true };
+  assert.equal((await call('POST', '/orders/1042/fulfill', confirmed, INVENTARIO)).body.state, 'uncertain');
+  const sent = await call('POST', '/orders/1042/fulfill', confirmed, INVENTARIO);
+  assert.equal(sent.status, 200);
+  assert.deepEqual(await call('POST', '/orders/1042/fulfill', confirmed, INVENTARIO), sent);
+  assert.equal(fake.count('PanelFulfill'), 1);
+  assert.equal((await call('POST', '/orders/1042/fulfill', { ...body, confirmUnpaid: false }, INVENTARIO)).body.code, 'OPERATION_REUSED');
+});
+
+test('a shipping retry refuses newly outstanding money unless the saved operation confirmed it', async () => {
+  const { call, fake } = setup();
+  const body = { operationId: op(906), trackingNumber: '9400100000000', carrier: 'USPS', notify: true };
+  fake.next('PanelFulfill', 'down');
+  assert.equal((await call('POST', '/orders/1042/fulfill', body, INVENTARIO)).body.state, 'uncertain');
+  fake.raw(1042).outstandingCents = 100;
+  const retry = await call('POST', '/orders/1042/fulfill', body, INVENTARIO);
+  assert.deepEqual([retry.status, retry.body.code], [409, 'UNPAID_SHIPMENT']);
+  assert.equal(fake.count('PanelFulfill'), 1);
+});
+
+test('shipping without an unpaid override preserves receipts written before confirmUnpaid existed', async () => {
+  const { call, fake, store } = setup();
+  const params = { trackingNumber: '9400100000000', carrier: 'USPS', carrierName: 'USPS', notify: true };
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify({ action: 'fulfill', orderId: '1042', params })));
+  const fingerprint = [...new Uint8Array(hash)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+  const operationId = op(908), response = { status: 200, body: { ok: true, operationId } };
+  store.begin({ operationId, action: 'fulfill', orderId: '1042', fingerprint, plan: {}, staffId: USER, staffName: 'Dayana', amountCents: null, summary: 'Despachado', at: Date.now() });
+  store.finish(operationId, { state: 'succeeded', response, at: Date.now() });
+  for (const extra of [{}, { confirmUnpaid: false }]) {
+    assert.deepEqual(await call('POST', '/orders/1042/fulfill', { ...params, operationId, ...extra }, INVENTARIO), response);
+  }
+  assert.equal(fake.calls.length, 0, 'a legacy completed receipt requires no Shopify reads or writes');
+});
 
 test('list groups open orders, sums the bake list and excludes Celebraciones and shipped orders', async () => {
   const { call } = setup();

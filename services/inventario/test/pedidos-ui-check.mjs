@@ -75,7 +75,7 @@ try {
   await page.getByRole('heading', { name: 'Para hornear' }).waitFor();
   await page.getByText('Suma de los pedidos sin despachar ni retirar.').waitFor();
   await page.getByText('pedidos en total').waitFor();
-  await page.getByRole('button', { name: 'Por preparar · 4' }).waitFor();
+  await page.getByRole('button', { name: 'Por preparar · 6' }).waitFor();
   await page.getByRole('button', { name: 'Listos · 1' }).waitFor();
   await page.getByRole('button', { name: 'Entregados · 0' }).waitFor();
   assert.equal(await page.getByLabel('Buscar pedido').getAttribute('placeholder'), 'Número, nombre o correo');
@@ -223,6 +223,42 @@ try {
   assert.equal(refundKeys.length, 2);
   assert.equal(refundKeys[0], refundKeys[1], 'el reintento usa la misma clave');
 
+  // Tarjeta autorizada: nunca se ofrece efectivo, incluso con saldo positivo.
+  await page.evaluate(() => { location.hash = 'pedidos/1047'; });
+  await page.getByRole('heading', { name: 'Pedido #1047' }).waitFor();
+  await page.getByText('Saldo por cobrar').waitFor();
+  assert.equal(await page.getByRole('button', { name: 'Cobré en efectivo' }).count(), 0);
+  await screenshots(page, 'tarjeta-autorizada');
+
+  // Envío manual sin cobrar: casilla explícita, desmarcada al abrir, y misma confirmación al reintentar.
+  await page.evaluate(() => { location.hash = 'pedidos/1048'; });
+  await page.getByRole('heading', { name: 'Pedido #1048' }).waitFor();
+  await page.getByRole('button', { name: 'Cobré en efectivo' }).waitFor();
+  await page.getByRole('button', { name: 'Marcar despachado' }).click();
+  await page.getByText('Este pedido tiene saldo por cobrar. Cóbralo antes de enviarlo.', { exact: false }).waitFor();
+  const confirmUnpaid = page.getByLabel('Enviar igual sin cobrar');
+  assert.equal(await confirmUnpaid.isChecked(), false);
+  await page.getByLabel('Número de seguimiento').fill('940010481048');
+  const beforeUnpaid = await state();
+  await page.getByRole('button', { name: 'Confirmar despacho' }).click();
+  await page.locator('#sheet-error').getByText('Confirma «Enviar igual sin cobrar» para despachar este pedido.').waitFor();
+  assert.equal((await state()).forwarded.length, beforeUnpaid.forwarded.length, 'sin confirmar no sale ninguna petición');
+  await screenshots(page, 'envio-sin-cobrar');
+  await confirmUnpaid.check();
+  await worker.fetch('/__test/pedidos-next?op=PanelFulfill&mode=lost');
+  await page.getByRole('button', { name: 'Confirmar despacho' }).click();
+  await page.getByRole('button', { name: 'Reintentar', exact: true }).waitFor();
+  assert.equal(await confirmUnpaid.isChecked(), true);
+  assert.equal(await confirmUnpaid.isDisabled(), true);
+  await page.getByRole('button', { name: 'Reintentar', exact: true }).click();
+  await page.getByText('Pedido despachado.', { exact: true }).waitFor();
+  const afterUnpaid = await state();
+  const unpaidWrites = afterUnpaid.forwarded.filter(f => f.path === '/orders/1048/fulfill');
+  assert.equal(unpaidWrites.length, 2);
+  assert.equal(unpaidWrites[0].body.operationId, unpaidWrites[1].body.operationId);
+  assert.ok(unpaidWrites.every(f => f.body.confirmUnpaid === true));
+  assert.equal(afterUnpaid.calls.filter(c => c === 'PanelFulfill').length - beforeUnpaid.calls.filter(c => c === 'PanelFulfill').length, 1);
+
   // g) Cancelar un pedido abierto: motivo, reembolso, stock y aviso, con contraseña.
   await page.evaluate(() => { location.hash = 'pedidos/1046'; });
   await page.getByRole('heading', { name: 'Pedido #1046' }).waitFor();
@@ -282,5 +318,5 @@ try {
   assert.equal(await events.locator('#pedidos').isHidden(), true);
 
   assert.deepEqual(errors, []);
-  console.log('PASS pedidos-ui-check: lista, detalle, nota, efectivo con respuesta perdida (1 cobro, misma clave), retiro listo/entregado, edición con stock, Celebraciones sin dinero, despacho con aviso de permiso, reembolso con tope y respuesta RPC perdida con la misma clave, cancelación asíncrona (job) con la misma clave, fallo definitivo que se cierra con Volver/Escape, roles; 390/1440 sin desbordes, 44 px, 0 errores JS.');
+  console.log('PASS pedidos-ui-check: lista, detalle, nota, efectivo con respuesta perdida (1 cobro, misma clave), tarjeta autorizada sin botón de efectivo, envío con saldo exige casilla y conserva confirmUnpaid al reintentar sin duplicar, retiro listo/entregado, edición con stock, Celebraciones sin dinero, despacho con aviso de permiso, reembolso con tope y respuesta RPC perdida con la misma clave, cancelación asíncrona (job) con la misma clave, fallo definitivo que se cierra con Volver/Escape, roles; 390/1440 sin desbordes, 44 px, 0 errores JS.');
 } finally { await browser?.close(); await worker.stop(); }

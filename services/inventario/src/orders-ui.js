@@ -10,7 +10,7 @@ const UNCONFIRMED = 'No pudimos confirmar si se guardó. Toca «Reintentar»: co
 // distinto, stock, userErrors). Solo con estos se descarta la clave. Cualquier otro error conserva la clave.
 const NOT_APPLIED = new Set(['VALIDATION', 'ROLE_REQUIRED', 'STEP_UP_REQUIRED', 'NOT_FOUND', 'ORDER_NOT_FOUND', 'NO_STOCK', 'AMOUNT_CHANGED', 'NOTHING_DUE',
   'REFUND_LIMIT', 'ORDER_CHANGED', 'ORDER_SHIPPED', 'ORDER_CANCELLED', 'ORDER_TOO_LARGE', 'CELEBRACIONES_ORDER', 'PICKUP_ORDER', 'SHIPPING_ORDER',
-  'NOTHING_TO_FULFILL', 'FULFILLMENT_SCOPE', 'SHOPIFY_REJECTED', 'OPERATION_REUSED']);
+  'NOTHING_TO_FULFILL', 'FULFILLMENT_SCOPE', 'SHOPIFY_REJECTED', 'OPERATION_REUSED', 'CASH_NOT_ALLOWED', 'UNPAID_SHIPMENT']);
 const STAGES = { preparar: 'Por preparar', listo: 'Listos', entregado: 'Entregados' };
 const STAGE_ONE = { preparar: 'Por preparar', listo: 'Listo', entregado: 'Entregado' };
 const REFUND_REASONS = [['damaged', 'Llegó dañado'], ['missing', 'Faltó un producto'], ['customer', 'Pedido de la clienta'], ['other', 'Otro']];
@@ -121,7 +121,7 @@ function actionButtons(order) {
     } else if (order.fulfillment !== 'FULFILLED') buttons.push('<button type="button" class="primary" data-action="fulfill">Marcar despachado</button>');
     if (admin && order.celebraciones) notes.push('<p class="notice">Este pedido se cobra desde Celebraciones</p>');
     if (admin && !order.celebraciones) {
-      if (order.outstandingCents > 0) buttons.push('<button type="button" data-action="cash">Cobré en efectivo</button>');
+      if (order.outstandingCents > 0 && order.cashAllowed === true) buttons.push('<button type="button" data-action="cash">Cobré en efectivo</button>');
       if (order.lines.some(line => line.unfulfilled > 0)) buttons.push('<button type="button" data-action="edit">Editar pedido</button>');
       if (order.netPaymentCents > 0) buttons.push('<button type="button" data-action="refund">Reembolsar</button>');
       if (order.canCancel) buttons.push('<button type="button" class="danger" data-action="cancel">Cancelar pedido</button>');
@@ -254,7 +254,9 @@ function openAction(action) {
   const order = detail, units = order.lines.reduce((sum, line) => sum + line.unfulfilled, 0);
   const pending = order.lines.filter(line => line.unfulfilled > 0).map(line => `${line.unfulfilled} ${line.title}`).join(', ');
   if (action === 'fulfill') return openSheet({ action, eyebrow: `Pedido ${order.name} · ${order.shippingTitle && /usps/i.test(order.shippingTitle) ? 'Envío USPS' : 'Envío'}`, title: 'Marcar despachado', confirm: 'Confirmar despacho',
-    fields: `<label>Número de seguimiento<input type="text" id="tracking" inputmode="text" autocomplete="off" maxlength="60" required></label>
+    fields: `${order.outstandingCents > 0 ? `<p class="notice">Este pedido tiene saldo por cobrar. Cóbralo antes de enviarlo. Saldo: ${usd(order.outstandingCents)}.</p>
+      <label class="check"><input type="checkbox" id="confirm-unpaid"><span>Enviar igual sin cobrar</span></label>` : ''}
+      <label>Número de seguimiento<input type="text" id="tracking" inputmode="text" autocomplete="off" maxlength="60" required></label>
       <label>Transportista<select id="carrier"><option value="USPS">USPS Ground Advantage</option><option value="OTHER">Otro</option></select></label>
       <label id="carrier-name-field" hidden>Nombre del transportista<input type="text" id="carrier-name" maxlength="40"></label>
       <label class="check"><input type="checkbox" id="notify" checked><span>Avisar a la clienta por correo con el enlace de seguimiento <small>Lo envía Shopify con su plantilla de envío.</small></span></label>
@@ -264,7 +266,9 @@ function openAction(action) {
       if (!/^[A-Za-z0-9][A-Za-z0-9 -]{3,59}$/.test(trackingNumber)) throw new Error('Escribe un número de seguimiento válido.');
       const carrier = $('#carrier').value;
       if (carrier === 'OTHER' && !$('#carrier-name').value.trim()) throw new Error('Escribe el nombre del transportista.');
-      return { trackingNumber, carrier, ...(carrier === 'OTHER' ? { carrierName: $('#carrier-name').value.trim() } : {}), notify: $('#notify').checked };
+      const confirmUnpaid = $('#confirm-unpaid')?.checked === true;
+      if (order.outstandingCents > 0 && !confirmUnpaid) throw new Error('Confirma «Enviar igual sin cobrar» para despachar este pedido.');
+      return { trackingNumber, carrier, ...(carrier === 'OTHER' ? { carrierName: $('#carrier-name').value.trim() } : {}), notify: $('#notify').checked, confirmUnpaid };
     }, after: done('Pedido despachado.') }), $('#carrier').onchange = () => { $('#carrier-name-field').hidden = $('#carrier').value !== 'OTHER'; };
   if (action === 'ready') return openSheet({ action, eyebrow: `Pedido ${order.name} · Retiro en Fulshear`, title: 'Listo para retirar', confirm: 'Marcar listo para retirar',
     fields: `<p>Shopify le avisa a la clienta que su pedido ya está listo en Fulshear. Al entregarlo, se marca «Entregado».</p><div class="notice">${esc(pending)}</div>`, build: () => ({}), after: done('Pedido listo para retirar.') });

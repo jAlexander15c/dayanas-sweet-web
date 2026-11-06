@@ -19,6 +19,8 @@ export const MESSAGES = Object.freeze({
   cancelRefund: 'El pedido se canceló, pero Shopify todavía no muestra el reembolso. Revisa los pagos del pedido en Shopify.',
   stockCheck: 'Hay que confirmar el stock antes de guardar.',
   cancelUnknown: 'No pudimos confirmar la cancelación. Revisa el pedido en Shopify antes de intentarlo de nuevo.',
+  cashNotAllowed: 'Este pedido se paga con tarjeta. Cóbralo o captúralo desde Shopify.',
+  unpaidShipment: 'Este pedido tiene saldo por cobrar. Cóbralo antes de enviarlo.',
 });
 // orderCancel runs as a background job. When its id is unknown (the answer was lost) time never
 // allows a resend: the operation stays pending and, if the order still is not cancelled this long
@@ -61,6 +63,24 @@ function stageOf(order, ready) {
 }
 const gatewayLabel = name => /cash|efectivo|manual|cod\b|pago al/i.test(name || '') ? 'Efectivo' : /shopify_payments/i.test(name || '') ? 'Tarjeta' : String(name || 'Otro').slice(0, 40);
 
+// Explicit offline methods only: e.g. cash_app_pay is an electronic gateway.
+const manualGateway = name => /^(manual|cash|cash on delivery(?: \(cod\))?|cod|bank deposit|money order|efectivo(?: al retirar| contra entrega)?|pago (?:en efectivo|al retirar|contra entrega)|depósito bancario|transferencia bancaria)$/i.test(String(name || '').trim().replace(/[_-]+/g, ' ').replace(/\s+/g, ' '));
+function cashAllowed(order) {
+  const transactions = order.transactions;
+  // Missing data is not evidence of an order with no transactions.
+  if (!Array.isArray(transactions)) return false;
+  if (!transactions.length) return true;
+  // Shopify always returns the boolean; the name list is only a fallback when it is absent.
+  const manual = t => typeof t.manualPaymentGateway === 'boolean' ? t.manualPaymentGateway : manualGateway(t.gateway);
+  const electronic = transactions.filter(t => !manual(t));
+  // Never let a manual display name mask an authorization, pending payment or
+  // successful electronic payment. In doubt, payment must be handled in Shopify.
+  if (electronic.some(t => !['FAILURE', 'ERROR'].includes(t.status) && !(t.kind === 'VOID' && t.status === 'SUCCESS'))) return false;
+  return transactions.every(manual) || (order.paymentGatewayNames?.length > 0 && order.paymentGatewayNames.every(manualGateway));
+}
+const cashConflict = () => conflict('CASH_NOT_ALLOWED', MESSAGES.cashNotAllowed);
+const unpaidShipment = (order, confirmed) => cents(order.totalOutstandingSet) > 0 && confirmed !== true ? conflict('UNPAID_SHIPMENT', MESSAGES.unpaidShipment) : null;
+
 async function digest(value) {
   const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(value)));
   return [...new Uint8Array(hash)].map(byte => byte.toString(16).padStart(2, '0')).join('');
@@ -97,19 +117,25 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
         if (!['USPS', 'OTHER'].includes(body.carrier)) throw bad('Elige el transportista.');
         const carrierName = body.carrier === 'OTHER' ? String(body.carrierName || '').trim() : 'USPS';
         if (!carrierName || carrierName.length > 40) throw bad('Escribe el nombre del transportista.');
-        return { trackingNumber, carrier: body.carrier, carrierName, notify: bool(body.notify) };
+        const confirmUnpaid = body.confirmUnpaid === undefined ? false : bool(body.confirmUnpaid);
+        // The default keeps the fingerprint of receipts created before this option existed.
+        return { trackingNumber, carrier: body.carrier, carrierName, notify: bool(body.notify), ...(confirmUnpaid ? { confirmUnpaid: true } : {}) };
       },
       async prepare(order, params) {
         if (isPickup(order)) throw conflict('PICKUP_ORDER', 'Este pedido es de retiro en Fulshear.');
+        const unpaid = unpaidShipment(order, params.confirmUnpaid);
+        if (unpaid) throw unpaid;
         const fos = await openFulfillmentOrders(order);
         return { amountCents: null, summary: `Despachado · ${params.carrierName} ${params.trackingNumber}`,
-          plan: { fulfillment: { lineItemsByFulfillmentOrder: fos.map(fo => ({ fulfillmentOrderId: fo.id })), notifyCustomer: params.notify, trackingInfo: { company: params.carrierName, number: params.trackingNumber } } } };
+          plan: { confirmUnpaid: params.confirmUnpaid === true, fulfillment: { lineItemsByFulfillmentOrder: fos.map(fo => ({ fulfillmentOrderId: fo.id })), notifyCustomer: params.notify, trackingInfo: { company: params.carrierName, number: params.trackingNumber } } } };
       },
       perform: plan => scoped(() => client.fulfill(plan.fulfillment)),
       reconcile(order, plan) {
         const number = plan.fulfillment.trackingInfo.number;
         if (activeFulfillments(order).some(f => (f.trackingInfo || []).some(t => t.number === number))) return 'done';
         if (order.displayFulfillmentStatus === 'FULFILLED') return conflict('ORDER_CHANGED', 'El pedido ya se despachó desde Shopify.');
+        const unpaid = unpaidShipment(order, plan.confirmUnpaid);
+        if (unpaid) return unpaid;
         return 'retry';
       },
     },
@@ -139,6 +165,7 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
       prepare(order, params) {
         const outstanding = cents(order.totalOutstandingSet);
         if (outstanding <= 0 || order.displayFinancialStatus === 'PAID') throw conflict('NOTHING_DUE', 'Este pedido no tiene saldo por cobrar.');
+        if (!cashAllowed(order)) throw cashConflict();
         if (outstanding !== params.expectedAmountCents) throw conflict('AMOUNT_CHANGED', `El saldo cambió en Shopify: ahora es ${usd(outstanding)}. Revisa antes de cobrar.`, { currentCents: outstanding });
         return { amountCents: outstanding, summary: `Cobró en efectivo ${usd(outstanding)}`, plan: { orderId: order.id, amountCents: outstanding } };
       },
@@ -146,6 +173,7 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
       reconcile(order, plan) {
         const outstanding = cents(order.totalOutstandingSet);
         if (outstanding === 0) return 'done';
+        if (!cashAllowed(order)) return cashConflict();
         if (outstanding === plan.amountCents) return 'retry';
         return conflict('AMOUNT_CHANGED', 'El saldo cambió en Shopify mientras se cobraba. Revisa el pedido.', { currentCents: outstanding });
       },
@@ -448,6 +476,7 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
           subtotalCents: optionalCents(order.currentSubtotalPriceSet), shippingCents: optionalCents(order.totalShippingPriceSet), totalCents: cents(order.currentTotalPriceSet),
           outstandingCents: cents(order.totalOutstandingSet), receivedCents: optionalCents(order.totalReceivedSet), refundedCents: optionalCents(order.totalRefundedSet), netPaymentCents: optionalCents(order.netPaymentSet),
           payment: [...new Set((order.paymentGatewayNames || []).map(gatewayLabel))],
+          cashAllowed: cashAllowed(order),
           fulfillments: activeFulfillments(order).map(f => ({ createdAt: f.createdAt, displayStatus: f.displayStatus, tracking: (f.trackingInfo || []).map(t => ({ company: t.company || null, number: t.number || null, url: /^https:\/\//.test(t.url || '') ? t.url : null })) })),
           shipped, cancelPending, canCancel: !order.cancelledAt && !shipped && !cancelPending, timeline: timeline(order, operations, pickup), note: store.getNote(id),
         } };

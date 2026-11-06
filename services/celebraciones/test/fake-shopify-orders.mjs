@@ -61,12 +61,12 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
   const calc = new Map();
   for (const source of orders) {
     const order = structuredClone(source);
-    order.cancelledAt = null; order.refunds = []; order.fulfillments = []; order.transactions = [];
+    order.cancelledAt = null; order.refunds = []; order.fulfillments = []; order.transactions = order.transactions || [];
     order.refundedCents = 0; order.shippingRefunded = 0;
     const total = totals(order).total;
     order.receivedCents = order.paid ? total : 0;
     order.outstandingCents = order.paid ? 0 : total;
-    if (order.paid) order.transactions.push({ id: `gid://shopify/OrderTransaction/${order.id}1`, kind: 'SALE', status: 'SUCCESS', gateway: order.gateway, createdAt: order.createdAt, cents: total });
+    if (order.paid && !order.transactions.length) order.transactions.push({ id: `gid://shopify/OrderTransaction/${order.id}1`, kind: 'SALE', status: 'SUCCESS', gateway: order.gateway, createdAt: order.createdAt, cents: total });
     if (order.shipped) shipAll(order, { company: 'USPS', number: '9400111111111111111111' }, 'IN_TRANSIT');
     state.set(order.id, order);
   }
@@ -93,7 +93,7 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
     const { subtotal, total } = totals(order);
     return {
       id: `gid://shopify/Order/${order.id}`, name: order.name, createdAt: order.createdAt, cancelledAt: order.cancelledAt, closed: false,
-      email: order.email, phone: order.phone, note: order.note, tags: order.tags, paymentGatewayNames: [order.gateway],
+      email: order.email, phone: order.phone, note: order.note, tags: order.tags, paymentGatewayNames: order.paymentGatewayNames || [order.gateway],
       displayFinancialStatus: financial(order), displayFulfillmentStatus: fulfillmentStatus(order), customer: order.customer,
       currentSubtotalPriceSet: money(subtotal), currentTotalPriceSet: money(total), totalShippingPriceSet: money(order.shipping.cents),
       totalOutstandingSet: money(order.outstandingCents), totalReceivedSet: money(order.receivedCents), totalRefundedSet: money(order.refundedCents),
@@ -102,7 +102,7 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
       lineItems: { nodes: order.lines.map(line => ({ id: `gid://shopify/LineItem/${line.id}`, title: line.title, variantTitle: line.variantTitle, sku: line.sku,
         quantity: line.quantity, currentQuantity: line.current, unfulfilledQuantity: Math.max(0, line.current - line.fulfilled), refundableQuantity: line.current,
         originalUnitPriceSet: money(line.unitCents), discountedUnitPriceAfterAllDiscountsSet: money(line.unitCents), variant: { id: line.variantId } })), pageInfo: { hasNextPage: false } },
-      transactions: order.transactions.map(t => ({ id: t.id, kind: t.kind, status: t.status, gateway: t.gateway, createdAt: t.createdAt, manualPaymentGateway: t.gateway === 'manual', amountSet: money(t.cents) })),
+      transactions: order.transactions.map(t => ({ id: t.id, kind: t.kind, status: t.status, gateway: t.gateway, createdAt: t.createdAt, manualPaymentGateway: t.manualPaymentGateway ?? (t.gateway === 'manual'), amountSet: money(t.cents) })),
       refunds: order.refunds.map(r => ({ id: r.id, createdAt: r.createdAt, note: r.note, totalRefundedSet: money(r.cents) })),
       fulfillments: order.fulfillments.map(f => ({ id: f.id, status: f.status, displayStatus: f.displayStatus, createdAt: f.createdAt, trackingInfo: f.trackingInfo })),
     };
@@ -135,7 +135,9 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
       const order = find(v.input.id);
       if (order.outstandingCents <= 0) return { orderMarkAsPaid: { order: null, userErrors: [userError('Order is already paid')] } };
       const cents = order.outstandingCents;
-      order.transactions.push({ id: `gid://shopify/OrderTransaction/${nextId++}`, kind: 'SALE', status: 'SUCCESS', gateway: 'manual', createdAt: clock(), cents });
+      // Like Shopify, this mutation may capture an existing electronic authorization.
+      const authorization = order.transactions.find(t => t.kind === 'AUTHORIZATION' && t.status === 'SUCCESS' && t.gateway !== 'manual' && t.manualPaymentGateway !== true);
+      order.transactions.push({ id: `gid://shopify/OrderTransaction/${nextId++}`, kind: authorization ? 'CAPTURE' : 'SALE', status: 'SUCCESS', gateway: authorization?.gateway || 'manual', createdAt: clock(), cents });
       order.receivedCents += cents; order.outstandingCents = 0; moneyCalls++;
       return { orderMarkAsPaid: { order: { id: v.input.id, displayFinancialStatus: financial(order), totalOutstandingSet: money(0) }, userErrors: [] } };
     },
@@ -218,6 +220,9 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
     if (!handlers[op]) return Response.json({ errors: [{ message: 'unknown', extensions: { code: 'UNKNOWN' } }] });
     if (mode === 'reject') return Response.json({ data: { [ROOTS[op]]: { userErrors: [userError('Rejected by test')], orderCancelUserErrors: [userError('Rejected by test')] } } });
     const data = handlers[op](variables, mode);
+    // Order.transactions is an array: first truncates it, with no pagination cursor.
+    const firstTransactions = /transactions\(first:\s*(\d+)\)/.exec(query);
+    if (op === 'PanelOrder' && data.order && firstTransactions) data.order.transactions = data.order.transactions.slice(0, Number(firstTransactions[1]));
     if (data.__errors) return Response.json({ errors: data.__errors });
     if (mode === 'lost') throw new TypeError('response lost after Shopify applied it');
     return Response.json({ data });

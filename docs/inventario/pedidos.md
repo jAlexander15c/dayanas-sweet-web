@@ -21,6 +21,7 @@ Reglas de negocio:
 
 - **Montos:** la persona nunca escribe el monto que se cobra.
   - En efectivo se registra el `totalOutstandingSet` que devuelve Shopify. Si cambió desde que se abrió la hoja, responde 409 y no cobra.
+  - **Efectivo solo para pagos manuales o pedidos sin transacciones.** El detalle calcula `cashAllowed` y oculta «Cobré en efectivo» cuando es `false`. Se consultan todas las transacciones (`kind`, `status`, `gateway`, `manualPaymentGateway`), sin truncarlas a las primeras 50. Una autorización electrónica, un pago electrónico pendiente o un pago electrónico exitoso con saldo bloquean el cobro con 409 `CASH_NOT_ALLOWED`: «Este pedido se paga con tarjeta. Cóbralo o captúralo desde Shopify.». Una etiqueta manual nunca habilita cobrar una transacción electrónica activa. Los métodos manuales se reconocen por `manualPaymentGateway`, el gateway manual o nombres conocidos de métodos manuales; una respuesta sin la lista de transacciones no habilita el cobro.
   - En un reembolso, Shopify calcula el monto con `suggestedRefund`. El panel le suma el monto adicional opcional.
   - El total nunca pasa de `maximumRefundableSet` y tiene que coincidir con el que se vio en la revisión.
 - **Pedidos de Celebraciones** (etiqueta `ds-celebraciones`):
@@ -37,6 +38,7 @@ Reglas de negocio:
   - El navegador no puede saltarse el chequeo. `stockVerified` solo viaja en el actor que arma Inventario; el portal rechaza un `actor` del navegador, y un `stockVerified` dentro del cuerpo se ignora. La pasarela solo acepta `stockVerified` igual a `true` o ausente.
   - Un aumento de una línea existente necesita conocer su variante. Si Shopify no la entrega, solo se puede bajar la cantidad.
 - **Retiro o envío:** se detecta por `shippingLine.deliveryCategory`, que contiene «pick», o porque el título dice retiro, pickup o Fulshear. Un pedido sin línea de envío cuenta como retiro.
+- **Despachar con saldo:** para un envío con `outstandingCents > 0`, el servidor responde 409 `UNPAID_SHIPMENT`: «Este pedido tiene saldo por cobrar. Cóbralo antes de enviarlo.», sin crear el despacho, salvo que el cuerpo lleve `confirmUnpaid: true` (booleano). La hoja muestra el aviso, el saldo y la casilla «Enviar igual sin cobrar», desmarcada al abrir; hay que marcarla para confirmar. Listo/entregado en retiro conserva su comportamiento, incluso con saldo.
 - **Etapas:**
 
   | Etapa | Envío | Retiro |
@@ -91,6 +93,8 @@ Cada escritura lleva un `operationId`: un UUID que crea el navegador al confirma
 - fechas
 
 El recibo no guarda datos de la clienta.
+
+En despacho, `confirmUnpaid` forma parte de los parámetros y de la huella (ausente equivale a `false` y conserva la huella anterior a esta opción); cambiarlo con una clave ya guardada devuelve `OPERATION_REUSED`. El plan conserva esa confirmación para los reintentos. Antes de reenviar un cobro pendiente se vuelve a comprobar `cashAllowed`, y antes de reenviar un despacho se vuelve a comprobar el saldo con la confirmación guardada; si Shopify ya aplicó la acción, se devuelve el recibo sin repetirla. `CASH_NOT_ALLOWED` y `UNPAID_SHIPMENT` son rechazos definitivos sin escritura; la UI permite corregir y confirmar con una clave nueva.
 
 | Caso | Resultado |
 |---|---|
@@ -179,11 +183,16 @@ Qué dice Shopify sobre la idempotencia (consultado en shopify.dev, 2026-10):
   - Celebraciones
   - permisos
   - `ACCESS_DENIED`
+  - tarjeta autorizada o pago electrónico pendiente → `CASH_NOT_ALLOWED`, sin `orderMarkAsPaid`; pago manual pendiente y pedido sin transacciones → cobra una vez
+  - autorización después de 50 transacciones y autorización nueva durante un reintento pendiente → bloqueo sin captura
+  - envío con saldo → `UNPAID_SHIPMENT` sin `fulfillmentCreate`; `confirmUnpaid: true` → despacha una vez, incluso con respuesta perdida, y cambiar la confirmación reutilizando la clave → `OPERATION_REUSED`
   - que no haya salida a consola
 - `services/inventario/test/pedidos.test.mjs`: portal, identidad y pasarela reales. Cubre:
   - roles
   - contraseña y bloqueo compartido con el login
   - que la contraseña no se reenvíe
+  - restricciones de efectivo y envío con saldo a través del portal y la pasarela, con retiro sin cambios
   - stock al editar
   - reintento de una edición ya aplicada que consumió la última unidad: devuelve el recibo, no `NO_STOCK`
 - `services/inventario/test/pedidos-ui-check.mjs`: navegador a 390×844 y 1440×1000 con las acciones a–g, la respuesta perdida en el cobro, una respuesta RPC perdida en el reembolso que conserva la clave, la cancelación asíncrona («procesando» → «Reintentar» con la misma clave, Escape bloqueado) y un fallo definitivo (`CANCEL_FAILED`) que se cierra con «Volver» y con Escape. Las capturas quedan en `docs/inventario/evidence/pedidos-*.png`.
+  - También comprueba que no aparezca efectivo en una tarjeta autorizada con saldo, que el envío sin cobrar exija la casilla y que una respuesta de despacho perdida conserve `confirmUnpaid: true` y la misma clave. Para guardar capturas en otra ruta, usar `PORTAL_UI_EVIDENCE_DIR`.
