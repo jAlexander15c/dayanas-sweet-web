@@ -19,3 +19,18 @@ test('R03: un nombre nuevo de más de 200 caracteres se rechaza con un mensaje c
   assert.equal(mutations(h).length, 0);
   h.db.close();
 });
+
+// R04 (revisión de Codex): el plazo del portal cubre también el cuerpo de la respuesta.
+import vm from 'node:vm';
+import { readFile } from 'node:fs/promises';
+test('R04: cabeceras recibidas + cuerpo trabado se cortan con aviso de plazo', async () => {
+  const source = await readFile(new URL('../src/staff-ui.js', import.meta.url), 'utf8');
+  const nodes = new Map(), node = selector => { if (!nodes.has(selector)) nodes.set(selector, { hidden: false, replaceChildren() {}, remove() {}, focus() {}, querySelectorAll: () => [], classList: { toggle() {} } }); return nodes.get(selector); };
+  let jsonStarted = false;
+  const fetch = async (url, { signal }) => ({ ok: true, status: 200, json: () => { jsonStarted = true; return new Promise((_, reject) => signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))); } });
+  const context = vm.createContext({ document: { body: { dataset: { portal: 'true' } }, querySelector: node, querySelectorAll: () => [] }, window: {}, location: { hash: '' }, URL, DOMException, AbortController, clearTimeout,
+    setTimeout: fn => { setImmediate(fn); return 1; }, sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} }, localStorage: { removeItem() {} }, fetch });
+  vm.runInContext(source.replace('import.meta.url', "'https://store.test/apps/inventario/assets/staff-ui.js'") + '\n globalThis.call = () => request("session");', context);
+  await assert.rejects(context.call(), error => error.code === 'TIMEOUT' && /tardó demasiado/.test(error.message));
+  assert.equal(jsonStarted, true, 'el corte ocurrió mientras se leía el cuerpo');
+});

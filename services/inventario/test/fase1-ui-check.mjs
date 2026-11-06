@@ -77,6 +77,25 @@ try {
   await portal.waitForFunction(() => document.querySelector('.stock-number')?.textContent === '10');
   // R09: el filtro secundario tiene un área táctil de 44 px.
   assert.ok(await portal.locator('label.filter').evaluate(n => n.getBoundingClientRect().height) >= 44);
+  // R04 (revisión de Codex): escritura enviada sin respuesta -> se conserva el mismo intento, sin Volver ni Escape.
+  const opIds = [];
+  portal.on('request', r => { if (r.url().includes('/api/inventory/operations') && r.method() === 'POST') opIds.push(JSON.parse(r.postData()).operationId); });
+  let releaseWrite;
+  await portal.route('**/apps/inventario/api/inventory/operations', async route => { await new Promise(r => { releaseWrite = r; }); await route.abort().catch(() => {}); });
+  await portal.getByRole('button', { name: 'Agregar producción', exact: true }).click();
+  await portal.getByLabel('¿Cuántas cajas preparaste?').fill('2');
+  await portal.getByRole('button', { name: 'Revisar cambio' }).click();
+  await portal.getByRole('button', { name: 'Confirmar y guardar' }).click();
+  await portal.getByText('No pudimos confirmar si se guardó', { exact: false }).waitFor({ timeout: 40000 });
+  assert.equal(await portal.locator('#back').isHidden(), true, 'Volver queda oculto');
+  await portal.keyboard.press('Escape');
+  assert.equal(await portal.locator('#confirmation').evaluate(d => d.open), true, 'Escape no descarta el intento');
+  await screenshots(portal, 'fase1-r04-escritura-sin-confirmar');
+  releaseWrite?.();
+  await portal.unroute('**/apps/inventario/api/inventory/operations');
+  await portal.getByRole('button', { name: 'Reintentar', exact: true }).click();
+  await portal.waitForFunction(() => document.querySelector('.stock-number')?.textContent === '12');
+  assert.equal(opIds.length, 2); assert.equal(opIds[0], opIds[1], 'Reintentar usa el mismo operationId');
   // R02: sesión caducada con la confirmación abierta -> ninguna capa encima del acceso y foco en el usuario.
   await portal.getByRole('button', { name: 'Agregar producción', exact: true }).click();
   await portal.getByLabel('¿Cuántas cajas preparaste?').fill('1');
@@ -99,5 +118,5 @@ try {
   await screenshots(portal, 'fase1-r04-plazo');
   release?.();
   assert.deepEqual(errors, []);
-  console.log('PASS fase1-ui-check: R01 lista desactualizada sin conteo antiguo, R02 sin capas y foco, R04 plazo de 30 s, R09 44 px; 390/1440.');
+  console.log('PASS fase1-ui-check: R01 lista desactualizada sin conteo antiguo, R02 sin capas y foco, R04 plazo de 30 s en entrada y escritura (mismo intento), R09 44 px; 390/1440.');
 } finally { await browser?.close(); await worker.stop(); }

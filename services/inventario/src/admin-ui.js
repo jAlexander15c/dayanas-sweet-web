@@ -37,6 +37,7 @@ function readable(value) {
 let locations = [], products = [], cursor = null, context = null, pending = null, sending = false;
 let searchGeneration = 0, historyEvents = [], activeStaffId;
 let pendingSubmitted = false;
+let unconfirmed = false; // R04: hubo envío pero no respuesta; solo se puede consultar el mismo intento.
 let categoryWarning = '', publicationAvailable = true;
 let categories = [], editingCategory = null, categoryFromProduct = false;
 let storeCollections = [], collectionPage = 0, adoptingCategory = false;
@@ -45,12 +46,12 @@ async function api(path, body) {
   if (window.inventarioPortal?.mode) return window.inventarioAccess.inventory(path, body);
   if (!window.shopify?.idToken) throw new Error('Abre Dayana Inventario desde Shopify para entrar con tu cuenta.');
   const token = await window.shopify.idToken();
-  // R04: mismo plazo que el portal; un corte se trata como resultado sin confirmar, igual que una caída de red.
-  let response;
+  // R04: mismo plazo que el portal, para cabeceras y cuerpo; un corte se trata como resultado sin confirmar.
+  let response, result;
   try {
-  response = await fetch(path, { signal: globalThis.AbortSignal?.timeout?.(30000), method: body ? 'POST' : 'GET', headers: { Authorization: `Bearer ${token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
-  } catch (error) { if (error?.name === 'TimeoutError') throw new Error('La conexión tardó demasiado. Revisa tu internet e inténtalo otra vez.'); throw error; }
-  const result = await response.json();
+    response = await fetch(path, { signal: globalThis.AbortSignal?.timeout?.(30000), method: body ? 'POST' : 'GET', headers: { Authorization: `Bearer ${token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
+    result = await response.json();
+  } catch (error) { if (error?.name === 'TimeoutError' || error?.name === 'AbortError') throw Object.assign(new Error('La conexión tardó demasiado. Revisa tu internet e inténtalo otra vez.'), { code: 'TIMEOUT' }); throw error; }
   if (!response.ok) throw Object.assign(new Error(result.message || 'No pudimos cargar los datos. Actualiza la pantalla.'), { status: response.status, result });
   return result;
 }
@@ -239,6 +240,7 @@ async function review(event) {
     // Generated once when confirmation opens; retries use this same immutable payload.
     pending = { ...payload, operationId: crypto.randomUUID() };
     pendingSubmitted = false;
+    unconfirmed = false;
     $('#summary').innerHTML = summary;
     $('#confirm-error').textContent = '';
     $('#confirm').textContent = payload.action === 'delete' ? 'Eliminar para siempre' : 'Confirmar y guardar';
@@ -295,6 +297,7 @@ async function confirm() {
     }
     pendingSubmitted = true;
     const result = await api('/api/operations', pending);
+    unconfirmed = false;
     const categoryOperation = pending.action.startsWith('category_');
     $('#confirmation').close();
     if (categoryOperation) {
@@ -326,11 +329,21 @@ async function confirm() {
       $('#confirm').onclick = confirm;
       $('#back').hidden = true;
     } else if (error.status) {
+      unconfirmed = false;
       // A confirmed failure/conflict is terminal for this operationId. Open a
       // fresh form to read quantities again and create a new confirmation.
       $('#confirm').textContent = 'Cerrar y revisar';
       $('#confirm').disabled = false;
       $('#confirm').onclick = () => { $('#confirmation').close(); $('#editor').close(); $('#category-editor').close(); pending = null; $('#confirm').onclick = confirm; search().catch(e => feedback(e.message, true)); };
+      $('#back').hidden = true;
+    } else if (pendingSubmitted) {
+      // Red caída o plazo vencido después de enviar: puede haberse guardado. Se ofrece consultar el mismo cambio
+      // (misma clave, no se repite) y no se permite descartarlo con Volver o Escape.
+      unconfirmed = true;
+      $('#confirm-error').textContent = 'No pudimos confirmar si se guardó. Toca «Reintentar»: consulta este mismo cambio y no lo repite.';
+      $('#confirm').textContent = 'Reintentar';
+      $('#confirm').disabled = false;
+      $('#confirm').onclick = confirm;
       $('#back').hidden = true;
     } else {
       $('#confirm').textContent = 'Reintentar';
@@ -494,8 +507,8 @@ $('#more').addEventListener('click', guard(() => search(true)));
 $('#new-product').addEventListener('click', guard(async () => { await loadCategories(); openEditor('create'); }));
 $('#close-editor').addEventListener('click', () => $('#editor').close());
 $('#editor-form').addEventListener('submit', review);
-$('#back').addEventListener('click', () => { $('#confirmation').close(); pending = null; });
-$('#confirmation').addEventListener('cancel', event => { if (sending) event.preventDefault(); });
+$('#back').addEventListener('click', () => { if (unconfirmed) return; $('#confirmation').close(); pending = null; });
+$('#confirmation').addEventListener('cancel', event => { if (sending || unconfirmed) event.preventDefault(); });
 $('#editor').addEventListener('cancel', event => { if (sending) event.preventDefault(); });
 $('#confirm').onclick = confirm;
 $('#home').addEventListener('click', guard(async () => { $('#workspace').hidden = false; $('#history-view').hidden = true; $('#categories-view').hidden = true; await search(); }));

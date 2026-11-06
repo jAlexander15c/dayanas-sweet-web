@@ -13,21 +13,21 @@ function forgetLegacySession() { try { localStorage.removeItem(storageKey); } ca
 function clearSession() { credential = null; currentUser = null; try { sessionStorage.removeItem(storageKey); } catch { /* almacenamiento bloqueado */ } forgetLegacySession(); }
 function saveSession(result) { credential = { session: result.session, expiresAt: result.expiresAt }; try { sessionStorage.setItem(storageKey, JSON.stringify(credential)); } catch { /* la sesión sigue en memoria */ } forgetLegacySession(); currentUser = result.user; }
 const REQUEST_TIMEOUT_MS = 30000;
-// R04: si la conexión se queda colgada, la petición se corta y se informa; las escrituras inciertas siguen el flujo de "consultar la misma operación".
-async function timedFetch(url, options) {
+// R04: si la conexión se queda colgada, la petición se corta y se informa. El plazo cubre la respuesta completa
+// (cabeceras y cuerpo); las escrituras sin confirmar siguen el flujo de "consultar la misma operación".
+async function timedJson(url, options) {
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-  try { return await fetch(url, { ...options, signal: controller.signal }); }
+  try { const response = await fetch(url, { ...options, signal: controller.signal }); return { response, result: await response.json() }; }
   catch (error) { if (controller.signal.aborted) throw Object.assign(new Error('La conexión tardó demasiado. Revisa tu internet e inténtalo otra vez.'), { code: 'TIMEOUT' }); throw error; }
   finally { clearTimeout(timer); }
 }
 async function request(action, body = {}) {
-  let response;
-  if (portal) response = await timedFetch(`${base}api/${action}`, { method: 'POST', credentials: 'omit', referrerPolicy: 'no-referrer', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, session: credential?.session }) });
+  let response, result;
+  if (portal) ({ response, result } = await timedJson(`${base}api/${action}`, { method: 'POST', credentials: 'omit', referrerPolicy: 'no-referrer', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, session: credential?.session }) }));
   else {
     if (!window.shopify?.idToken) throw new Error('Abre Dayana Inventario desde Shopify.');
-    response = await timedFetch(`/api/staff/${action}`, { method: 'POST', headers: { Authorization: `Bearer ${await window.shopify.idToken()}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    ({ response, result } = await timedJson(`/api/staff/${action}`, { method: 'POST', headers: { Authorization: `Bearer ${await window.shopify.idToken()}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
   }
-  const result = await response.json();
   if (!response.ok) {
     if (portal && result.code === 'SESSION_REQUIRED') { clearSession(); hideViews(); showAccess('login'); }
     throw Object.assign(new Error(result.message || 'No pudimos completar esta acción.'), { code: result.code, status: response.status, result });
