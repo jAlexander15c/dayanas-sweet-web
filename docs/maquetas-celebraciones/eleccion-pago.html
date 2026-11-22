@@ -1,0 +1,60 @@
+<div id="ds-payment-mock" class="viz-dotted-background">
+  <style>
+    #ds-payment-mock {padding:16px;box-sizing:border-box;color-scheme:light dark}
+    #ds-payment-mock * {box-sizing:border-box}
+    #ds-payment-mock .panel {max-width:560px;margin:auto;padding:24px;background:light-dark(#fffafd,#30252c);color:light-dark(#402d37,#f6eaf1);border:1px solid light-dark(#e9cbdc,#6b5060);border-radius:16px;font:16px/1.5 Arial,sans-serif}
+    #ds-payment-mock h2 {font:500 28px/1.2 Georgia,serif;margin:8px 0 24px}
+    #ds-payment-mock .eyebrow {font-size:12px;text-transform:uppercase;letter-spacing:1px;margin:0}
+    #ds-payment-mock label,#ds-payment-mock legend {display:block;margin-bottom:8px;font-weight:500}
+    #ds-payment-mock select,#ds-payment-mock input {width:100%;font:inherit;padding:12px;border:1px solid #ac899b;border-radius:8px;background:light-dark(white,#392c33);color:inherit}
+    #ds-payment-mock fieldset {padding:0;border:0;margin:24px 0 16px;min-width:0}
+    #ds-payment-mock .summary {background:light-dark(#f5e8ef,#493441);padding:16px;border-radius:8px;margin-top:20px}
+    #ds-payment-mock p {margin:8px 0}
+    #ds-payment-mock .row {display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}
+    #ds-payment-mock button {margin-top:24px;padding:14px 20px;border:0;border-radius:24px;background:light-dark(#75435e,#eac1d8);color:light-dark(white,#30212a);font:inherit;width:100%}
+    #ds-payment-mock small {display:block;margin-top:12px;font-size:13px}
+    @media(max-width:400px){#ds-payment-mock{padding:8px}#ds-payment-mock .panel{padding:16px}}
+  </style>
+  <section class="panel" aria-label="Maqueta de la propuesta">
+    <p class="eyebrow">Panel de la pastelera · Maqueta</p>
+    <h2>Prepara la propuesta</h2>
+    <label for="ds-mock-total">Total de la cotización (USD)</label>
+    <input id="ds-mock-total" type="number" min="1" step="0.01" value="150">
+    <fieldset><legend>¿Cómo debe pagar el cliente?</legend>
+      <select id="ds-mock-mode" aria-label="Condición de pago">
+        <option value="deposit">Anticipo del 60 %</option>
+        <option value="full">Pago completo antes de preparar</option>
+        <option value="delivery" selected>Pago completo contra entrega</option>
+      </select>
+    </fieldset>
+    <div class="summary" aria-live="polite">
+      <div class="row"><span>Paga ahora</span><strong id="ds-mock-now">$0.00</strong></div>
+      <div class="row"><span id="ds-mock-later-label">Al recoger</span><strong id="ds-mock-later">$150.00</strong></div>
+      <p id="ds-mock-note">La reserva se confirma al aceptar la propuesta. El pago queda pendiente hasta cobrarlo al entregar.</p>
+    </div>
+    <small>La pastelera elige esta condición. El cliente la revisa al aceptar la propuesta.</small>
+    <button type="button" id="ds-mock-send" class="cursor-interaction">Ver lo que recibe el cliente</button>
+    <p id="ds-mock-customer" aria-live="polite" hidden></p>
+  </section>
+</div>
+<script>
+(() => {
+  const root=document.getElementById('ds-payment-mock');
+  const get=id=>root.querySelector('#'+id);
+  const money=value=>new Intl.NumberFormat('es-US',{style:'currency',currency:'USD'}).format(value);
+  function update(){
+    const total=Math.max(0,Math.round(Number(get('ds-mock-total').value||0)*100));
+    const mode=get('ds-mock-mode').value;
+    const now=mode==='deposit'?Math.ceil(total*0.6):mode==='full'?total:0;
+    get('ds-mock-now').textContent=money(now/100);
+    get('ds-mock-later').textContent=money((total-now)/100);
+    get('ds-mock-later-label').textContent=mode==='deposit'?'24 horas antes de recoger':mode==='delivery'?'Al recoger':'Saldo pendiente';
+    get('ds-mock-note').textContent=mode==='delivery'?'La reserva se confirma al aceptar la propuesta. El pago queda pendiente hasta cobrarlo al entregar.':'La reserva se confirma cuando se acredita el pago en Shopify.';
+    get('ds-mock-customer').textContent=mode==='delivery'?`Tu pastel cuesta ${money(total/100)}. No necesitas anticipo: pagarás el total al recoger.`:mode==='full'?`Tu pastel cuesta ${money(total/100)}. Paga el total en Shopify para confirmar tu reserva.`:`Tu pastel cuesta ${money(total/100)}. Paga ${money(now/100)} para reservar y ${money((total-now)/100)} hasta 24 horas antes de recoger.`;
+  }
+  get('ds-mock-total').addEventListener('input',update);
+  get('ds-mock-mode').addEventListener('change',update);
+  get('ds-mock-send').addEventListener('click',()=>{get('ds-mock-customer').hidden=false});
+  update();
+})();
+</script>

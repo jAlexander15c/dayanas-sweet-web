@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-28",
+  "publicStore": "https://dayanassweet.com/",
+  "scope": "Public storefront audit and local theme checks. Existing cart observed only.",
+  "viewports": [{"width":1440,"height":1000},{"width":390,"height":844},{"width":768,"height":1024}],
+  "additionalCheck": {"page":"Tomate Confitada","width":320,"horizontalOverflow":false},
+  "contrast": {
+    "newsletter": {"background":[208,58,103],"foreground":[255,255,255],"alpha":0.75,"compositedForeground":[243.25,205.75,217],"ratio":3.262563807714466,"paragraphFontSize":17,"paragraphFontWeight":400,"labelFontSize":14,"labelFontWeight":600},
+    "heroCta": {"background":[208,58,103],"foreground":[255,255,255],"ratioApprox":4.68,"fontSize":15,"fontWeight":600},
+    "searchSubmit": {"page":"Full search results for tomate","buttonBackground":[255,255,255],"iconFill":[255,255,255],"ratio":1}
+  },
+  "manualChecks": {
+    "cartAtStart":16,
+    "cartMutated":false,
+    "cartCheckoutDisabled":true,
+    "cartEscapeRestoresFocusTo":"cart-icon-bubble",
+    "mobileMenuNavigates":true,
+    "predictiveSearchTomateResults":1,
+    "fullSearchTomateResults":1,
+    "sortSelection":"price-descending",
+    "sortUrlVerified":true,
+    "newsletterKeyboardFocusVisible":true,
+    "newsletterSubmitted":false,
+    "contactEmptySubmitBlocked":true,
+    "contactFocusedInvalidField":"DSContactForm-email",
+    "contactMessageSent":false,
+    "homeSocialLinksFound":0,
+    "postresProductCount":0,
+    "httpRedirectStatus":301,
+    "notFoundStatus":404
+  },
+  "performanceSample": {"tool":"curl","url":"https://dayanassweet.com/","ttfbSeconds":0.469938,"totalHtmlSeconds":0.525742,"htmlBytes":145083,"sampleCount":1,"includesRendering":false},
+  "limitations": ["No completed checkout or payment","No inventory quantities or admin settings inspected","No delivery quote by address verified","No successful newsletter or contact delivery verified","PageSpeed API returned 429","Raw CDP unavailable during browser session","Reduced motion checked in source only","No full WCAG certification or penetration test"],
+  "localTests": {"syntaxJs":37,"json":67,"sectionSchemas":52,"browserRegressionsPassed":12,"browserRegressionsTotal":12,"shopifyThemeCheckRun":false}
+}

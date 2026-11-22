@@ -1,0 +1,62 @@
+<div id="ds-guest-preview" class="viz-dotted-background">
+  <style>
+    #ds-guest-preview{padding:20px;font-family:Arial,sans-serif;color:#402432}
+    #ds-guest-preview .switcher{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+    #ds-guest-preview button{font:inherit;cursor:pointer;min-height:44px;border-radius:24px;padding:10px 20px;border:1px solid #d7a7b9;background:#fff7fa;color:#402432}
+    #ds-guest-preview button[aria-pressed="true"],#ds-guest-preview .primary{background:#b72658;color:white;border-color:#b72658}
+    #ds-guest-preview .surface{max-width:600px;margin:auto;padding:30px;background:#fff7fa;border:1px solid #edccd9;border-radius:16px}
+    #ds-guest-preview .brand{font:26px Georgia,serif;margin-bottom:28px}
+    #ds-guest-preview h2{font:32px Georgia,serif;margin:8px 0 18px}
+    #ds-guest-preview p{font-size:16px;line-height:1.6;margin:12px 0}
+    #ds-guest-preview .eyebrow{font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+    #ds-guest-preview .number{font-size:25px;font-weight:600;letter-spacing:.04em}
+    #ds-guest-preview .receipt{background:white;border:1px solid #edccd9;border-radius:12px;padding:20px;margin:22px 0}
+    #ds-guest-preview .actions{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0}
+    #ds-guest-preview .note{font-size:14px;color:#735262}
+    #ds-guest-preview label{display:block;font-size:15px;margin:16px 0}
+    #ds-guest-preview input{display:block;box-sizing:border-box;width:100%;font:16px Arial,sans-serif;margin-top:7px;padding:12px;border:1px solid #d7a7b9;border-radius:8px;background:white;color:#402432}
+    #ds-guest-preview [hidden]{display:none}
+    @media(max-width:420px){#ds-guest-preview{padding:8px}#ds-guest-preview .surface{padding:22px}#ds-guest-preview h2{font-size:28px}}
+  </style>
+  <div class="switcher" aria-label="Vista de confirmación">
+    <button type="button" data-view="contact" aria-pressed="true">Tus datos</button>
+    <button type="button" data-view="web" aria-pressed="false">En la web</button>
+    <button type="button" data-view="email" aria-pressed="false">Correo</button>
+  </div>
+  <section class="surface" data-panel="contact">
+    <div class="brand">Dayana’s Sweet</div>
+    <div class="eyebrow">Tu pastel · Tu idea · Fecha y contacto</div>
+    <h2>¿Cómo te contactamos?</h2>
+    <p>Te enviaremos el número de tu cotización y su enlace de seguimiento. No necesitas crear una cuenta.</p>
+    <label>Nombre<input value="Sofía" autocomplete="off" readonly></label>
+    <label>Correo electrónico<input value="sofia@example.com" type="email" autocomplete="off" readonly></label>
+    <label>Teléfono<input value="(281) 555-0123" type="tel" autocomplete="off" readonly></label>
+    <p class="note">Continuarás a la revisión de tu pastel, fotos y fecha antes de enviar la solicitud.</p>
+    <div class="actions"><button class="primary" type="button" data-view="web" aria-pressed="false">Ver confirmación de ejemplo</button></div>
+  </section>
+  <section class="surface" data-panel="web" hidden>
+    <div class="brand">Dayana’s Sweet</div>
+    <div class="eyebrow">Solicitud recibida</div>
+    <h2>Tu pastel empieza aquí.</h2>
+    <p>Gracias, Sofía. Dayana revisará tu idea y las fotos para preparar tu propuesta.</p>
+    <div class="receipt"><div class="eyebrow">Número de cotización</div><p class="number">DS-000123</p><p>Te enviamos tu enlace de seguimiento a <strong>sofia@example.com</strong>.</p></div>
+    <div class="actions"><button class="primary" type="button" data-action="tracking">Ver mi cotización</button><button type="button" data-action="copy">Copiar enlace</button></div>
+    <p class="note">Conserva tu enlace privado. Desde allí podrás ver la propuesta, conversar con Dayana y pagar cuando la aceptes, sin crear una cuenta.</p>
+    <p class="note">La solicitud todavía no reserva la fecha.</p>
+    <p class="note" data-feedback aria-live="polite"></p>
+  </section>
+  <section class="surface" data-panel="email" hidden>
+    <div class="brand">Dayana’s Sweet</div>
+    <div class="eyebrow">Asunto</div><p>Recibimos tu solicitud DS-000123</p>
+    <h2>Hola, Sofía.</h2>
+    <p>Ya recibimos la idea para tu pastel. Tu número de cotización es <strong>DS-000123</strong>.</p>
+    <p>Dayana revisará los detalles y preparará una propuesta. Puedes consultar su respuesta y escribirle desde tu enlace privado.</p>
+    <div class="actions"><button class="primary" type="button" data-action="tracking">Ver mi cotización</button></div>
+    <p class="note">No necesitas registrarte. Guarda este correo y no compartas el enlace.</p>
+    <p class="note">La fecha queda pendiente de confirmación y del pago correspondiente.</p>
+    <p class="note" data-feedback aria-live="polite"></p>
+  </section>
+  <script>
+    (function(){const root=document.getElementById('ds-guest-preview');root.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{root.querySelectorAll('[data-view]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));root.querySelectorAll('[data-panel]').forEach(panel=>panel.hidden=panel.dataset.panel!==button.dataset.view);}));root.querySelectorAll('[data-action]').forEach(button=>button.addEventListener('click',()=>{button.closest('.surface').querySelector('[data-feedback]').textContent=button.dataset.action==='copy'?'Vista previa: aquí se copiará el enlace privado.':'Vista previa: abrirá el seguimiento con propuesta, pagos y comentarios.';}));})();
+  </script>
+</div>

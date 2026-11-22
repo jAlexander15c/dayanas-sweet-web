@@ -1,0 +1,108 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Seguimiento · prueba local</title><link rel="stylesheet" href="/assets/ds-celebracion-seguimiento.css"></head><body style="margin:0"><p style="padding:12px;margin:0;background:#fae5ed;font:14px Arial">Prueba local · datos ficticios · sin envíos ni cobros</p><section class="ds-tracking" data-ds-tracking data-tracking-id="" aria-labelledby="DSTrackingTitle-qa-section">
+  <div class="ds-tracking__wrap">
+    <header class="ds-tracking__header">
+      <p class="ds-tracking__eyebrow">Tu celebración</p>
+      <h1 id="DSTrackingTitle-qa-section">Tu pastel, <em>paso a paso.</em></h1>
+    </header>
+
+    <div class="ds-tracking__availability">
+      <p data-status-message role="status">El seguimiento todavía no está disponible.</p>
+      <button class="ds-tracking__button ds-tracking__button--secondary" data-retry type="button" hidden>Volver a intentar</button>
+    </div>
+
+    <div data-content hidden>
+      <div class="ds-tracking__order">
+        <p class="ds-tracking__pickup" data-pickup></p>
+        <p class="ds-tracking__status" data-order-status></p>
+      </div>
+
+      <section class="ds-tracking__card ds-tracking__payments" aria-labelledby="DSTrackingPayments-qa-section">
+        <h2 class="ds-tracking__eyebrow" id="DSTrackingPayments-qa-section">Tu reserva y pagos</h2>
+        <dl class="ds-tracking__amounts">
+          <div>
+            <dt>Total vigente</dt>
+            <dd data-total></dd>
+          </div>
+          <div>
+            <dt>Anticipo recibido</dt>
+            <dd data-paid></dd>
+          </div>
+          <div class="ds-tracking__balance">
+            <dt data-balance-label>Saldo pendiente</dt>
+            <dd data-balance></dd>
+          </div>
+        </dl>
+        <div class="ds-tracking__breakdown" data-breakdown hidden></div>
+        <p class="ds-tracking__muted" data-credit-note hidden>Dayana coordinará cómo resolver la diferencia a tu favor. No se genera un reembolso automático.</p>
+        <p class="ds-tracking__muted" data-payments-note>Paga el saldo 24 horas antes de recoger. Cualquier ajuste requiere tu aceptación.</p>
+      </section>
+
+      <section class="ds-tracking__pending" data-pending hidden aria-labelledby="DSTrackingPending-qa-section">
+        <h2 id="DSTrackingPending-qa-section" data-pending-title>Hay un ajuste por revisar</h2>
+        <p class="ds-tracking__copy" data-pending-reply></p>
+        <div class="ds-tracking__two">
+          <div>
+            <h3>Lo que podemos preparar</h3>
+            <p class="ds-tracking__copy" data-pending-can></p>
+          </div>
+          <div>
+            <h3>Lo que cambia respecto a tu foto</h3>
+            <p class="ds-tracking__copy" data-pending-changes></p>
+          </div>
+        </div>
+        <dl class="ds-tracking__pending-amounts">
+          <div><dt>Nuevo total</dt><dd data-pending-total></dd></div>
+          <div><dt>Si aceptas</dt><dd data-pending-balance></dd></div>
+        </dl>
+        <div class="ds-tracking__breakdown" data-pending-breakdown hidden></div>
+        <p class="ds-tracking__muted" data-pending-note>Tu anticipo y tu reserva se conservan.</p>
+        <button class="ds-tracking__button" data-accept type="button">Aceptar ajuste</button>
+      </section>
+
+      <section class="ds-tracking__card" data-accepted aria-labelledby="DSTrackingAccepted-qa-section">
+        <h2 class="ds-tracking__eyebrow" id="DSTrackingAccepted-qa-section">Diseño acordado</h2>
+        <div class="ds-tracking__request">
+          <h3>Lo que nos contaste</h3>
+          <p class="ds-tracking__copy" data-request></p>
+        </div>
+        <div class="ds-tracking__two">
+          <div>
+            <h3>Lo que podemos preparar</h3>
+            <p class="ds-tracking__copy" data-can-prepare></p>
+          </div>
+          <div>
+            <h3>Lo que cambia respecto a tu foto</h3>
+            <p class="ds-tracking__copy" data-changes></p>
+          </div>
+        </div>
+        <div class="ds-tracking__answer">
+          <h3>Respuesta final de Dayana</h3>
+          <p class="ds-tracking__copy" data-reply></p>
+        </div>
+      </section>
+
+      <section class="ds-tracking__card" aria-labelledby="DSTrackingConversation-qa-section">
+        <p class="ds-tracking__eyebrow">Comentarios</p>
+        <h2 id="DSTrackingConversation-qa-section">Conversemos sobre tu pastel</h2>
+        <p class="ds-tracking__muted">Puedes pedir ajustes hasta que el pastel esté listo. Dayana confirmará si son posibles y si cambia el precio.</p>
+        <div class="ds-tracking__comments" data-comments></div>
+        <form class="ds-tracking__comment-form" data-comment-form>
+          <label for="DSTrackingComment-qa-section">Tu comentario</label>
+          <textarea id="DSTrackingComment-qa-section" name="comment" rows="5" maxlength="2000" required data-comment-input aria-describedby="DSTrackingCommentHelp-qa-section"></textarea>
+          <p class="ds-tracking__muted" id="DSTrackingCommentHelp-qa-section">Máximo 2000 caracteres.</p>
+          <button class="ds-tracking__button" data-send type="submit">Enviar comentario</button>
+        </form>
+        <p class="ds-tracking__closed" data-comment-closed hidden>Los comentarios de este pedido están cerrados.</p>
+      </section>
+
+      <details class="ds-tracking__history">
+        <summary>Historial de propuestas</summary>
+        <div class="ds-tracking__history-items" data-history></div>
+      </details>
+    </div>
+
+    <p class="ds-tracking__action-message" data-action-message role="status" aria-atomic="true"></p>
+  </div>
+</section>
+
+<script src="/assets/ds-celebracion-seguimiento.js"></script><script src="/docs/maquetas-celebraciones/qa/seguimiento-fixture.js"></script></body></html>

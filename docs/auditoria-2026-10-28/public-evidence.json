@@ -1,0 +1,3266 @@
+{
+  "capturedAt": "2026-10-28T13:24:08.179Z",
+  "scope": "Public GET requests only; no cart changes, no checkout submission, no admin access",
+  "pages": [
+    {
+      "url": "https://dayanassweet.com/",
+      "status": 200,
+      "bytes": 145083,
+      "ttfbMs": 204,
+      "totalMs": 254,
+      "title": "Dayana’s Sweet",
+      "description": null,
+      "canonical": "https://dayanassweet.com/",
+      "robots": null,
+      "ogImage": null,
+      "h1": [
+        "Galletas gruesas, recién horneadas."
+      ],
+      "mainText": "Galletas gruesas, recién horneadas. Galletas gruesas, recién horneadas. Borde tostado, centro que todavía se dobla y trozos de chocolate que se derriten al abrir la caja. Ver el menú Cómo funcionan las tandas Chocolate sin prisa , cortado en cuadros generosos. La costra cruje como papel de azúcar y debajo espera un centro denso, casi de trufa. Ver el menú Una caja rosa dice más que una tarjeta. Elige los sabores, deja una nota en el carrito y la despachamos lista para regalar. Ver el menú Pausar Los más pedidos Tomate Confitada Tomates confitados llenos de sabor, acompañados de pimiento asado, ajo,… $10.00 Cerrado Foto próximamente Caja de seis galletas — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Una caja… $6.00 Cerrado Foto próximamente Brownie de chocolate — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Brownie artesanal… $6.00 Cerrado Foto próximamente Galleta con chispas de chocolate — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Galleta artesanal… $6.00 Cerrado Ver todo el menú Horneamos por tandas, no para una vitrina. Abrimos el menú unos días, reunimos todos los pedidos y los horneamos juntos para una misma fecha de despacho. No horneamos en el minuto en que pides, pero nada sale del horno para quedarse esperando en un mostrador: se hace para tu tanda. La tanda ya cerró. Suscríbete al boletín y te avisamos cuando abra el próximo menú. ¿Qué se te antoja hoy? Galletas Brownies Cajas para regalar Varios sabores en una caja rosa; deja tu nota en el carrito y va adentro. Postres Horneados en la misma tanda que las galletas. Cada uno indica en su ficha cómo conservarlo. Enlatados Conservas artesanales, como el tomate confitado. Cada frasco indica su conservación. Recetas con memoria cubana, horneadas en Texas. Dayana’s Sweet nace de más de 15 años de experiencia en la pastelería y de una historia que comenzó en Cuba. Hoy, desde Fulshear, Texas, unimos nuestras raíces con sabores e ingredientes de Estados Unidos para crear galletas y postres con personalidad propia. Trabajamos por tandas porque así cada caja sale del horno para su fecha de despacho, y los cupos dependen de lo que podemos hornear bien en un día. Cuando algo se acaba, esperamos a la próxima tanda en lugar de apurar el horno. Más de 15 años de oficio Horneado para tu fecha de despacho Cupos según lo que sale del horno Lo más dulce, primero en tu correo. Cada producto tiene cupos limitados, solo lo que podemos hornear bien en un día, y los favoritos se agotan primero. Te escribimos el día que abre el menú, antes de anunciarlo en redes. Tu correo electrónico Suscribirme Síguenos @dayanassweet Antes de pedir Lo que conviene saber antes de elegir, para que tu caja llegue justo cuando la esperas. ¿Cuándo puedo hacer mi pedido? La tanda ya cerró. Suscríbete al boletín y te avisamos cuando abra el próximo menú. ¿Por qué se agota un producto? Cada tanda tiene cupos según lo que podemos hornear bien ese día. Cuando un producto llega a cero, se cierra hasta la próxima tanda. Suscríbete y te avisamos cuando vuelva a abrir el menú. ¿Cómo veo las opciones de entrega? Realizamos únicamente envíos, sin retiro presencial. El envío es gratis en pedidos desde $100; en pedidos menores, el costo aparece antes del pago. La fecha de despacho indica cuándo entregamos tu pedido al transportista; la llegada depende de tu dirección. ¿Cómo conservo las galletas? Cuatro días fuera de la nevera en su caja cerrada, ocho días en la nevera y hasta tres meses en el congelador. Para revivirlas: 20 segundos en el microondas o 5 minutos en el horno a 350 °F. Los postres indican su conservación en la descripción de cada uno. ¿Dónde consulto los ingredientes? En la descripción de cada producto. Trabajamos con harina de trigo, huevo, leche y frutos secos, y compartimos utensilios y equipos, por lo que puede existir contacto cruzado. Revisa los ingredientes específicos antes de comprar.",
+      "structured": [
+        {
+          "@context": "http://schema.org",
+          "@type": "Organization",
+          "name": "Dayana’s Sweet",
+          "logo": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-logo-horizontal.png?v=85206367675808367111790445534",
+          "sameAs": [],
+          "url": "https://dayanassweet.com"
+        },
+        {
+          "@context": "http://schema.org",
+          "@type": "WebSite",
+          "name": "Dayana’s Sweet",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://dayanassweet.com/search?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+          },
+          "url": "https://dayanassweet.com"
+        }
+      ],
+      "links": [
+        {
+          "href": "#MainContent",
+          "text": "Ir directamente al contenido"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Seguir comprando"
+        },
+        {
+          "href": "https://dayanassweet.com/customer_authentication/redirect?locale=es&region_country=US",
+          "text": "Inicia sesión"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/",
+          "text": ""
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/cart",
+          "text": "Carrito"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Ver el menú"
+        },
+        {
+          "href": "#ds-tandas",
+          "text": "Cómo funcionan las tandas"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Ver el menú"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Ver el menú"
+        },
+        {
+          "href": "/products/tomate-confitada",
+          "text": ""
+        },
+        {
+          "href": "/products/tomate-confitada",
+          "text": "Tomate Confitada"
+        },
+        {
+          "href": "/products/caja-de-seis-galletas-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/caja-de-seis-galletas-prueba",
+          "text": "Caja de seis galletas — PRUEBA"
+        },
+        {
+          "href": "/products/brownie-de-chocolate-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/brownie-de-chocolate-prueba",
+          "text": "Brownie de chocolate — PRUEBA"
+        },
+        {
+          "href": "/products/galleta-con-chispas-de-chocolate-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/galleta-con-chispas-de-chocolate-prueba",
+          "text": "Galleta con chispas de chocolate — PRUEBA"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Ver todo el menú"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar Varios sabores en una caja rosa; deja tu nota en el carrito y va adentro."
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres Horneados en la misma tanda que las galletas. Cada uno indica en su ficha cómo conservarlo."
+        },
+        {
+          "href": "/collections/enlatados",
+          "text": "Enlatados Conservas artesanales, como el tomate confitado. Cada frasco indica su conservación."
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Catálogo"
+        },
+        {
+          "href": "/pages/contact",
+          "text": "Contacto"
+        },
+        {
+          "href": "/",
+          "text": "Dayana’s Sweet"
+        },
+        {
+          "href": "http://es.shopify.com?utm_campaign=poweredby&utm_medium=shopify&utm_source=onlinestore",
+          "text": "Tecnología de Shopify"
+        },
+        {
+          "href": "/policies/privacy-policy",
+          "text": "Política de privacidad"
+        }
+      ]
+    },
+    {
+      "url": "https://dayanassweet.com/collections/all",
+      "status": 200,
+      "bytes": 159823,
+      "ttfbMs": 168,
+      "totalMs": 260,
+      "title": "Productos &ndash; Dayana’s Sweet",
+      "description": null,
+      "canonical": "https://dayanassweet.com/collections/all",
+      "robots": null,
+      "ogImage": null,
+      "h1": [
+        "Todo el menú"
+      ],
+      "mainText": "Inicio / Menú Todo el menú La tanda ya cerró. Suscríbete al boletín y te avisamos cuando abra el próximo menú. Filtrar: Disponibilidad 0 seleccionados Restablecer Disponibilidad En existencia (4) En existencia (4 productos) Agotado (0) Agotado (0 productos) Precio El precio más alto es $10.00 Restablecer $ De $ Para Eliminar todos Ordenar por: Características Más relevantes Más vendidos Alfabéticamente, A-Z Alfabéticamente, Z-A Precio, menor a mayor Precio, mayor a menor Fecha: antiguo(a) a reciente Fecha: reciente a antiguo(a) 4 productos Filtrar y ordenar Filtrar Filtrar y ordenar Filtrar 4 productos Disponibilidad Disponibilidad En existencia (4) En existencia (4 productos) Agotado (0) Agotado (0 productos) Borrar Aplicar Precio Precio El precio más alto es $10.00 $ De $ Para Borrar Aplicar Ordenar por: Características Más relevantes Más vendidos Alfabéticamente, A-Z Alfabéticamente, Z-A Precio, menor a mayor Precio, mayor a menor Fecha: antiguo(a) a reciente Fecha: reciente a antiguo(a) Eliminar todos Aplicar Eliminar todos 4 productos Foto próximamente Brownie de chocolate — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Brownie artesanal… $6.00 Cerrado Foto próximamente Caja de seis galletas — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Una caja… $6.00 Cerrado Foto próximamente Galleta con chispas de chocolate — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Galleta artesanal… $6.00 Cerrado Tomate Confitada Tomates confitados llenos de sabor, acompañados de pimiento asado, ajo,… $10.00 Cerrado",
+      "structured": [
+        {
+          "@context": "http://schema.org",
+          "@type": "Organization",
+          "name": "Dayana’s Sweet",
+          "logo": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-logo-horizontal.png?v=85206367675808367111790445534",
+          "sameAs": [],
+          "url": "https://dayanassweet.com"
+        }
+      ],
+      "links": [
+        {
+          "href": "#MainContent",
+          "text": "Ir directamente al contenido"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Seguir comprando"
+        },
+        {
+          "href": "https://dayanassweet.com/customer_authentication/redirect?locale=es&region_country=US",
+          "text": "Inicia sesión"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/",
+          "text": ""
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/cart",
+          "text": "Carrito"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Restablecer"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Restablecer"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Eliminar todos"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Borrar"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Borrar"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Eliminar todos"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Eliminar todos"
+        },
+        {
+          "href": "/products/brownie-de-chocolate-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/brownie-de-chocolate-prueba",
+          "text": "Brownie de chocolate — PRUEBA"
+        },
+        {
+          "href": "/products/caja-de-seis-galletas-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/caja-de-seis-galletas-prueba",
+          "text": "Caja de seis galletas — PRUEBA"
+        },
+        {
+          "href": "/products/galleta-con-chispas-de-chocolate-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/galleta-con-chispas-de-chocolate-prueba",
+          "text": "Galleta con chispas de chocolate — PRUEBA"
+        },
+        {
+          "href": "/products/tomate-confitada",
+          "text": ""
+        },
+        {
+          "href": "/products/tomate-confitada",
+          "text": "Tomate Confitada"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Catálogo"
+        },
+        {
+          "href": "/pages/contact",
+          "text": "Contacto"
+        },
+        {
+          "href": "/",
+          "text": "Dayana’s Sweet"
+        },
+        {
+          "href": "http://es.shopify.com?utm_campaign=poweredby&utm_medium=shopify&utm_source=onlinestore",
+          "text": "Tecnología de Shopify"
+        },
+        {
+          "href": "/policies/privacy-policy",
+          "text": "Política de privacidad"
+        }
+      ]
+    },
+    {
+      "url": "https://dayanassweet.com/products/galleta-con-chispas-de-chocolate-prueba",
+      "status": 200,
+      "bytes": 148342,
+      "ttfbMs": 216,
+      "totalMs": 264,
+      "title": "Galleta con chispas de chocolate — PRUEBA &ndash; Dayana’s Sweet",
+      "description": "PRODUCTO DE PRUEBA. No disponible para la venta.Galleta artesanal con chispas de chocolate. Presentación sugerida: una unidad.Precio, receta final, ingredientes específicos, foto, peso y existencias pendientes de confirmar.Elaboración por encargo en tandas mensuales. Trabajamos con trigo, huevo, leche y frutos secos en",
+      "canonical": "https://dayanassweet.com/products/galleta-con-chispas-de-chocolate-prueba",
+      "robots": null,
+      "ogImage": null,
+      "h1": [
+        "Galleta con chispas de chocolate — PRUEBA"
+      ],
+      "mainText": "Ir directamente a la información del producto 1 / de 0 Galleta con chispas de chocolate — PRUEBA Galleta con chispas de chocolate — PRUEBA Precio habitual $6.00 Precio habitual Precio de oferta $6.00 Oferta Agotado Cantidad Cantidad ( 0 en el carrito) Reducir cantidad para Galleta con chispas de chocolate — PRUEBA Aumentar cantidad para Galleta con chispas de chocolate — PRUEBA La tanda ya cerró. Suscríbete al boletín y te avisamos cuando abra el próximo menú. Conservación Cuatro días fuera de la nevera en su caja cerrada, ocho días en la nevera y hasta tres meses en el congelador. Para revivirlas: 20 segundos en el microondas o 5 minutos en el horno a 350 °F. PRODUCTO DE PRUEBA. No disponible para la venta. Galleta artesanal con chispas de chocolate. Presentación sugerida: una unidad. Precio, receta final, ingredientes específicos, foto, peso y existencias pendientes de confirmar. Elaboración por encargo en tandas mensuales. Trabajamos con trigo, huevo, leche y frutos secos en equipos compartidos. Ver todos los detalles Los más pedidos Tomate Confitada Tomates confitados llenos de sabor, acompañados de pimiento asado, ajo,… $10.00 Cerrado Foto próximamente Caja de seis galletas — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Una caja… $6.00 Cerrado Foto próximamente Brownie de chocolate — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Brownie artesanal… $6.00 Cerrado Ver todo el menú",
+      "structured": [
+        {
+          "@context": "http://schema.org",
+          "@type": "Organization",
+          "name": "Dayana’s Sweet",
+          "logo": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-logo-horizontal.png?v=85206367675808367111790445534",
+          "sameAs": [],
+          "url": "https://dayanassweet.com"
+        },
+        {
+          "@context": "http://schema.org/",
+          "@id": "/products/galleta-con-chispas-de-chocolate-prueba#product",
+          "@type": "Product",
+          "brand": {
+            "@type": "Brand",
+            "name": "Dayana’s Sweet"
+          },
+          "category": "",
+          "description": "PRODUCTO DE PRUEBA. No disponible para la venta.Galleta artesanal con chispas de chocolate. Presentación sugerida: una unidad.Precio, receta final, ingredientes específicos, foto, peso y existencias pendientes de confirmar.Elaboración por encargo en tandas mensuales. Trabajamos con trigo, huevo, leche y frutos secos en equipos compartidos.",
+          "name": "Galleta con chispas de chocolate — PRUEBA",
+          "offers": {
+            "@id": "/products/galleta-con-chispas-de-chocolate-prueba?variant=67810583478576#offer",
+            "@type": "Offer",
+            "availability": "http://schema.org/InStock",
+            "price": "6.00",
+            "priceCurrency": "USD",
+            "url": "https://dayanassweet.com/products/galleta-con-chispas-de-chocolate-prueba?variant=67810583478576"
+          },
+          "url": "https://dayanassweet.com/products/galleta-con-chispas-de-chocolate-prueba"
+        }
+      ],
+      "links": [
+        {
+          "href": "#MainContent",
+          "text": "Ir directamente al contenido"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Seguir comprando"
+        },
+        {
+          "href": "https://dayanassweet.com/customer_authentication/redirect?locale=es&region_country=US",
+          "text": "Inicia sesión"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/",
+          "text": ""
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/cart",
+          "text": "Carrito"
+        },
+        {
+          "href": "#ProductInfo-template--27774317330736__main",
+          "text": "Ir directamente a la información del producto"
+        },
+        {
+          "href": "/products/galleta-con-chispas-de-chocolate-prueba",
+          "text": "Galleta con chispas de chocolate — PRUEBA"
+        },
+        {
+          "href": "/products/galleta-con-chispas-de-chocolate-prueba",
+          "text": "Ver todos los detalles"
+        },
+        {
+          "href": "/products/tomate-confitada",
+          "text": ""
+        },
+        {
+          "href": "/products/tomate-confitada",
+          "text": "Tomate Confitada"
+        },
+        {
+          "href": "/products/caja-de-seis-galletas-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/caja-de-seis-galletas-prueba",
+          "text": "Caja de seis galletas — PRUEBA"
+        },
+        {
+          "href": "/products/brownie-de-chocolate-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/brownie-de-chocolate-prueba",
+          "text": "Brownie de chocolate — PRUEBA"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Ver todo el menú"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Catálogo"
+        },
+        {
+          "href": "/pages/contact",
+          "text": "Contacto"
+        },
+        {
+          "href": "/",
+          "text": "Dayana’s Sweet"
+        },
+        {
+          "href": "http://es.shopify.com?utm_campaign=poweredby&utm_medium=shopify&utm_source=onlinestore",
+          "text": "Tecnología de Shopify"
+        },
+        {
+          "href": "/policies/privacy-policy",
+          "text": "Política de privacidad"
+        }
+      ]
+    },
+    {
+      "url": "https://dayanassweet.com/products/brownie-de-chocolate-prueba",
+      "status": 200,
+      "bytes": 147551,
+      "ttfbMs": 253,
+      "totalMs": 275,
+      "title": "Brownie de chocolate — PRUEBA &ndash; Dayana’s Sweet",
+      "description": "PRODUCTO DE PRUEBA. No disponible para la venta.Brownie artesanal de chocolate. Presentación sugerida: una porción.Precio, receta final, ingredientes específicos, foto, peso y existencias pendientes de confirmar.Elaboración por encargo en tandas mensuales. Trabajamos con trigo, huevo, leche y frutos secos en equipos co",
+      "canonical": "https://dayanassweet.com/products/brownie-de-chocolate-prueba",
+      "robots": null,
+      "ogImage": null,
+      "h1": [
+        "Brownie de chocolate — PRUEBA"
+      ],
+      "mainText": "Ir directamente a la información del producto 1 / de 0 Brownie de chocolate — PRUEBA Brownie de chocolate — PRUEBA Precio habitual $6.00 Precio habitual Precio de oferta $6.00 Oferta Agotado Cantidad Cantidad ( 0 en el carrito) Reducir cantidad para Brownie de chocolate — PRUEBA Aumentar cantidad para Brownie de chocolate — PRUEBA La tanda ya cerró. Suscríbete al boletín y te avisamos cuando abra el próximo menú. PRODUCTO DE PRUEBA. No disponible para la venta. Brownie artesanal de chocolate. Presentación sugerida: una porción. Precio, receta final, ingredientes específicos, foto, peso y existencias pendientes de confirmar. Elaboración por encargo en tandas mensuales. Trabajamos con trigo, huevo, leche y frutos secos en equipos compartidos. Ver todos los detalles Los más pedidos Tomate Confitada Tomates confitados llenos de sabor, acompañados de pimiento asado, ajo,… $10.00 Cerrado Foto próximamente Caja de seis galletas — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Una caja… $6.00 Cerrado Foto próximamente Galleta con chispas de chocolate — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Galleta artesanal… $6.00 Cerrado Ver todo el menú",
+      "structured": [
+        {
+          "@context": "http://schema.org",
+          "@type": "Organization",
+          "name": "Dayana’s Sweet",
+          "logo": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-logo-horizontal.png?v=85206367675808367111790445534",
+          "sameAs": [],
+          "url": "https://dayanassweet.com"
+        },
+        {
+          "@context": "http://schema.org/",
+          "@id": "/products/brownie-de-chocolate-prueba#product",
+          "@type": "Product",
+          "brand": {
+            "@type": "Brand",
+            "name": "Dayana’s Sweet"
+          },
+          "category": "",
+          "description": "PRODUCTO DE PRUEBA. No disponible para la venta.Brownie artesanal de chocolate. Presentación sugerida: una porción.Precio, receta final, ingredientes específicos, foto, peso y existencias pendientes de confirmar.Elaboración por encargo en tandas mensuales. Trabajamos con trigo, huevo, leche y frutos secos en equipos compartidos.",
+          "name": "Brownie de chocolate — PRUEBA",
+          "offers": {
+            "@id": "/products/brownie-de-chocolate-prueba?variant=67810596782384#offer",
+            "@type": "Offer",
+            "availability": "http://schema.org/InStock",
+            "price": "6.00",
+            "priceCurrency": "USD",
+            "url": "https://dayanassweet.com/products/brownie-de-chocolate-prueba?variant=67810596782384"
+          },
+          "url": "https://dayanassweet.com/products/brownie-de-chocolate-prueba"
+        }
+      ],
+      "links": [
+        {
+          "href": "#MainContent",
+          "text": "Ir directamente al contenido"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Seguir comprando"
+        },
+        {
+          "href": "https://dayanassweet.com/customer_authentication/redirect?locale=es&region_country=US",
+          "text": "Inicia sesión"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/",
+          "text": ""
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/cart",
+          "text": "Carrito"
+        },
+        {
+          "href": "#ProductInfo-template--27774317330736__main",
+          "text": "Ir directamente a la información del producto"
+        },
+        {
+          "href": "/products/brownie-de-chocolate-prueba",
+          "text": "Brownie de chocolate — PRUEBA"
+        },
+        {
+          "href": "/products/brownie-de-chocolate-prueba",
+          "text": "Ver todos los detalles"
+        },
+        {
+          "href": "/products/tomate-confitada",
+          "text": ""
+        },
+        {
+          "href": "/products/tomate-confitada",
+          "text": "Tomate Confitada"
+        },
+        {
+          "href": "/products/caja-de-seis-galletas-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/caja-de-seis-galletas-prueba",
+          "text": "Caja de seis galletas — PRUEBA"
+        },
+        {
+          "href": "/products/galleta-con-chispas-de-chocolate-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/galleta-con-chispas-de-chocolate-prueba",
+          "text": "Galleta con chispas de chocolate — PRUEBA"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Ver todo el menú"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Catálogo"
+        },
+        {
+          "href": "/pages/contact",
+          "text": "Contacto"
+        },
+        {
+          "href": "/",
+          "text": "Dayana’s Sweet"
+        },
+        {
+          "href": "http://es.shopify.com?utm_campaign=poweredby&utm_medium=shopify&utm_source=onlinestore",
+          "text": "Tecnología de Shopify"
+        },
+        {
+          "href": "/policies/privacy-policy",
+          "text": "Política de privacidad"
+        }
+      ]
+    },
+    {
+      "url": "https://dayanassweet.com/products/caja-de-seis-galletas-prueba",
+      "status": 200,
+      "bytes": 148083,
+      "ttfbMs": 274,
+      "totalMs": 278,
+      "title": "Caja de seis galletas — PRUEBA &ndash; Dayana’s Sweet",
+      "description": "PRODUCTO DE PRUEBA. No disponible para la venta.Una caja de seis galletas artesanales para compartir o regalar. Sabores y combinación por definir.Precio, receta final, ingredientes específicos, foto, peso y existencias pendientes de confirmar.Elaboración por encargo en tandas mensuales. Trabajamos con trigo, huevo, lec",
+      "canonical": "https://dayanassweet.com/products/caja-de-seis-galletas-prueba",
+      "robots": null,
+      "ogImage": null,
+      "h1": [
+        "Caja de seis galletas — PRUEBA"
+      ],
+      "mainText": "Ir directamente a la información del producto 1 / de 0 Caja de seis galletas — PRUEBA Caja de seis galletas — PRUEBA Precio habitual $6.00 Precio habitual Precio de oferta $6.00 Oferta Agotado Cantidad Cantidad ( 0 en el carrito) Reducir cantidad para Caja de seis galletas — PRUEBA Aumentar cantidad para Caja de seis galletas — PRUEBA La tanda ya cerró. Suscríbete al boletín y te avisamos cuando abra el próximo menú. Conservación Cuatro días fuera de la nevera en su caja cerrada, ocho días en la nevera y hasta tres meses en el congelador. Para revivirlas: 20 segundos en el microondas o 5 minutos en el horno a 350 °F. PRODUCTO DE PRUEBA. No disponible para la venta. Una caja de seis galletas artesanales para compartir o regalar. Sabores y combinación por definir. Precio, receta final, ingredientes específicos, foto, peso y existencias pendientes de confirmar. Elaboración por encargo en tandas mensuales. Trabajamos con trigo, huevo, leche y frutos secos en equipos compartidos. Ver todos los detalles Los más pedidos Tomate Confitada Tomates confitados llenos de sabor, acompañados de pimiento asado, ajo,… $10.00 Cerrado Foto próximamente Brownie de chocolate — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Brownie artesanal… $6.00 Cerrado Foto próximamente Galleta con chispas de chocolate — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Galleta artesanal… $6.00 Cerrado Ver todo el menú",
+      "structured": [
+        {
+          "@context": "http://schema.org",
+          "@type": "Organization",
+          "name": "Dayana’s Sweet",
+          "logo": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-logo-horizontal.png?v=85206367675808367111790445534",
+          "sameAs": [],
+          "url": "https://dayanassweet.com"
+        },
+        {
+          "@context": "http://schema.org/",
+          "@id": "/products/caja-de-seis-galletas-prueba#product",
+          "@type": "Product",
+          "brand": {
+            "@type": "Brand",
+            "name": "Dayana’s Sweet"
+          },
+          "category": "",
+          "description": "PRODUCTO DE PRUEBA. No disponible para la venta.Una caja de seis galletas artesanales para compartir o regalar. Sabores y combinación por definir.Precio, receta final, ingredientes específicos, foto, peso y existencias pendientes de confirmar.Elaboración por encargo en tandas mensuales. Trabajamos con trigo, huevo, leche y frutos secos en equipos compartidos.",
+          "name": "Caja de seis galletas — PRUEBA",
+          "offers": {
+            "@id": "/products/caja-de-seis-galletas-prueba?variant=67810605924656#offer",
+            "@type": "Offer",
+            "availability": "http://schema.org/InStock",
+            "price": "6.00",
+            "priceCurrency": "USD",
+            "url": "https://dayanassweet.com/products/caja-de-seis-galletas-prueba?variant=67810605924656"
+          },
+          "url": "https://dayanassweet.com/products/caja-de-seis-galletas-prueba"
+        }
+      ],
+      "links": [
+        {
+          "href": "#MainContent",
+          "text": "Ir directamente al contenido"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Seguir comprando"
+        },
+        {
+          "href": "https://dayanassweet.com/customer_authentication/redirect?locale=es&region_country=US",
+          "text": "Inicia sesión"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/",
+          "text": ""
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/cart",
+          "text": "Carrito"
+        },
+        {
+          "href": "#ProductInfo-template--27774317330736__main",
+          "text": "Ir directamente a la información del producto"
+        },
+        {
+          "href": "/products/caja-de-seis-galletas-prueba",
+          "text": "Caja de seis galletas — PRUEBA"
+        },
+        {
+          "href": "/products/caja-de-seis-galletas-prueba",
+          "text": "Ver todos los detalles"
+        },
+        {
+          "href": "/products/tomate-confitada",
+          "text": ""
+        },
+        {
+          "href": "/products/tomate-confitada",
+          "text": "Tomate Confitada"
+        },
+        {
+          "href": "/products/brownie-de-chocolate-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/brownie-de-chocolate-prueba",
+          "text": "Brownie de chocolate — PRUEBA"
+        },
+        {
+          "href": "/products/galleta-con-chispas-de-chocolate-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/galleta-con-chispas-de-chocolate-prueba",
+          "text": "Galleta con chispas de chocolate — PRUEBA"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Ver todo el menú"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Catálogo"
+        },
+        {
+          "href": "/pages/contact",
+          "text": "Contacto"
+        },
+        {
+          "href": "/",
+          "text": "Dayana’s Sweet"
+        },
+        {
+          "href": "http://es.shopify.com?utm_campaign=poweredby&utm_medium=shopify&utm_source=onlinestore",
+          "text": "Tecnología de Shopify"
+        },
+        {
+          "href": "/policies/privacy-policy",
+          "text": "Política de privacidad"
+        }
+      ]
+    },
+    {
+      "url": "https://dayanassweet.com/products/tomate-confitada",
+      "status": 200,
+      "bytes": 151608,
+      "ttfbMs": 228,
+      "totalMs": 318,
+      "title": "Tomate Confitada &ndash; Dayana’s Sweet",
+      "description": "Tomates confitados llenos de sabor, acompañados de pimiento asado, ajo, cebolla, tomillo y romero, todo sumergido en aceite de oliva para lograr una mezcla aromática, suave y deliciosa. Ideal para acompañar panes, pastas, pizzas, sándwiches, quesos, carnes o tablas de picar.",
+      "canonical": "https://dayanassweet.com/products/tomate-confitada",
+      "robots": null,
+      "ogImage": "http://dayanassweet.com/cdn/shop/files/FrascodeTomateConfitadoArtesanal.png?v=1791414688",
+      "h1": [
+        "Tomate Confitada"
+      ],
+      "mainText": "Ir directamente a la información del producto Abrir elemento multimedia 1 en una ventana modal 1 / de 1 Tomate Confitada Tomate Confitada Precio habitual $10.00 Precio habitual Precio de oferta $10.00 Oferta Agotado Cantidad Cantidad ( 0 en el carrito) Reducir cantidad para Tomate Confitada Aumentar cantidad para Tomate Confitada La tanda ya cerró. Suscríbete al boletín y te avisamos cuando abra el próximo menú. Tomates confitados llenos de sabor, acompañados de pimiento asado, ajo, cebolla, tomillo y romero , todo sumergido en aceite de oliva para lograr una mezcla aromática, suave y deliciosa. Ideal para acompañar panes, pastas, pizzas, sándwiches, quesos, carnes o tablas de picar . Ver todos los detalles Los más pedidos Foto próximamente Caja de seis galletas — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Una caja… $6.00 Cerrado Foto próximamente Brownie de chocolate — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Brownie artesanal… $6.00 Cerrado Foto próximamente Galleta con chispas de chocolate — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Galleta artesanal… $6.00 Cerrado Ver todo el menú",
+      "structured": [
+        {
+          "@context": "http://schema.org",
+          "@type": "Organization",
+          "name": "Dayana’s Sweet",
+          "logo": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-logo-horizontal.png?v=85206367675808367111790445534",
+          "sameAs": [],
+          "url": "https://dayanassweet.com"
+        },
+        {
+          "@context": "http://schema.org/",
+          "@id": "/products/tomate-confitada#product",
+          "@type": "Product",
+          "brand": {
+            "@type": "Brand",
+            "name": "Dayana’s Sweet"
+          },
+          "category": "",
+          "description": "Tomates confitados llenos de sabor, acompañados de pimiento asado, ajo, cebolla, tomillo y romero, todo sumergido en aceite de oliva para lograr una mezcla aromática, suave y deliciosa. Ideal para acompañar panes, pastas, pizzas, sándwiches, quesos, carnes o tablas de picar.",
+          "image": "https://dayanassweet.com/cdn/shop/files/FrascodeTomateConfitadoArtesanal.png?v=1791414688&width=1920",
+          "name": "Tomate Confitada",
+          "offers": {
+            "@id": "/products/tomate-confitada?variant=67965185261872#offer",
+            "@type": "Offer",
+            "availability": "http://schema.org/InStock",
+            "price": "10.00",
+            "priceCurrency": "USD",
+            "url": "https://dayanassweet.com/products/tomate-confitada?variant=67965185261872"
+          },
+          "url": "https://dayanassweet.com/products/tomate-confitada"
+        }
+      ],
+      "links": [
+        {
+          "href": "#MainContent",
+          "text": "Ir directamente al contenido"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Seguir comprando"
+        },
+        {
+          "href": "https://dayanassweet.com/customer_authentication/redirect?locale=es&region_country=US",
+          "text": "Inicia sesión"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/",
+          "text": ""
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/cart",
+          "text": "Carrito"
+        },
+        {
+          "href": "#ProductInfo-template--27774317330736__main",
+          "text": "Ir directamente a la información del producto"
+        },
+        {
+          "href": "/products/tomate-confitada",
+          "text": "Tomate Confitada"
+        },
+        {
+          "href": "/products/tomate-confitada",
+          "text": "Ver todos los detalles"
+        },
+        {
+          "href": "/products/caja-de-seis-galletas-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/caja-de-seis-galletas-prueba",
+          "text": "Caja de seis galletas — PRUEBA"
+        },
+        {
+          "href": "/products/brownie-de-chocolate-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/brownie-de-chocolate-prueba",
+          "text": "Brownie de chocolate — PRUEBA"
+        },
+        {
+          "href": "/products/galleta-con-chispas-de-chocolate-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/galleta-con-chispas-de-chocolate-prueba",
+          "text": "Galleta con chispas de chocolate — PRUEBA"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Ver todo el menú"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Catálogo"
+        },
+        {
+          "href": "/pages/contact",
+          "text": "Contacto"
+        },
+        {
+          "href": "/",
+          "text": "Dayana’s Sweet"
+        },
+        {
+          "href": "http://es.shopify.com?utm_campaign=poweredby&utm_medium=shopify&utm_source=onlinestore",
+          "text": "Tecnología de Shopify"
+        },
+        {
+          "href": "/policies/privacy-policy",
+          "text": "Política de privacidad"
+        }
+      ]
+    },
+    {
+      "url": "https://dayanassweet.com/pages/contact",
+      "status": 200,
+      "bytes": 124490,
+      "ttfbMs": 190,
+      "totalMs": 235,
+      "title": "Contacto &ndash; Dayana’s Sweet",
+      "description": null,
+      "canonical": "https://dayanassweet.com/pages/contact",
+      "robots": null,
+      "ogImage": null,
+      "h1": [
+        "Contacto"
+      ],
+      "mainText": "Contacto ¿Tienes una pregunta sobre tu pedido o nuestras tandas? Escríbenos y te responderemos. Escríbenos Nombre Correo electrónico * Mensaje * Enviar mensaje Antes de escribir Horneamos por tandas y enviamos solo por transportista. No ofrecemos retiro presencial. Nuestros productos se preparan en equipos compartidos con trigo, huevo, leche y frutos secos. Preguntas frecuentes Cómo funcionan las tandas",
+      "structured": [
+        {
+          "@context": "http://schema.org",
+          "@type": "Organization",
+          "name": "Dayana’s Sweet",
+          "logo": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-logo-horizontal.png?v=85206367675808367111790445534",
+          "sameAs": [],
+          "url": "https://dayanassweet.com/pages/contact"
+        }
+      ],
+      "links": [
+        {
+          "href": "#MainContent",
+          "text": "Ir directamente al contenido"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Seguir comprando"
+        },
+        {
+          "href": "https://dayanassweet.com/customer_authentication/redirect?locale=es&region_country=US",
+          "text": "Inicia sesión"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/",
+          "text": ""
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/cart",
+          "text": "Carrito"
+        },
+        {
+          "href": "/#ds-preguntas",
+          "text": "Preguntas frecuentes"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funcionan las tandas"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Catálogo"
+        },
+        {
+          "href": "/pages/contact",
+          "text": "Contacto"
+        },
+        {
+          "href": "/",
+          "text": "Dayana’s Sweet"
+        },
+        {
+          "href": "http://es.shopify.com?utm_campaign=poweredby&utm_medium=shopify&utm_source=onlinestore",
+          "text": "Tecnología de Shopify"
+        },
+        {
+          "href": "/policies/privacy-policy",
+          "text": "Política de privacidad"
+        }
+      ]
+    },
+    {
+      "url": "https://dayanassweet.com/pages/data-sharing-opt-out",
+      "status": 200,
+      "bytes": 127411,
+      "ttfbMs": 196,
+      "totalMs": 226,
+      "title": "Tus opciones de privacidad &ndash; Dayana’s Sweet",
+      "description": "Como se describe en nuestra Política de privacidad, recopilamos información personal de sus interacciones con nosotros y nuestro sitio web, incluso a través de cookies y tecnologías similares. También podemos compartir esta información personal con terceros, incluidos socios publicitarios. Hacemos esto para mostrarle a",
+      "canonical": "https://dayanassweet.com/pages/data-sharing-opt-out",
+      "robots": null,
+      "ogImage": null,
+      "h1": [
+        "Tus opciones de privacidad"
+      ],
+      "mainText": "Tus opciones de privacidad Como se describe en nuestra Política de privacidad, recopilamos información personal de sus interacciones con nosotros y nuestro sitio web, incluso a través de cookies y tecnologías similares. También podemos compartir esta información personal con terceros, incluidos socios publicitarios. Hacemos esto para mostrarle anuncios en otros sitios web que sean más relevantes para sus intereses y por otros motivos que se describen en nuestra Política de privacidad. Compartir información personal para realizar publicidad dirigida en función de su interacción en diferentes sitios web puede considerarse “venta”, “intercambio” o “publicidad dirigida” según determinadas leyes de privacidad de los estados de EE. UU. En función de dónde viva, puede tener derecho a darse de baja de estas actividades. Si desea ejercer este derecho a la baja voluntaria, siga las instrucciones a continuación. Si visita nuestro sitio web con la señal de preferencia de darse de baja del Control Global de Privacidad activada, trataremos esto, según su ubicación, como una solicitud para darse de baja de la actividad que pueda considerarse una “venta” o “intercambio” de información personal. También lo trataremos como una solicitud de baja de otros usos que puedan considerarse publicidad dirigida para el dispositivo y navegador que utilizó al visitar nuestro sitio web.",
+      "structured": [
+        {
+          "@context": "http://schema.org",
+          "@type": "Organization",
+          "name": "Dayana’s Sweet",
+          "logo": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-logo-horizontal.png?v=85206367675808367111790445534",
+          "sameAs": [],
+          "url": "https://dayanassweet.com/pages/data-sharing-opt-out"
+        }
+      ],
+      "links": [
+        {
+          "href": "#MainContent",
+          "text": "Ir directamente al contenido"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Seguir comprando"
+        },
+        {
+          "href": "https://dayanassweet.com/customer_authentication/redirect?locale=es&region_country=US",
+          "text": "Inicia sesión"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/",
+          "text": ""
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/cart",
+          "text": "Carrito"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Catálogo"
+        },
+        {
+          "href": "/pages/contact",
+          "text": "Contacto"
+        },
+        {
+          "href": "/",
+          "text": "Dayana’s Sweet"
+        },
+        {
+          "href": "http://es.shopify.com?utm_campaign=poweredby&utm_medium=shopify&utm_source=onlinestore",
+          "text": "Tecnología de Shopify"
+        },
+        {
+          "href": "/policies/privacy-policy",
+          "text": "Política de privacidad"
+        }
+      ]
+    },
+    {
+      "url": "https://dayanassweet.com/collections/mas-vendidos",
+      "status": 200,
+      "bytes": 160324,
+      "ttfbMs": 158,
+      "totalMs": 221,
+      "title": "Más vendidos &ndash; Dayana’s Sweet",
+      "description": null,
+      "canonical": "https://dayanassweet.com/collections/mas-vendidos",
+      "robots": null,
+      "ogImage": null,
+      "h1": [
+        "Más vendidos"
+      ],
+      "mainText": "Inicio / Más vendidos Más vendidos La tanda ya cerró. Suscríbete al boletín y te avisamos cuando abra el próximo menú. Filtrar: Disponibilidad 0 seleccionados Restablecer Disponibilidad En existencia (4) En existencia (4 productos) Agotado (0) Agotado (0 productos) Precio El precio más alto es $10.00 Restablecer $ De $ Para Eliminar todos Ordenar por: Características Más relevantes Más vendidos Alfabéticamente, A-Z Alfabéticamente, Z-A Precio, menor a mayor Precio, mayor a menor Fecha: antiguo(a) a reciente Fecha: reciente a antiguo(a) 4 productos Filtrar y ordenar Filtrar Filtrar y ordenar Filtrar 4 productos Disponibilidad Disponibilidad En existencia (4) En existencia (4 productos) Agotado (0) Agotado (0 productos) Borrar Aplicar Precio Precio El precio más alto es $10.00 $ De $ Para Borrar Aplicar Ordenar por: Características Más relevantes Más vendidos Alfabéticamente, A-Z Alfabéticamente, Z-A Precio, menor a mayor Precio, mayor a menor Fecha: antiguo(a) a reciente Fecha: reciente a antiguo(a) Eliminar todos Aplicar Eliminar todos 4 productos Tomate Confitada Tomates confitados llenos de sabor, acompañados de pimiento asado, ajo,… $10.00 Cerrado Foto próximamente Caja de seis galletas — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Una caja… $6.00 Cerrado Foto próximamente Brownie de chocolate — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Brownie artesanal… $6.00 Cerrado Foto próximamente Galleta con chispas de chocolate — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Galleta artesanal… $6.00 Cerrado",
+      "structured": [
+        {
+          "@context": "http://schema.org",
+          "@type": "Organization",
+          "name": "Dayana’s Sweet",
+          "logo": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-logo-horizontal.png?v=85206367675808367111790445534",
+          "sameAs": [],
+          "url": "https://dayanassweet.com"
+        }
+      ],
+      "links": [
+        {
+          "href": "#MainContent",
+          "text": "Ir directamente al contenido"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Seguir comprando"
+        },
+        {
+          "href": "https://dayanassweet.com/customer_authentication/redirect?locale=es&region_country=US",
+          "text": "Inicia sesión"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/",
+          "text": ""
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/cart",
+          "text": "Carrito"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Restablecer"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Restablecer"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Eliminar todos"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Borrar"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Borrar"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Eliminar todos"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Eliminar todos"
+        },
+        {
+          "href": "/products/tomate-confitada",
+          "text": ""
+        },
+        {
+          "href": "/products/tomate-confitada",
+          "text": "Tomate Confitada"
+        },
+        {
+          "href": "/products/caja-de-seis-galletas-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/caja-de-seis-galletas-prueba",
+          "text": "Caja de seis galletas — PRUEBA"
+        },
+        {
+          "href": "/products/brownie-de-chocolate-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/brownie-de-chocolate-prueba",
+          "text": "Brownie de chocolate — PRUEBA"
+        },
+        {
+          "href": "/products/galleta-con-chispas-de-chocolate-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/galleta-con-chispas-de-chocolate-prueba",
+          "text": "Galleta con chispas de chocolate — PRUEBA"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Catálogo"
+        },
+        {
+          "href": "/pages/contact",
+          "text": "Contacto"
+        },
+        {
+          "href": "/",
+          "text": "Dayana’s Sweet"
+        },
+        {
+          "href": "http://es.shopify.com?utm_campaign=poweredby&utm_medium=shopify&utm_source=onlinestore",
+          "text": "Tecnología de Shopify"
+        },
+        {
+          "href": "/policies/privacy-policy",
+          "text": "Política de privacidad"
+        }
+      ]
+    },
+    {
+      "url": "https://dayanassweet.com/collections/galletas",
+      "status": 200,
+      "bytes": 156385,
+      "ttfbMs": 154,
+      "totalMs": 228,
+      "title": "Galletas &ndash; Dayana’s Sweet",
+      "description": null,
+      "canonical": "https://dayanassweet.com/collections/galletas",
+      "robots": null,
+      "ogImage": null,
+      "h1": [
+        "Galletas"
+      ],
+      "mainText": "Inicio / Galletas Galletas La tanda ya cerró. Suscríbete al boletín y te avisamos cuando abra el próximo menú. Filtrar: Disponibilidad 0 seleccionados Restablecer Disponibilidad En existencia (2) En existencia (2 productos) Agotado (0) Agotado (0 productos) Precio El precio más alto es $6.00 Restablecer $ De $ Para Eliminar todos Ordenar por: Características Más relevantes Más vendidos Alfabéticamente, A-Z Alfabéticamente, Z-A Precio, menor a mayor Precio, mayor a menor Fecha: antiguo(a) a reciente Fecha: reciente a antiguo(a) 2 productos Filtrar y ordenar Filtrar Filtrar y ordenar Filtrar 2 productos Disponibilidad Disponibilidad En existencia (2) En existencia (2 productos) Agotado (0) Agotado (0 productos) Borrar Aplicar Precio Precio El precio más alto es $6.00 $ De $ Para Borrar Aplicar Ordenar por: Características Más relevantes Más vendidos Alfabéticamente, A-Z Alfabéticamente, Z-A Precio, menor a mayor Precio, mayor a menor Fecha: antiguo(a) a reciente Fecha: reciente a antiguo(a) Eliminar todos Aplicar Eliminar todos 2 productos Foto próximamente Caja de seis galletas — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Una caja… $6.00 Cerrado Foto próximamente Galleta con chispas de chocolate — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Galleta artesanal… $6.00 Cerrado",
+      "structured": [
+        {
+          "@context": "http://schema.org",
+          "@type": "Organization",
+          "name": "Dayana’s Sweet",
+          "logo": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-logo-horizontal.png?v=85206367675808367111790445534",
+          "sameAs": [],
+          "url": "https://dayanassweet.com"
+        }
+      ],
+      "links": [
+        {
+          "href": "#MainContent",
+          "text": "Ir directamente al contenido"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Seguir comprando"
+        },
+        {
+          "href": "https://dayanassweet.com/customer_authentication/redirect?locale=es&region_country=US",
+          "text": "Inicia sesión"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/",
+          "text": ""
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/cart",
+          "text": "Carrito"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Restablecer"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Restablecer"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Eliminar todos"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Borrar"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Borrar"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Eliminar todos"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Eliminar todos"
+        },
+        {
+          "href": "/products/caja-de-seis-galletas-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/caja-de-seis-galletas-prueba",
+          "text": "Caja de seis galletas — PRUEBA"
+        },
+        {
+          "href": "/products/galleta-con-chispas-de-chocolate-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/galleta-con-chispas-de-chocolate-prueba",
+          "text": "Galleta con chispas de chocolate — PRUEBA"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Catálogo"
+        },
+        {
+          "href": "/pages/contact",
+          "text": "Contacto"
+        },
+        {
+          "href": "/",
+          "text": "Dayana’s Sweet"
+        },
+        {
+          "href": "http://es.shopify.com?utm_campaign=poweredby&utm_medium=shopify&utm_source=onlinestore",
+          "text": "Tecnología de Shopify"
+        },
+        {
+          "href": "/policies/privacy-policy",
+          "text": "Política de privacidad"
+        }
+      ]
+    },
+    {
+      "url": "https://dayanassweet.com/collections/brownies",
+      "status": 200,
+      "bytes": 154562,
+      "ttfbMs": 180,
+      "totalMs": 250,
+      "title": "Brownies &ndash; Dayana’s Sweet",
+      "description": null,
+      "canonical": "https://dayanassweet.com/collections/brownies",
+      "robots": null,
+      "ogImage": null,
+      "h1": [
+        "Brownies"
+      ],
+      "mainText": "Inicio / Brownies Brownies La tanda ya cerró. Suscríbete al boletín y te avisamos cuando abra el próximo menú. Filtrar: Disponibilidad 0 seleccionados Restablecer Disponibilidad En existencia (1) En existencia (1 producto) Agotado (0) Agotado (0 productos) Precio El precio más alto es $6.00 Restablecer $ De $ Para Eliminar todos Ordenar por: Características Más relevantes Más vendidos Alfabéticamente, A-Z Alfabéticamente, Z-A Precio, menor a mayor Precio, mayor a menor Fecha: antiguo(a) a reciente Fecha: reciente a antiguo(a) 1 producto Filtrar y ordenar Filtrar Filtrar y ordenar Filtrar 1 producto Disponibilidad Disponibilidad En existencia (1) En existencia (1 productos) Agotado (0) Agotado (0 productos) Borrar Aplicar Precio Precio El precio más alto es $6.00 $ De $ Para Borrar Aplicar Ordenar por: Características Más relevantes Más vendidos Alfabéticamente, A-Z Alfabéticamente, Z-A Precio, menor a mayor Precio, mayor a menor Fecha: antiguo(a) a reciente Fecha: reciente a antiguo(a) Eliminar todos Aplicar Eliminar todos 1 producto Foto próximamente Brownie de chocolate — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Brownie artesanal… $6.00 Cerrado",
+      "structured": [
+        {
+          "@context": "http://schema.org",
+          "@type": "Organization",
+          "name": "Dayana’s Sweet",
+          "logo": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-logo-horizontal.png?v=85206367675808367111790445534",
+          "sameAs": [],
+          "url": "https://dayanassweet.com"
+        }
+      ],
+      "links": [
+        {
+          "href": "#MainContent",
+          "text": "Ir directamente al contenido"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Seguir comprando"
+        },
+        {
+          "href": "https://dayanassweet.com/customer_authentication/redirect?locale=es&region_country=US",
+          "text": "Inicia sesión"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/",
+          "text": ""
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/cart",
+          "text": "Carrito"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Restablecer"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Restablecer"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Eliminar todos"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Borrar"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Borrar"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Eliminar todos"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Eliminar todos"
+        },
+        {
+          "href": "/products/brownie-de-chocolate-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/brownie-de-chocolate-prueba",
+          "text": "Brownie de chocolate — PRUEBA"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Catálogo"
+        },
+        {
+          "href": "/pages/contact",
+          "text": "Contacto"
+        },
+        {
+          "href": "/",
+          "text": "Dayana’s Sweet"
+        },
+        {
+          "href": "http://es.shopify.com?utm_campaign=poweredby&utm_medium=shopify&utm_source=onlinestore",
+          "text": "Tecnología de Shopify"
+        },
+        {
+          "href": "/policies/privacy-policy",
+          "text": "Política de privacidad"
+        }
+      ]
+    },
+    {
+      "url": "https://dayanassweet.com/collections/cajas-para-regalar",
+      "status": 200,
+      "bytes": 154782,
+      "ttfbMs": 162,
+      "totalMs": 246,
+      "title": "Cajas para regalar &ndash; Dayana’s Sweet",
+      "description": null,
+      "canonical": "https://dayanassweet.com/collections/cajas-para-regalar",
+      "robots": null,
+      "ogImage": null,
+      "h1": [
+        "Cajas para regalar"
+      ],
+      "mainText": "Inicio / Cajas para regalar Cajas para regalar La tanda ya cerró. Suscríbete al boletín y te avisamos cuando abra el próximo menú. Filtrar: Disponibilidad 0 seleccionados Restablecer Disponibilidad En existencia (1) En existencia (1 producto) Agotado (0) Agotado (0 productos) Precio El precio más alto es $6.00 Restablecer $ De $ Para Eliminar todos Ordenar por: Características Más relevantes Más vendidos Alfabéticamente, A-Z Alfabéticamente, Z-A Precio, menor a mayor Precio, mayor a menor Fecha: antiguo(a) a reciente Fecha: reciente a antiguo(a) 1 producto Filtrar y ordenar Filtrar Filtrar y ordenar Filtrar 1 producto Disponibilidad Disponibilidad En existencia (1) En existencia (1 productos) Agotado (0) Agotado (0 productos) Borrar Aplicar Precio Precio El precio más alto es $6.00 $ De $ Para Borrar Aplicar Ordenar por: Características Más relevantes Más vendidos Alfabéticamente, A-Z Alfabéticamente, Z-A Precio, menor a mayor Precio, mayor a menor Fecha: antiguo(a) a reciente Fecha: reciente a antiguo(a) Eliminar todos Aplicar Eliminar todos 1 producto Foto próximamente Caja de seis galletas — PRUEBA PRODUCTO DE PRUEBA. No disponible para la venta. Una caja… $6.00 Cerrado",
+      "structured": [
+        {
+          "@context": "http://schema.org",
+          "@type": "Organization",
+          "name": "Dayana’s Sweet",
+          "logo": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-logo-horizontal.png?v=85206367675808367111790445534",
+          "sameAs": [],
+          "url": "https://dayanassweet.com"
+        }
+      ],
+      "links": [
+        {
+          "href": "#MainContent",
+          "text": "Ir directamente al contenido"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Seguir comprando"
+        },
+        {
+          "href": "https://dayanassweet.com/customer_authentication/redirect?locale=es&region_country=US",
+          "text": "Inicia sesión"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/",
+          "text": ""
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/cart",
+          "text": "Carrito"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Restablecer"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Restablecer"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Eliminar todos"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Borrar"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Borrar"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Eliminar todos"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Eliminar todos"
+        },
+        {
+          "href": "/products/caja-de-seis-galletas-prueba",
+          "text": "Foto próximamente"
+        },
+        {
+          "href": "/products/caja-de-seis-galletas-prueba",
+          "text": "Caja de seis galletas — PRUEBA"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Catálogo"
+        },
+        {
+          "href": "/pages/contact",
+          "text": "Contacto"
+        },
+        {
+          "href": "/",
+          "text": "Dayana’s Sweet"
+        },
+        {
+          "href": "http://es.shopify.com?utm_campaign=poweredby&utm_medium=shopify&utm_source=onlinestore",
+          "text": "Tecnología de Shopify"
+        },
+        {
+          "href": "/policies/privacy-policy",
+          "text": "Política de privacidad"
+        }
+      ]
+    },
+    {
+      "url": "https://dayanassweet.com/collections/postres",
+      "status": 200,
+      "bytes": 136421,
+      "ttfbMs": 201,
+      "totalMs": 284,
+      "title": "Postres &ndash; Dayana’s Sweet",
+      "description": null,
+      "canonical": "https://dayanassweet.com/collections/postres",
+      "robots": null,
+      "ogImage": null,
+      "h1": [
+        "Postres"
+      ],
+      "mainText": "Inicio / Postres Postres La tanda ya cerró. Suscríbete al boletín y te avisamos cuando abra el próximo menú. Eliminar todos Ordenar por: Características Más relevantes Más vendidos Alfabéticamente, A-Z Alfabéticamente, Z-A Precio, menor a mayor Precio, mayor a menor Fecha: antiguo(a) a reciente Fecha: reciente a antiguo(a) 0 productos Filtrar y ordenar Filtrar Filtrar y ordenar Filtrar 0 productos Ordenar por: Características Más relevantes Más vendidos Alfabéticamente, A-Z Alfabéticamente, Z-A Precio, menor a mayor Precio, mayor a menor Fecha: antiguo(a) a reciente Fecha: reciente a antiguo(a) Eliminar todos Aplicar Eliminar todos 0 productos No se encontró ningún producto Usa menos filtros o elimínalos todos",
+      "structured": [
+        {
+          "@context": "http://schema.org",
+          "@type": "Organization",
+          "name": "Dayana’s Sweet",
+          "logo": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-logo-horizontal.png?v=85206367675808367111790445534",
+          "sameAs": [],
+          "url": "https://dayanassweet.com"
+        }
+      ],
+      "links": [
+        {
+          "href": "#MainContent",
+          "text": "Ir directamente al contenido"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Seguir comprando"
+        },
+        {
+          "href": "https://dayanassweet.com/customer_authentication/redirect?locale=es&region_country=US",
+          "text": "Inicia sesión"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/",
+          "text": ""
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/cart",
+          "text": "Carrito"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Eliminar todos"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Eliminar todos"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Eliminar todos"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "elimínalos todos"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Catálogo"
+        },
+        {
+          "href": "/pages/contact",
+          "text": "Contacto"
+        },
+        {
+          "href": "/",
+          "text": "Dayana’s Sweet"
+        },
+        {
+          "href": "http://es.shopify.com?utm_campaign=poweredby&utm_medium=shopify&utm_source=onlinestore",
+          "text": "Tecnología de Shopify"
+        },
+        {
+          "href": "/policies/privacy-policy",
+          "text": "Política de privacidad"
+        }
+      ]
+    },
+    {
+      "url": "https://dayanassweet.com/collections/enlatados",
+      "status": 200,
+      "bytes": 155007,
+      "ttfbMs": 277,
+      "totalMs": 283,
+      "title": "Enlatados &ndash; Dayana’s Sweet",
+      "description": null,
+      "canonical": "https://dayanassweet.com/collections/enlatados",
+      "robots": null,
+      "ogImage": null,
+      "h1": [
+        "Enlatados"
+      ],
+      "mainText": "Inicio / Enlatados Enlatados La tanda ya cerró. Suscríbete al boletín y te avisamos cuando abra el próximo menú. Filtrar: Disponibilidad 0 seleccionados Restablecer Disponibilidad En existencia (1) En existencia (1 producto) Agotado (0) Agotado (0 productos) Precio El precio más alto es $10.00 Restablecer $ De $ Para Eliminar todos Ordenar por: Características Más relevantes Más vendidos Alfabéticamente, A-Z Alfabéticamente, Z-A Precio, menor a mayor Precio, mayor a menor Fecha: antiguo(a) a reciente Fecha: reciente a antiguo(a) 1 producto Filtrar y ordenar Filtrar Filtrar y ordenar Filtrar 1 producto Disponibilidad Disponibilidad En existencia (1) En existencia (1 productos) Agotado (0) Agotado (0 productos) Borrar Aplicar Precio Precio El precio más alto es $10.00 $ De $ Para Borrar Aplicar Ordenar por: Características Más relevantes Más vendidos Alfabéticamente, A-Z Alfabéticamente, Z-A Precio, menor a mayor Precio, mayor a menor Fecha: antiguo(a) a reciente Fecha: reciente a antiguo(a) Eliminar todos Aplicar Eliminar todos 1 producto Tomate Confitada Tomates confitados llenos de sabor, acompañados de pimiento asado, ajo,… $10.00 Cerrado",
+      "structured": [
+        {
+          "@context": "http://schema.org",
+          "@type": "Organization",
+          "name": "Dayana’s Sweet",
+          "logo": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-logo-horizontal.png?v=85206367675808367111790445534",
+          "sameAs": [],
+          "url": "https://dayanassweet.com"
+        }
+      ],
+      "links": [
+        {
+          "href": "#MainContent",
+          "text": "Ir directamente al contenido"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Seguir comprando"
+        },
+        {
+          "href": "https://dayanassweet.com/customer_authentication/redirect?locale=es&region_country=US",
+          "text": "Inicia sesión"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/",
+          "text": ""
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/cart",
+          "text": "Carrito"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/enlatados",
+          "text": "Restablecer"
+        },
+        {
+          "href": "/collections/enlatados",
+          "text": "Restablecer"
+        },
+        {
+          "href": "/collections/enlatados",
+          "text": "Eliminar todos"
+        },
+        {
+          "href": "/collections/enlatados",
+          "text": "Borrar"
+        },
+        {
+          "href": "/collections/enlatados",
+          "text": "Borrar"
+        },
+        {
+          "href": "/collections/enlatados",
+          "text": "Eliminar todos"
+        },
+        {
+          "href": "/collections/enlatados",
+          "text": "Eliminar todos"
+        },
+        {
+          "href": "/products/tomate-confitada",
+          "text": ""
+        },
+        {
+          "href": "/products/tomate-confitada",
+          "text": "Tomate Confitada"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Catálogo"
+        },
+        {
+          "href": "/pages/contact",
+          "text": "Contacto"
+        },
+        {
+          "href": "/",
+          "text": "Dayana’s Sweet"
+        },
+        {
+          "href": "http://es.shopify.com?utm_campaign=poweredby&utm_medium=shopify&utm_source=onlinestore",
+          "text": "Tecnología de Shopify"
+        },
+        {
+          "href": "/policies/privacy-policy",
+          "text": "Política de privacidad"
+        }
+      ]
+    },
+    {
+      "url": "https://dayanassweet.com/policies/privacy-policy",
+      "status": 200,
+      "bytes": 141265,
+      "ttfbMs": 253,
+      "totalMs": 256,
+      "title": "Política de privacidad &ndash; Dayana’s Sweet",
+      "description": null,
+      "canonical": "https://dayanassweet.com/policies/privacy-policy",
+      "robots": null,
+      "ogImage": null,
+      "h1": [
+        "Política de privacidad"
+      ],
+      "mainText": "Política de privacidad Última actualización: 17 de septiembre de 2026 Dayana’s Sweet gestiona de esta tienda y este sitio web, incluidos los datos, el contenido, las funciones, las herramientas, los productos y los servicios para ofrecerle a usted, el cliente, una experiencia de compra seleccionada (los “Servicios”). Dayana’s Sweet cuenta con tecnología de Shopify que nos permite ofrecerle los Servicios. Esta Política de privacidad describe cómo recopilamos, utilizamos y divulgamos su información personal cuando visita, utiliza o realiza una compra u otra transacción a través de los Servicios o cuando se comunica con nosotros por cualquier otro medio. En caso de conflicto entre nuestros Términos del Servicio y esta Política de privacidad, prevalecerá esta Política de privacidad en lo que respecta a la recopilación, el tratamiento y la divulgación de su información personal. Le rogamos que lea atentamente esta Política de privacidad. Al utilizar y acceder a cualquiera de los Servicios, usted reconoce haber leído esta Política de privacidad y entender la forma en que se recopila, utiliza y divulga su información personal, de conformidad con lo establecido en la presente Política de privacidad. Información personal que recopilamos o tratamos Cuando utilizamos el término \"información personal\", nos referimos a cualquier dato que le identifique o que pueda vincularse razonablemente con usted o con otra persona. La información personal no incluye los datos recopilados de forma anónima ni aquellos que hayan sido desidentificados, de modo que no puedan identificarle ni vincularse razonablemente con usted. Podemos recopilar o tratar las siguientes categorías de información personal —incluidas las inferencias obtenidas a partir de dicha información—, en función de cómo interactúe con los Servicios, del lugar en el que resida y de lo que permita o exija la legislación aplicable: Detalles de contacto incluidos su nombre, dirección, dirección de facturación, dirección de envío, número de teléfono y dirección de correo electrónico. Información financiera incluidos los números de tarjeta de crédito, tarjeta de débito y cuentas financieras, la información de las tarjetas de pago, los datos de cuentas financieras, los detalles de las transacciones, la forma de pago, la confirmación del pago y otra información relacionada con el pago. Información de la cuenta incluidos su nombre de usuario, contraseña, preguntas de seguridad, preferencias y configuración. Información sobre transacciones incluidos los artículos que consulta, añade a su carrito, guarda en su lista de deseos o compra, devuelve, cambia o cancela, así como sus transacciones anteriores Comunicaciones con nosotros incluida la información que nos facilite en sus comunicaciones con nosotros, por ejemplo, al enviar una reclamación al servicio de atención al cliente. Información del dispositivo incluida información sobre su dispositivo, navegador o conexión de red, su dirección IP y otros identificadores únicos. Información sobre el uso incluida la información relativa a su interacción con los Servicios, como el modo y el momento en que los utiliza o navega por ellos. Fuentes de información personal Podemos recopilar información personal de las siguientes fuentes: Directamente de usted incluido cuando crea una cuenta, visita o utiliza los Servicios, se comunica con nosotros o nos proporciona su información personal por cualquier otro medio. Automáticamente a través de los Servicios incluida la información procedente de su dispositivo cuando utiliza nuestros productos o servicios o visita nuestros sitios web, así como mediante el uso de cookies y tecnologías similares; De nuestros proveedores de servicios incluido cuando los contratamos para habilitar determinada tecnología o cuando recopilan o tratan su información personal en nuestro nombre; De nuestros partners o de otros terceros. Cómo utilizamos su información personal Según cómo interactúe con nosotros o qué Servicios utilice, podemos utilizar su información personal para los siguientes fines: Prestar, personalizar y mejorar los Servicios. Utilizamos su información personal para prestarle los Servicios, lo que incluye cumplir el contrato celebrado con usted, procesar sus pagos, gestionar sus pedidos, recordar sus preferencias y los artículos que le interesan, enviarle notificaciones relacionadas con su cuenta, tramitar compras, devoluciones, cambios u otras transacciones, crear, mantener y gestionar su cuenta, organizar el envío, facilitar devoluciones y cambios, permitirle publicar reseñas y ofrecerle una experiencia de compra personalizada, como recomendarle productos relacionados con sus compras. Esto puede incluir el uso de su información personal para personalizar y mejorar los Servicios. Marketing y publicidad. Utilizamos su información personal con fines de marketing y promoción, como enviarle comunicaciones comerciales, publicitarias y promocionales por correo electrónico, mensaje de texto o correo postal, así como mostrarle anuncios en línea sobre productos o servicios en los propios Servicios o en otros sitios web, incluso en función de artículos que haya comprado previamente, añadido al carrito u otras actividades realizadas en los Servicios. Seguridad y prevención de fraudes. Utilizamos su información personal para autenticar su cuenta, ofrecer una experiencia de compra y pago segura, detectar, investigar o actuar ante posibles actividades fraudulentas, ilegales, peligrosas o malintencionadas, proteger la seguridad pública y garantizar la seguridad de nuestros servicios. Si decide utilizar los Servicios y registrar una cuenta, usted es responsable de mantener la confidencialidad de sus credenciales de acceso. Le recomendamos encarecidamente que no comparta su nombre de usuario, contraseña ni otra información con nadie. Comunicaciones con usted. Utilizamos su información personal para ofrecerle atención al cliente, responder a sus solicitudes, prestarle servicios de forma eficaz y mantener nuestra relación comercial con usted. Motivos legales. Utilizamos su información personal para cumplir con la legislación aplicable o responder a procedimientos legales válidos, incluidas solicitudes de organismos encargados del cumplimiento de la legislación o de autoridades gubernamentales, así como para investigar o participar en procesos de descubrimiento civil, litigios potenciales o reales u otros procedimientos legales de carácter contencioso, y para hacer cumplir o investigar posibles infracciones de nuestros términos o políticas. Cómo divulgamos la información personal En determinadas circunstancias, podemos divulgar su información personal a terceros por motivos legítimos, de conformidad con esta Política de privacidad. Tales circunstancias pueden incluir: Con Shopify, proveedores y otros terceros que prestan servicios en nuestro nombre (por ejemplo, gestión de TI, procesamiento de pagos, análisis de datos, atención al cliente, almacenamiento en la nube, gestión de pedidos y envíos). Con partners comerciales y de marketing para prestar servicios de marketing y mostrarle publicidad. Por ejemplo, utilizamos Shopify para respaldar la publicidad personalizada mediante servicios de terceros, basada en su actividad en línea con distintos comercios y sitios web. Nuestros partners comerciales y de marketing utilizarán su información de acuerdo con sus propios avisos de privacidad. Según el lugar en el que resida, es posible que tenga derecho a indicarnos que no compartamos información sobre usted con fines de publicidad y marketing personalizados, basados en su actividad en línea con distintos emprendedores y sitios web. Puede ejercer sus derechos para oponerse a dichos usos aquí Cuando usted nos lo indique, lo solicite o consienta de otro modo la divulgación de determinada información a terceros, por ejemplo, para enviarle productos o mediante el uso de widgets de redes sociales o integraciones de inicio de sesión. Con nuestros afiliados o, en general, dentro de nuestro grupo empresarial. En relación con una transacción comercial, como una fusión o un proceso de insolvencia, para cumplir con las obligaciones legales aplicables (incluida la respuesta a citaciones judiciales, órdenes de registro u otras solicitudes similares), para hacer cumplir los Términos del Servicio o políticas correspondientes, y para proteger o defender los Servicios, nuestros derechos y los derechos de nuestros usuarios u otras personas. Relación con Shopify Los Servicios se alojan en Shopify, que recopila y procesa información personal sobre su acceso y uso de los Servicios, a fin de proporcionarle y mejorar los Servicios para usted. Con el objetivo de ofrecerle y mejorar los Servicios, la información que usted envíe a los Servicios se transmitirá y compartirá con Shopify y con terceros que podrían estar ubicados en países diferentes al suyo. Además, para ayudar a proteger, desarrollar y mejorar nuestro negocio, utilizamos determinadas funciones avanzadas de Shopify que incorporan datos e información obtenidos a partir de sus interacciones con nuestra tienda, con otros emprendedores y con la propia plataforma de Shopify. Para ofrecer estas funciones avanzadas, Shopify puede utilizar información personal recopilada sobre sus interacciones con nuestra tienda, con otros emprendedores y con la propia plataforma de Shopify. En estas circunstancias, Shopify es responsable del tratamiento de su información personal, incluida la respuesta a sus solicitudes para ejercer sus derechos sobre el uso de dicha información para dichos fines. Para obtener más información sobre cómo Shopify utiliza su información personal y sobre los derechos que pueda tener, puede consultar la Política de privacidad del consumidor de Shopify . Según el lugar en el que resida, puede ejercer determinados derechos respecto a su información personal aquí Enlace al portal de privacidad de Shopify . Sitios web y enlaces de terceros Los Servicios pueden incluir enlaces a sitios web u otras plataformas en línea gestionadas por terceros. Si accede a enlaces que dirigen a sitios no afiliados ni controlados por nosotros, le recomendamos que revise sus políticas de privacidad y seguridad y demás términos y condiciones. No garantizamos ni nos hacemos responsables de la privacidad o la seguridad de dichos sitios, incluida la exactitud, integridad o fiabilidad de la información que contengan. La información que proporcione en espacios públicos o semipúblicos —incluida la que comparta en plataformas de redes sociales de terceros— también puede ser visible para otros usuarios de los Servicios y para usuarios de dichas plataformas de terceros, sin que existan limitaciones respecto a su uso por parte nuestra o de terceros. La inclusión de dichos enlaces no implica por sí sola ningún respaldo del contenido de esas plataformas ni de sus propietarios o responsables, salvo que se indique expresamente en los propios Servicios. Datos de menores Los Servicios no están destinados a ser utilizados por menores, y no recopilamos conscientemente información personal de menores de edad según la legislación aplicable en su jurisdicción. Si usted es padre, madre o tutor legal de un menor que nos haya facilitado su información personal, puede ponerse en contacto con nosotros a través de los datos que se indican más abajo para solicitar su eliminación. A fecha de entrada en vigor de esta Política de privacidad, no tenemos conocimiento efectivo de que \"compartamos\" o \"vendamos\" (según la definición de estos términos en la legislación aplicable) información personal de personas menores de 16 años. Seguridad y retención de su información Tenga en cuenta que ninguna medida de seguridad es perfecta o infalible, y no podemos garantizar una \"seguridad absoluta\". Además, cualquier información que nos envíe puede no estar protegida durante la transmisión. Le recomendamos que no utilice canales no seguros para enviarnos información sensible o confidencial. El tiempo durante el cual conservamos su información personal depende de varios factores, como la necesidad de mantener su cuenta, prestarle los Servicios, cumplir con obligaciones legales, resolver conflictos o hacer cumplir otros contratos y políticas aplicables. Sus derechos y opciones Según el lugar en el que resida, es posible que tenga algunos o todos los derechos que se enumeran a continuación en relación con su información personal. No obstante, estos derechos no son absolutos, pueden aplicarse solo en determinadas circunstancias y, en algunos casos, podemos rechazar su solicitud cuando así lo permita la legislación. Derecho de acceso. Puede tener derecho a solicitar el acceso a la información personal que conservamos sobre usted. Derecho de supresión. Puede tener derecho a solicitarnos la supresión de la información personal que conservamos sobre usted. Derecho de rectificación. Puede tener derecho a solicitar que rectifiquemos la información personal inexacta que conservamos sobre usted. Derecho a la portabilidad de los datos. Puede tener derecho a recibir una copia de la información personal que conservamos sobre usted y a solicitar que la transfiramos a un tercero, en determinadas circunstancias y con ciertas excepciones. Derecho a oponerse a la venta o cesión de datos con fines de publicidad personalizada. Según el lugar en el que resida, es posible que tenga derecho a oponerse a la \"venta\" o \"cesión\" de su información personal, o a oponerse al tratamiento de dicha información con fines considerados como \"publicidad dirigida\", conforme a lo establecido en las leyes de privacidad aplicables. Puede ejercer sus derechos para oponerse a dichos usos aquí . Tenga en cuenta que, si visita nuestro sitio web con la señal de preferencia de rechazo del uso compartido de datos de Global Privacy Control activada, dependiendo de su ubicación, trataremos automáticamente dicha visita como una solicitud de exclusión para el dispositivo y el navegador que utilice. Si podemos asociar el dispositivo que envía la señal con una cuenta de Shopify, aplicaremos la solicitud de exclusión también a dicha cuenta. Para obtener más información sobre Global Privacy Control, puede visitar https://globalprivacycontrol.org/. A excepción de la señal Global Privacy Control, no reconocemos otras señales de “No realizar seguimiento (DNT)” que puedan ser enviadas desde su navegador web o dispositivo. Gestión de preferencias de comunicación. Podemos enviarle correos electrónicos promocionales, y usted puede optar por no recibirlos en cualquier momento utilizando la opción de cancelación de suscripción que aparece en nuestros correos electrónicos. Si opta por no recibirlos, es posible que sigamos enviándole correos electrónicos no promocionales, como aquellos relacionados con su cuenta o con los pedidos que haya realizado. Podrá ejercer cualquiera de estos derechos en los lugares indicados en los Servicios o poniéndose en contacto con nosotros a través de los detalles de contacto que se proporcionan más abajo. Para obtener más información sobre cómo Shopify utiliza su información personal y sobre los derechos que pueda tener —incluidos los relacionados con los datos tratados por Shopify—, puede visitar https://privacy.shopify.com/en. No le discriminaremos por ejercer ninguno de estos derechos. Es posible que necesitemos verificar su identidad antes de poder tramitar sus solicitudes, según lo permita o exija la legislación aplicable. De conformidad con la legislación aplicable, usted puede designar a un representante autorizado para que presente solicitudes en su nombre con el fin de ejercer sus derechos. Antes de aceptar una solicitud presentada por un representante, exigiremos que este proporcione una prueba de que le ha autorizado a actuar en su nombre, y es posible que necesitemos que usted verifique su identidad directamente con nosotros. Responderemos a su solicitud en un plazo razonable, según lo establecido por la legislación aplicable. Reclamaciones Si tiene alguna reclamación sobre cómo tratamos su información personal, le rogamos que se ponga en contacto con nosotros a través de los detalles de contacto que se indican más abajo. Según el lugar en el que resida, es posible que tenga derecho a recurrir nuestra decisión poniéndose en contacto con nosotros a través de los detalles de contacto que se indican más abajo, o a presentar una reclamación ante la autoridad local de protección de datos. Transferencias internacionales Tenga en cuenta que podemos transferir, almacenar y tratar su información personal fuera del país en el que reside. Si transferimos su información personal fuera del Espacio Económico Europeo (EEA) o del Reino Unido, utilizaremos mecanismos de transferencia reconocidos, como las cláusulas contractuales estándar (SCC) de la Comisión Europea o cualquier contrato equivalente emitido por la autoridad competente del Reino Unido, según corresponda, salvo que la transferencia se realice a un país que haya sido reconocido como garante de un nivel adecuado de protección. Cambios en esta Política de privacidad Podemos actualizar esta Política de privacidad ocasionalmente, incluso para reflejar cambios en nuestras prácticas o por motivos operativos, legales o normativos. Publicaremos la versión actualizada de esta Política de privacidad en este sitio web, actualizaremos la fecha de \"Última actualización\" y notificaremos los cambios conforme a lo exigido por la legislación aplicable. Contacto Si tiene alguna pregunta sobre nuestras prácticas de privacidad o sobre esta Política de privacidad, o si desea ejercer cualquiera de los derechos que le corresponden, llámenos al , envíenos un correo electrónico a dayanaoramasgalano@gmail.com o póngase en contacto con nosotros en 4319 Freya Pointe Dr, Fulshear TX 77441, Estados Unidos",
+      "structured": [
+        {
+          "@context": "http://schema.org",
+          "@type": "Organization",
+          "name": "Dayana’s Sweet",
+          "logo": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-logo-horizontal.png?v=85206367675808367111790445534",
+          "sameAs": [],
+          "url": "https://dayanassweet.com"
+        }
+      ],
+      "links": [
+        {
+          "href": "#MainContent",
+          "text": "Ir directamente al contenido"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Seguir comprando"
+        },
+        {
+          "href": "https://dayanassweet.com/customer_authentication/redirect?locale=es&region_country=US",
+          "text": "Inicia sesión"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/",
+          "text": ""
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/cart",
+          "text": "Carrito"
+        },
+        {
+          "href": "https://dayanassweet.com/pages/data-sharing-opt-out",
+          "text": "aquí"
+        },
+        {
+          "href": "https://www.shopify.com/legal/privacy/app-users",
+          "text": "Política de privacidad del consumidor de Shopify"
+        },
+        {
+          "href": "https://privacy.shopify.com/en",
+          "text": "Enlace al portal de privacidad de Shopify"
+        },
+        {
+          "href": "https://dayanassweet.com/pages/data-sharing-opt-out",
+          "text": "aquí"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Catálogo"
+        },
+        {
+          "href": "/pages/contact",
+          "text": "Contacto"
+        },
+        {
+          "href": "/",
+          "text": "Dayana’s Sweet"
+        },
+        {
+          "href": "http://es.shopify.com?utm_campaign=poweredby&utm_medium=shopify&utm_source=onlinestore",
+          "text": "Tecnología de Shopify"
+        },
+        {
+          "href": "/policies/privacy-policy",
+          "text": "Política de privacidad"
+        }
+      ]
+    },
+    {
+      "url": "https://dayanassweet.com/policies/shipping-policy",
+      "status": 404,
+      "bytes": 122157,
+      "ttfbMs": 167,
+      "totalMs": 202,
+      "title": "404 No encontrado &ndash; Dayana’s Sweet",
+      "description": null,
+      "canonical": "https://dayanassweet.com/404",
+      "robots": null,
+      "ogImage": null,
+      "h1": [
+        "Esta página se nos escapó del horno."
+      ],
+      "mainText": "404 Esta página se nos escapó del horno. Parece que el enlace no lleva a ninguna parte. Vuelve al menú o a la portada para seguir explorando Dayana's Sweet. Ver el menú Ir a la portada",
+      "structured": [
+        {
+          "@context": "http://schema.org",
+          "@type": "Organization",
+          "name": "Dayana’s Sweet",
+          "logo": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-logo-horizontal.png?v=85206367675808367111790445534",
+          "sameAs": [],
+          "url": "https://dayanassweet.com"
+        }
+      ],
+      "links": [
+        {
+          "href": "#MainContent",
+          "text": "Ir directamente al contenido"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Seguir comprando"
+        },
+        {
+          "href": "https://dayanassweet.com/customer_authentication/redirect?locale=es&region_country=PA",
+          "text": "Inicia sesión"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/",
+          "text": ""
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/cart",
+          "text": "Carrito"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Ver el menú"
+        },
+        {
+          "href": "/",
+          "text": "Ir a la portada"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Catálogo"
+        },
+        {
+          "href": "/pages/contact",
+          "text": "Contacto"
+        },
+        {
+          "href": "/",
+          "text": "Dayana’s Sweet"
+        },
+        {
+          "href": "http://es.shopify.com?utm_campaign=poweredby&utm_medium=shopify&utm_source=onlinestore",
+          "text": "Tecnología de Shopify"
+        },
+        {
+          "href": "/policies/privacy-policy",
+          "text": "Política de privacidad"
+        }
+      ]
+    },
+    {
+      "url": "https://dayanassweet.com/policies/refund-policy",
+      "status": 404,
+      "bytes": 122157,
+      "ttfbMs": 164,
+      "totalMs": 167,
+      "title": "404 No encontrado &ndash; Dayana’s Sweet",
+      "description": null,
+      "canonical": "https://dayanassweet.com/404",
+      "robots": null,
+      "ogImage": null,
+      "h1": [
+        "Esta página se nos escapó del horno."
+      ],
+      "mainText": "404 Esta página se nos escapó del horno. Parece que el enlace no lleva a ninguna parte. Vuelve al menú o a la portada para seguir explorando Dayana's Sweet. Ver el menú Ir a la portada",
+      "structured": [
+        {
+          "@context": "http://schema.org",
+          "@type": "Organization",
+          "name": "Dayana’s Sweet",
+          "logo": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-logo-horizontal.png?v=85206367675808367111790445534",
+          "sameAs": [],
+          "url": "https://dayanassweet.com"
+        }
+      ],
+      "links": [
+        {
+          "href": "#MainContent",
+          "text": "Ir directamente al contenido"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Seguir comprando"
+        },
+        {
+          "href": "https://dayanassweet.com/customer_authentication/redirect?locale=es&region_country=PA",
+          "text": "Inicia sesión"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/",
+          "text": ""
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/cart",
+          "text": "Carrito"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Ver el menú"
+        },
+        {
+          "href": "/",
+          "text": "Ir a la portada"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Catálogo"
+        },
+        {
+          "href": "/pages/contact",
+          "text": "Contacto"
+        },
+        {
+          "href": "/",
+          "text": "Dayana’s Sweet"
+        },
+        {
+          "href": "http://es.shopify.com?utm_campaign=poweredby&utm_medium=shopify&utm_source=onlinestore",
+          "text": "Tecnología de Shopify"
+        },
+        {
+          "href": "/policies/privacy-policy",
+          "text": "Política de privacidad"
+        }
+      ]
+    },
+    {
+      "url": "https://dayanassweet.com/policies/terms-of-service",
+      "status": 404,
+      "bytes": 123330,
+      "ttfbMs": 244,
+      "totalMs": 247,
+      "title": "404 No encontrado &ndash; Dayana’s Sweet",
+      "description": null,
+      "canonical": "https://dayanassweet.com/404",
+      "robots": null,
+      "ogImage": null,
+      "h1": [
+        "Esta página se nos escapó del horno."
+      ],
+      "mainText": "404 Esta página se nos escapó del horno. Parece que el enlace no lleva a ninguna parte. Vuelve al menú o a la portada para seguir explorando Dayana's Sweet. Ver el menú Ir a la portada",
+      "structured": [
+        {
+          "@context": "http://schema.org",
+          "@type": "Organization",
+          "name": "Dayana’s Sweet",
+          "logo": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-logo-horizontal.png?v=85206367675808367111790445534",
+          "sameAs": [],
+          "url": "https://dayanassweet.com"
+        }
+      ],
+      "links": [
+        {
+          "href": "#MainContent",
+          "text": "Ir directamente al contenido"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Seguir comprando"
+        },
+        {
+          "href": "https://dayanassweet.com/customer_authentication/redirect?locale=es&region_country=PA",
+          "text": "Inicia sesión"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/",
+          "text": ""
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/cart",
+          "text": "Carrito"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Ver el menú"
+        },
+        {
+          "href": "/",
+          "text": "Ir a la portada"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Catálogo"
+        },
+        {
+          "href": "/pages/contact",
+          "text": "Contacto"
+        },
+        {
+          "href": "/",
+          "text": "Dayana’s Sweet"
+        },
+        {
+          "href": "http://es.shopify.com?utm_campaign=poweredby&utm_medium=shopify&utm_source=onlinestore",
+          "text": "Tecnología de Shopify"
+        },
+        {
+          "href": "/policies/privacy-policy",
+          "text": "Política de privacidad"
+        }
+      ]
+    },
+    {
+      "url": "https://dayanassweet.com/auditoria-pagina-inexistente-20261028",
+      "status": 404,
+      "bytes": 122157,
+      "ttfbMs": 155,
+      "totalMs": 158,
+      "title": "404 No encontrado &ndash; Dayana’s Sweet",
+      "description": null,
+      "canonical": "https://dayanassweet.com/404",
+      "robots": null,
+      "ogImage": null,
+      "h1": [
+        "Esta página se nos escapó del horno."
+      ],
+      "mainText": "404 Esta página se nos escapó del horno. Parece que el enlace no lleva a ninguna parte. Vuelve al menú o a la portada para seguir explorando Dayana's Sweet. Ver el menú Ir a la portada",
+      "structured": [
+        {
+          "@context": "http://schema.org",
+          "@type": "Organization",
+          "name": "Dayana’s Sweet",
+          "logo": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-logo-horizontal.png?v=85206367675808367111790445534",
+          "sameAs": [],
+          "url": "https://dayanassweet.com"
+        }
+      ],
+      "links": [
+        {
+          "href": "#MainContent",
+          "text": "Ir directamente al contenido"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Seguir comprando"
+        },
+        {
+          "href": "https://dayanassweet.com/customer_authentication/redirect?locale=es&region_country=PA",
+          "text": "Inicia sesión"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/mas-vendidos",
+          "text": "Más vendidos"
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/",
+          "text": ""
+        },
+        {
+          "href": "/collections/galletas",
+          "text": "Galletas"
+        },
+        {
+          "href": "https://dayanassweet.com/collections/enlatados",
+          "text": "Enlatados"
+        },
+        {
+          "href": "/collections/brownies",
+          "text": "Brownies"
+        },
+        {
+          "href": "/collections/postres",
+          "text": "Postres"
+        },
+        {
+          "href": "/collections/cajas-para-regalar",
+          "text": "Cajas para regalar"
+        },
+        {
+          "href": "/#ds-tandas",
+          "text": "Cómo funciona"
+        },
+        {
+          "href": "/cart",
+          "text": "Carrito"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Ver el menú"
+        },
+        {
+          "href": "/",
+          "text": "Ir a la portada"
+        },
+        {
+          "href": "/",
+          "text": "Inicio"
+        },
+        {
+          "href": "/collections/all",
+          "text": "Catálogo"
+        },
+        {
+          "href": "/pages/contact",
+          "text": "Contacto"
+        },
+        {
+          "href": "/",
+          "text": "Dayana’s Sweet"
+        },
+        {
+          "href": "http://es.shopify.com?utm_campaign=poweredby&utm_medium=shopify&utm_source=onlinestore",
+          "text": "Tecnología de Shopify"
+        },
+        {
+          "href": "/policies/privacy-policy",
+          "text": "Política de privacidad"
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "name": "ds-motion.js",
+      "url": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-motion.js?v=166576960096275880471790649280",
+      "status": 200,
+      "remoteBytes": 13712,
+      "localBytes": 19414,
+      "identicalIgnoringCRLF": false
+    },
+    {
+      "name": "global.js",
+      "url": "https://dayanassweet.com/cdn/shop/t/3/assets/global.js?v=120629414044750144071790435846",
+      "status": 200,
+      "remoteBytes": 36509,
+      "localBytes": 48857,
+      "identicalIgnoringCRLF": false
+    },
+    {
+      "name": "cart.js",
+      "url": "https://dayanassweet.com/cdn/shop/t/3/assets/cart.js?v=55895714950147091831790435847",
+      "status": 200,
+      "remoteBytes": 11210,
+      "localBytes": 16971,
+      "identicalIgnoringCRLF": false
+    },
+    {
+      "name": "product-form.js",
+      "url": "https://dayanassweet.com/cdn/shop/t/3/assets/product-form.js?v=30308553270725186821790435846",
+      "status": 200,
+      "remoteBytes": 5314,
+      "localBytes": 8490,
+      "identicalIgnoringCRLF": false
+    },
+    {
+      "name": "product-info.js",
+      "observedOnHome": false
+    },
+    {
+      "name": "ds-premium.css",
+      "url": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-premium.css?v=174875866866358692571790649280",
+      "status": 200,
+      "remoteBytes": 20087,
+      "localBytes": 21388,
+      "identicalIgnoringCRLF": false
+    },
+    {
+      "name": "ds-conversion.css",
+      "url": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-conversion.css?v=183524293376916771321790644316",
+      "status": 200,
+      "remoteBytes": 12037,
+      "localBytes": 13039,
+      "identicalIgnoringCRLF": false
+    },
+    {
+      "name": "ds-header-ui.css",
+      "url": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-header-ui.css?v=20772335887168375181790644317",
+      "status": 200,
+      "remoteBytes": 4517,
+      "localBytes": 4649,
+      "identicalIgnoringCRLF": false
+    }
+  ],
+  "products": [
+    {
+      "url": "https://dayanassweet.com/products/galleta-con-chispas-de-chocolate-prueba",
+      "title": "Galleta con chispas de chocolate — PRUEBA",
+      "available": true,
+      "variants": [
+        {
+          "id": 67810583478576,
+          "available": true,
+          "inventory_management": "shopify",
+          "requires_shipping": true,
+          "weight": 180,
+          "price": 600
+        }
+      ],
+      "images": 0
+    },
+    {
+      "url": "https://dayanassweet.com/products/brownie-de-chocolate-prueba",
+      "title": "Brownie de chocolate — PRUEBA",
+      "available": true,
+      "variants": [
+        {
+          "id": 67810596782384,
+          "available": true,
+          "inventory_management": "shopify",
+          "requires_shipping": true,
+          "weight": 181,
+          "price": 600
+        }
+      ],
+      "images": 0
+    },
+    {
+      "url": "https://dayanassweet.com/products/caja-de-seis-galletas-prueba",
+      "title": "Caja de seis galletas — PRUEBA",
+      "available": true,
+      "variants": [
+        {
+          "id": 67810605924656,
+          "available": true,
+          "inventory_management": "shopify",
+          "requires_shipping": true,
+          "weight": 1080,
+          "price": 600
+        }
+      ],
+      "images": 0
+    },
+    {
+      "url": "https://dayanassweet.com/products/tomate-confitada",
+      "title": "Tomate Confitada",
+      "available": true,
+      "variants": [
+        {
+          "id": 67965185261872,
+          "available": true,
+          "inventory_management": "shopify",
+          "requires_shipping": true,
+          "weight": 240,
+          "price": 1000
+        }
+      ],
+      "images": 1
+    }
+  ]
+}

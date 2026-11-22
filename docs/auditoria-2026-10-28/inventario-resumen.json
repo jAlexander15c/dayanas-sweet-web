@@ -1,0 +1,284 @@
+﻿{
+  "pages": [
+    {
+      "url": "https://dayanassweet.com/",
+      "status": 200,
+      "title": "Dayana’s Sweet",
+      "hasDescription": false,
+      "hasOgImage": false,
+      "h1Count": 1
+    },
+    {
+      "url": "https://dayanassweet.com/collections/all",
+      "status": 200,
+      "title": "Productos &ndash; Dayana’s Sweet",
+      "hasDescription": false,
+      "hasOgImage": false,
+      "h1Count": 1
+    },
+    {
+      "url": "https://dayanassweet.com/products/galleta-con-chispas-de-chocolate-prueba",
+      "status": 200,
+      "title": "Galleta con chispas de chocolate — PRUEBA &ndash; Dayana’s Sweet",
+      "hasDescription": true,
+      "hasOgImage": false,
+      "h1Count": 1
+    },
+    {
+      "url": "https://dayanassweet.com/products/brownie-de-chocolate-prueba",
+      "status": 200,
+      "title": "Brownie de chocolate — PRUEBA &ndash; Dayana’s Sweet",
+      "hasDescription": true,
+      "hasOgImage": false,
+      "h1Count": 1
+    },
+    {
+      "url": "https://dayanassweet.com/products/caja-de-seis-galletas-prueba",
+      "status": 200,
+      "title": "Caja de seis galletas — PRUEBA &ndash; Dayana’s Sweet",
+      "hasDescription": true,
+      "hasOgImage": false,
+      "h1Count": 1
+    },
+    {
+      "url": "https://dayanassweet.com/products/tomate-confitada",
+      "status": 200,
+      "title": "Tomate Confitada &ndash; Dayana’s Sweet",
+      "hasDescription": true,
+      "hasOgImage": true,
+      "h1Count": 1
+    },
+    {
+      "url": "https://dayanassweet.com/pages/contact",
+      "status": 200,
+      "title": "Contacto &ndash; Dayana’s Sweet",
+      "hasDescription": false,
+      "hasOgImage": false,
+      "h1Count": 1
+    },
+    {
+      "url": "https://dayanassweet.com/pages/data-sharing-opt-out",
+      "status": 200,
+      "title": "Tus opciones de privacidad &ndash; Dayana’s Sweet",
+      "hasDescription": true,
+      "hasOgImage": false,
+      "h1Count": 1
+    },
+    {
+      "url": "https://dayanassweet.com/collections/mas-vendidos",
+      "status": 200,
+      "title": "Más vendidos &ndash; Dayana’s Sweet",
+      "hasDescription": false,
+      "hasOgImage": false,
+      "h1Count": 1
+    },
+    {
+      "url": "https://dayanassweet.com/collections/galletas",
+      "status": 200,
+      "title": "Galletas &ndash; Dayana’s Sweet",
+      "hasDescription": false,
+      "hasOgImage": false,
+      "h1Count": 1
+    },
+    {
+      "url": "https://dayanassweet.com/collections/brownies",
+      "status": 200,
+      "title": "Brownies &ndash; Dayana’s Sweet",
+      "hasDescription": false,
+      "hasOgImage": false,
+      "h1Count": 1
+    },
+    {
+      "url": "https://dayanassweet.com/collections/cajas-para-regalar",
+      "status": 200,
+      "title": "Cajas para regalar &ndash; Dayana’s Sweet",
+      "hasDescription": false,
+      "hasOgImage": false,
+      "h1Count": 1
+    },
+    {
+      "url": "https://dayanassweet.com/collections/postres",
+      "status": 200,
+      "title": "Postres &ndash; Dayana’s Sweet",
+      "hasDescription": false,
+      "hasOgImage": false,
+      "h1Count": 1
+    },
+    {
+      "url": "https://dayanassweet.com/collections/enlatados",
+      "status": 200,
+      "title": "Enlatados &ndash; Dayana’s Sweet",
+      "hasDescription": false,
+      "hasOgImage": false,
+      "h1Count": 1
+    },
+    {
+      "url": "https://dayanassweet.com/policies/privacy-policy",
+      "status": 200,
+      "title": "Política de privacidad &ndash; Dayana’s Sweet",
+      "hasDescription": false,
+      "hasOgImage": false,
+      "h1Count": 1
+    },
+    {
+      "url": "https://dayanassweet.com/policies/shipping-policy",
+      "status": 404,
+      "title": "404 No encontrado &ndash; Dayana’s Sweet",
+      "hasDescription": false,
+      "hasOgImage": false,
+      "h1Count": 1
+    },
+    {
+      "url": "https://dayanassweet.com/policies/refund-policy",
+      "status": 404,
+      "title": "404 No encontrado &ndash; Dayana’s Sweet",
+      "hasDescription": false,
+      "hasOgImage": false,
+      "h1Count": 1
+    },
+    {
+      "url": "https://dayanassweet.com/policies/terms-of-service",
+      "status": 404,
+      "title": "404 No encontrado &ndash; Dayana’s Sweet",
+      "hasDescription": false,
+      "hasOgImage": false,
+      "h1Count": 1
+    },
+    {
+      "url": "https://dayanassweet.com/auditoria-pagina-inexistente-20261028",
+      "status": 404,
+      "title": "404 No encontrado &ndash; Dayana’s Sweet",
+      "hasDescription": false,
+      "hasOgImage": false,
+      "h1Count": 1
+    }
+  ],
+  "assets": [
+    {
+      "name": "ds-motion.js",
+      "url": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-motion.js?v=166576960096275880471790649280",
+      "status": 200,
+      "remoteBytes": 13712,
+      "localBytes": 19414,
+      "identicalIgnoringCRLF": false
+    },
+    {
+      "name": "global.js",
+      "url": "https://dayanassweet.com/cdn/shop/t/3/assets/global.js?v=120629414044750144071790435846",
+      "status": 200,
+      "remoteBytes": 36509,
+      "localBytes": 48857,
+      "identicalIgnoringCRLF": false
+    },
+    {
+      "name": "cart.js",
+      "url": "https://dayanassweet.com/cdn/shop/t/3/assets/cart.js?v=55895714950147091831790435847",
+      "status": 200,
+      "remoteBytes": 11210,
+      "localBytes": 16971,
+      "identicalIgnoringCRLF": false
+    },
+    {
+      "name": "product-form.js",
+      "url": "https://dayanassweet.com/cdn/shop/t/3/assets/product-form.js?v=30308553270725186821790435846",
+      "status": 200,
+      "remoteBytes": 5314,
+      "localBytes": 8490,
+      "identicalIgnoringCRLF": false
+    },
+    {
+      "name": "product-info.js",
+      "observedOnHome": false
+    },
+    {
+      "name": "ds-premium.css",
+      "url": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-premium.css?v=174875866866358692571790649280",
+      "status": 200,
+      "remoteBytes": 20087,
+      "localBytes": 21388,
+      "identicalIgnoringCRLF": false
+    },
+    {
+      "name": "ds-conversion.css",
+      "url": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-conversion.css?v=183524293376916771321790644316",
+      "status": 200,
+      "remoteBytes": 12037,
+      "localBytes": 13039,
+      "identicalIgnoringCRLF": false
+    },
+    {
+      "name": "ds-header-ui.css",
+      "url": "https://dayanassweet.com/cdn/shop/t/3/assets/ds-header-ui.css?v=20772335887168375181790644317",
+      "status": 200,
+      "remoteBytes": 4517,
+      "localBytes": 4649,
+      "identicalIgnoringCRLF": false
+    }
+  ],
+  "products": [
+    {
+      "url": "https://dayanassweet.com/products/galleta-con-chispas-de-chocolate-prueba",
+      "title": "Galleta con chispas de chocolate — PRUEBA",
+      "available": true,
+      "variants": [
+        {
+          "id": 67810583478576,
+          "available": true,
+          "inventory_management": "shopify",
+          "requires_shipping": true,
+          "weight": 180,
+          "price": 600
+        }
+      ],
+      "images": 0
+    },
+    {
+      "url": "https://dayanassweet.com/products/brownie-de-chocolate-prueba",
+      "title": "Brownie de chocolate — PRUEBA",
+      "available": true,
+      "variants": [
+        {
+          "id": 67810596782384,
+          "available": true,
+          "inventory_management": "shopify",
+          "requires_shipping": true,
+          "weight": 181,
+          "price": 600
+        }
+      ],
+      "images": 0
+    },
+    {
+      "url": "https://dayanassweet.com/products/caja-de-seis-galletas-prueba",
+      "title": "Caja de seis galletas — PRUEBA",
+      "available": true,
+      "variants": [
+        {
+          "id": 67810605924656,
+          "available": true,
+          "inventory_management": "shopify",
+          "requires_shipping": true,
+          "weight": 1080,
+          "price": 600
+        }
+      ],
+      "images": 0
+    },
+    {
+      "url": "https://dayanassweet.com/products/tomate-confitada",
+      "title": "Tomate Confitada",
+      "available": true,
+      "variants": [
+        {
+          "id": 67965185261872,
+          "available": true,
+          "inventory_management": "shopify",
+          "requires_shipping": true,
+          "weight": 240,
+          "price": 1000
+        }
+      ],
+      "images": 1
+    }
+  ]
+}
