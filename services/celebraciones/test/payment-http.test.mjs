@@ -46,10 +46,10 @@ test('staff alerts require authorized staff and accept only an alert ID for mark
   const handler=createHandler({store,config});
   assert.equal((await handler(new Request('https://backend.test/admin/staff-alerts'))).status,401);
   assert.equal((await handler(staffRequest('/staff-alerts',undefined,'8'))).status,401);
-  const result=await (await handler(staffRequest('/staff-alerts'))).json();assert.equal(result.unread,1);
+  const result=await (await handler(staffRequest('/staff-alerts'))).json();assert.equal(result.unread,2);
   assert.equal((await handler(staffRequest('/staff-alerts',{id:result.alerts[0].id,recipient:'other@example.test'}))).status,422);
   assert.equal((await handler(staffRequest('/staff-alerts',{id:result.alerts[0].id}))).status,200);
-  assert.equal(store.listStaffAlerts(staff).unread,0);
+  assert.equal(store.listStaffAlerts(staff).unread,1);
  }finally{store.close();}
 });
 

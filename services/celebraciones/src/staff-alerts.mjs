@@ -66,13 +66,28 @@ export function createStaffAlerts(db) {
   };
 }
 
+// Every kind Dayana is told about by email. The body never carries customer data (name, contact,
+// message text): only the reference, amounts and the requested date; the details stay in the panel.
+const STAFF_SUBJECTS={request:'Nueva solicitud de pastel',accept:'Propuesta aceptada',comment:'Nuevo mensaje de la clienta',payment:'Pago confirmado'};
+const ACCEPT_TERMS={deposit:'Falta el pago del anticipo para reservar la fecha.',full:'Falta el pago completo para reservar la fecha.',delivery:'Pago contra entrega: la fecha quedó reservada.'};
+function staffBody(job,money) {
+  if(job.kind==='request') {
+    const when=typeof job.pickupAt==='string'&&Number.isFinite(Date.parse(job.pickupAt))
+      ?new Intl.DateTimeFormat('es-US',{timeZone:'America/Chicago',dateStyle:'full',timeStyle:'short'}).format(new Date(job.pickupAt)):null;
+    return `Llegó una solicitud nueva${when?` para el ${when} (hora de Houston)`:''}.\nRevisa los detalles y envía la propuesta desde el panel.`;
+  }
+  if(job.kind==='accept') return `La clienta aceptó la propuesta${Number.isSafeInteger(job.totalCents)?` de ${money(job.totalCents)}`:''}.\n${ACCEPT_TERMS[job.paymentMode]||'Revisa el estado del pago en el panel.'}`;
+  if(job.kind==='comment') return 'La clienta respondió. Revisa su mensaje en el panel.';
+  return `Se confirmó un pago de ${money(job.amountCents)}.\nSaldo pendiente al confirmar: ${money(job.balanceDueCents)}.`;
+}
+
 export function buildStaffMessage(job,{shop,clientId,portalEnabled=false}) {
-  if(!/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(shop)||!clientId||!['comment','payment'].includes(job.kind)||!/^[a-f0-9-]{36}$/.test(job.id))throw Error('Invalid staff notification');
+  if(!/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(shop)||!clientId||!Object.hasOwn(STAFF_SUBJECTS,job.kind)||!/^[a-f0-9-]{36}$/.test(job.id))throw Error('Invalid staff notification');
   const reference=/^DS-\d{6,12}$/.test(job.reference||'')?job.reference:'Solicitud de pastel';
   const money=cents=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(cents/100);
-  const subject=`${job.kind==='comment'?'Nuevo mensaje de la clienta':'Pago confirmado'} · ${reference}`;
+  const subject=`${STAFF_SUBJECTS[job.kind]} · ${reference}`;
   const link=portalEnabled?`https://dayanassweet.com/apps/inventario#celebraciones/${encodeURIComponent(job.requestId)}`:`https://admin.shopify.com/store/${shop.replace('.myshopify.com','')}/apps/${encodeURIComponent(clientId)}?solicitud=${encodeURIComponent(job.requestId)}`;
-  const body=job.kind==='comment'?'La clienta respondió. Revisa su mensaje en el panel.':`Se confirmó un pago de ${money(job.amountCents)}.\nSaldo pendiente al confirmar: ${money(job.balanceDueCents)}.`;
+  const body=staffBody(job,money);
   const content=`Hola Dayana,\n\n${subject}\n\n${body}\n\nAbre la solicitud en ${portalEnabled?'el panel de Dayana':'el panel de Shopify'}:\n${link}\n\nNecesitas iniciar sesión con una cuenta autorizada.\n\nDayana's Sweet`;
   return [`From: Dayana's Sweet <info@dayanassweet.com>`,`To: <${staffRecipient}>`,'Reply-To: <info@dayanassweet.com>',`Subject: ${subject}`,`Message-ID: <notice-${job.id}@dayanassweet.com>`,'MIME-Version: 1.0','Content-Type: text/plain; charset=UTF-8','Content-Transfer-Encoding: base64','',Buffer.from(content).toString('base64').match(/.{1,76}/g).join('\r\n')].join('\r\n');
 }

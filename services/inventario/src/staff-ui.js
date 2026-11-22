@@ -4,7 +4,7 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&
 const portal = document.body.dataset.portal === 'true';
 const storageKey = 'dayanas.inventario.session';
 const base = new URL('../', import.meta.url).pathname;
-let credential, currentUser, initializeInventory, invitationToken, recoveryIdentifier = '', busy = false;
+let credential, currentUser, initializeInventory, invitationToken, recoveryIdentifier = '', busy = false, lastLogin = null, loginOptions = null;
 const field = (label, name, type = 'text', extra = '') => `<label>${label}<input name="${name}" type="${type}" required ${extra}></label>`;
 const rules = '<ul class="password-rules"><li>Al menos 10 caracteres</li><li>Distinta de tu usuario</li><li>No es una contraseña muy común</li></ul>';
 // La sesión vive solo en esta pestaña (sessionStorage): se borra al cerrarla y no queda en el disco del navegador.
@@ -12,6 +12,27 @@ const rules = '<ul class="password-rules"><li>Al menos 10 caracteres</li><li>Dis
 function forgetLegacySession() { try { localStorage.removeItem(storageKey); } catch { /* almacenamiento bloqueado */ } }
 function clearSession() { credential = null; currentUser = null; try { sessionStorage.removeItem(storageKey); } catch { /* almacenamiento bloqueado */ } forgetLegacySession(); }
 function saveSession(result) { credential = { session: result.session, expiresAt: result.expiresAt }; try { sessionStorage.setItem(storageKey, JSON.stringify(credential)); } catch { /* la sesión sigue en memoria */ } forgetLegacySession(); currentUser = result.user; }
+// Passkeys (Face ID, huella o bloqueo de pantalla). La cara y la huella nunca salen del aparato:
+// el teléfono firma un desafío del servidor, que solo guarda la llave pública.
+const passkeyKey = 'dayanas.inventario.passkey';
+const toBytes = value => Uint8Array.from(atob(value.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+const toBase64url = buffer => btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+const passkeysSupported = () => portal && typeof window.PublicKeyCredential === 'function' && !!navigator.credentials?.create;
+async function platformPasskeyAvailable() { try { return passkeysSupported() && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable(); } catch { return false; } }
+// Preferencia de este aparato (ya activado o «ahora no»); si el navegador bloquea el almacenamiento, se vuelve a ofrecer.
+function devicePreference(value) { try { if (value === undefined) return localStorage.getItem(passkeyKey); localStorage.setItem(passkeyKey, value); } catch { return null; } return value; }
+const passkeyError = error => error?.name === 'NotAllowedError' || error?.name === 'AbortError' ? 'No se completó. Inténtalo otra vez o entra con tu contraseña.'
+  : error?.name === 'InvalidStateError' ? 'Este aparato ya tiene Face ID o huella activado.' : error?.message || 'No pudimos usar Face ID o huella en este aparato.';
+function deviceName() { const ua = navigator.userAgent; return /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? (/SM-|Samsung/i.test(ua) ? 'Samsung' : 'Android') : /Macintosh/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Computadora' : 'Este aparato'; }
+function prepareLoginOptions() { loginOptions = null; if (passkeysSupported()) request('passkey-options').then(options => { loginOptions = { ...options, readyAt: Date.now() }; }).catch(() => {}); }
+async function passkeyLogin() {
+  // Las opciones se piden antes del toque: Safari solo abre Face ID si la llamada sigue al toque sin esperas.
+  const options = loginOptions && Date.now() - loginOptions.readyAt < 4 * 60000 ? loginOptions : await request('passkey-options');
+  loginOptions = null;
+  const found = await navigator.credentials.get({ publicKey: { challenge: toBytes(options.challenge), rpId: options.rpId, timeout: options.timeout, userVerification: 'required', allowCredentials: [] } });
+  const response = found.response;
+  return request('passkey-login', { credentialId: toBase64url(found.rawId), clientDataJSON: toBase64url(response.clientDataJSON), authenticatorData: toBase64url(response.authenticatorData), signature: toBase64url(response.signature), ...(response.userHandle?.byteLength ? { userHandle: toBase64url(response.userHandle) } : {}) });
+}
 const REQUEST_TIMEOUT_MS = 30000;
 // R04: si la conexión se queda colgada, la petición se corta y se informa. El plazo cubre la respuesta completa
 // (cabeceras y cuerpo); las escrituras sin confirmar siguen el flujo de "consultar la misma operación".
@@ -34,11 +55,12 @@ async function request(action, body = {}) {
   }
   return result;
 }
-function message(text, error = false) { const element = $('#staff-message') || $('#access-message'); if (element) { element.textContent = text; element.classList.toggle('error', error); } }
+function message(text, error = false) { const element = (!$('#access-view').hidden && $('#access-message')) || $('#staff-message') || $('#access-message'); if (element) { element.textContent = text; element.classList.toggle('error', error); } }
 function showAccess(screen, notice = '') {
   // R02: cierra confirmaciones y editores abiertos para que la pantalla de entrada quede usable con teclado.
   for (const dialog of document.querySelectorAll('dialog[open]')) dialog.close();
-  $('#celebraciones-frame')?.remove();
+  // Al salir no queda en la página nada del panel (lista de personas, aparatos, mensajes).
+  $('#celebraciones-frame')?.remove(); $('#passkey-offer')?.remove(); $('#users-view')?.replaceChildren();
   $('#panel-view').hidden = true; $('#access-view').hidden = false; $('#staff-who').replaceChildren();
   let title, description = '', fields, submit, links;
   if (screen === 'login') {
@@ -57,7 +79,8 @@ function showAccess(screen, notice = '') {
     fields = '<p id="invitation-name"></p>' + field('Usuario', 'username', 'text', 'readonly autocomplete="username"') + field('Contraseña', 'password', 'password', 'autocomplete="new-password" minlength="10" maxlength="256"') + field('Repite la contraseña', 'repeat', 'password', 'autocomplete="new-password" minlength="10" maxlength="256"') + rules;
     submit = 'Crear contraseña y entrar'; links = '<p class="notice">El enlace de invitación sirve una sola vez y vence en 48 horas.</p>';
   }
-  $('#access-view').innerHTML = `<div class="access-card"><p class="eyebrow">${screen === 'invitation' ? 'Invitación' : 'Panel de la pastelera'}</p><h1>${title}</h1><p class="muted">${description}</p><form id="access-form">${fields}<button class="primary" id="access-submit">${submit}</button></form>${links}<p id="access-message" role="status" aria-live="polite"></p></div>`;
+  const passkeyBlock = screen === 'login' && passkeysSupported() ? '<button type="button" class="primary" id="passkey-login">Entrar con Face ID o huella</button><p class="access-divider muted">o entra con tu usuario y contraseña</p>' : '';
+  $('#access-view').innerHTML = `<div class="access-card"><p class="eyebrow">${screen === 'invitation' ? 'Invitación' : 'Panel de la pastelera'}</p><h1>${title}</h1><p class="muted">${description}</p>${passkeyBlock}<form id="access-form">${fields}<button class="primary" id="access-submit">${submit}</button></form>${links}<p id="access-message" role="status" aria-live="polite"></p></div>`;
   message(notice);
   if (!$('#access-view').hidden) $('#access-form input:not([readonly])')?.focus();
   $('#access-form').onsubmit = async event => {
@@ -69,12 +92,21 @@ function showAccess(screen, notice = '') {
       else {
         if (screen === 'invitation' && data.password !== data.repeat) throw new Error('Las dos contraseñas deben coincidir.');
         const result = await request(screen === 'login' ? 'login' : screen === 'reset' ? 'reset-password' : 'accept-invitation', { ...data, identifier: recoveryIdentifier, token: invitationToken });
-        invitationToken = null; saveSession(result); await showPanel();
+        invitationToken = null; lastLogin = 'password'; saveSession(result); await showPanel();
       }
     } catch (error) { message(error.message, true); }
     finally { busy = false; if ($('#access-submit')) $('#access-submit').disabled = false; }
   };
   for (const button of $('#access-view').querySelectorAll('[data-screen]')) button.onclick = () => showAccess(button.dataset.screen);
+  if ($('#passkey-login')) {
+    prepareLoginOptions();
+    $('#passkey-login').onclick = async () => {
+      if (busy) return; busy = true; $('#passkey-login').disabled = true; message('');
+      try { const result = await passkeyLogin(); lastLogin = 'passkey'; devicePreference('enrolled'); saveSession(result); await showPanel(); }
+      catch (error) { message(passkeyError(error), true); prepareLoginOptions(); }
+      finally { busy = false; if ($('#passkey-login')) $('#passkey-login').disabled = false; }
+    };
+  }
   if ($('#resend-code')) $('#resend-code').onclick = async event => { event.currentTarget.disabled = true; try { message((await request('recover', { identifier: recoveryIdentifier })).message); } catch (e) { message(e.message, true); } finally { if ($('#resend-code')) $('#resend-code').disabled = false; } };
   const digits = [...$('#access-view').querySelectorAll('.otp-code input')];
   digits.forEach((input, index) => {
@@ -89,7 +121,9 @@ function hideViews() { for (const id of ['workspace', 'categories-view', 'histor
 async function showPanel() {
   $('#access-view').hidden = true; $('#access-view').replaceChildren(); $('#panel-view').hidden = false;
   const roles = currentUser.roles;
-  $('#staff-who').innerHTML = `<span>${esc(currentUser.name)}${roles.includes('admin') ? ' · Administradora' : ''}</span><button id="change-password">Cambiar contraseña</button><button id="sign-out">Salir</button>`;
+  $('#staff-who').innerHTML = `<span>${esc(currentUser.name)}${roles.includes('admin') ? ' · Administradora' : ''}</span>${passkeysSupported() ? '<button id="passkeys-button">Face ID / huella</button>' : ''}<button id="change-password">Cambiar contraseña</button><button id="sign-out">Salir</button>`;
+  if ($('#passkeys-button')) $('#passkeys-button').onclick = () => showPasskeys().catch(e => { $('#feedback').textContent = e.message; });
+  void offerPasskey();
   $('#users').hidden = !roles.includes('admin'); $('#celebraciones').hidden = !roles.includes('celebraciones');
   if ($('#pedidos')) $('#pedidos').hidden = !(roles.includes('inventario') || roles.includes('admin'));
   for (const id of ['home', 'categories', 'history']) $(`#${id}`).hidden = !roles.includes('inventario');
@@ -109,13 +143,70 @@ async function showPanel() {
   if (location.hash.startsWith('#celebraciones') && roles.includes('celebraciones')) showCelebraciones();
   if (location.hash.startsWith('#pedidos') && $('#pedidos') && !$('#pedidos').hidden) window.inventarioOrders?.show();
 }
+async function offerPasskey() {
+  $('#passkey-offer')?.remove();
+  if (lastLogin !== 'password' || devicePreference() || !await platformPasskeyAvailable() || $('#panel-view').hidden) return;
+  const offer = document.createElement('div');
+  offer.id = 'passkey-offer'; offer.className = 'notice passkey-offer'; offer.setAttribute('role', 'region'); offer.setAttribute('aria-label', 'Entrar con Face ID o huella');
+  offer.innerHTML = '<p>¿Quieres entrar la próxima vez con Face ID o tu huella, sin escribir la contraseña?</p><div class="actions"><button class="primary" id="passkey-offer-yes">Activar</button><button id="passkey-offer-no">Ahora no</button></div>';
+  $('#panel-view').prepend(offer);
+  $('#passkey-offer-yes').onclick = () => showPasskeys().catch(e => { $('#feedback').textContent = e.message; });
+  $('#passkey-offer-no').onclick = () => { devicePreference('dismissed'); offer.remove(); };
+}
+function renderPasskeys(list) {
+  const container = $('#passkey-list'); if (!container) return;
+  container.innerHTML = list.length ? `<h3>Aparatos activados</h3>${list.map(p => `<article class="card passkey-item"><div><strong>${esc(p.label)}</strong><p class="muted">Activado ${esc(new Date(p.createdAt).toLocaleDateString('es'))}${p.lastUsedAt ? ` · último uso ${esc(new Date(p.lastUsedAt).toLocaleString('es'))}` : ''}</p></div><button type="button" data-passkey="${esc(p.id)}">Quitar</button></article>`).join('')}` : '<p class="muted">Todavía no activaste ningún aparato.</p>';
+  for (const button of container.querySelectorAll('[data-passkey]')) button.onclick = async () => {
+    if (busy) return; busy = true; button.disabled = true;
+    try { renderPasskeys((await request('passkey-remove', { credentialId: button.dataset.passkey })).passkeys); message('Aparato quitado: ya no entra con Face ID o huella. Puedes borrar también la llave en los ajustes de contraseñas del teléfono.'); }
+    catch (e) { message(e.message, true); button.disabled = false; }
+    finally { busy = false; }
+  };
+}
+async function showPasskeys(notice = '') {
+  hideViews(); $('#users-view').hidden = false; $('#passkey-offer')?.remove(); $('#feedback').textContent = '';
+  const available = await platformPasskeyAvailable();
+  const form = available ? `<form id="passkey-form">${field('Nombre de este aparato', 'label', 'text', `maxlength="60" autocomplete="off" value="${esc(deviceName())}"`)}${field('Tu contraseña', 'password', 'password', 'autocomplete="current-password" maxlength="256"')}<button class="primary" id="passkey-continue">Continuar</button></form>`
+    : '<p class="notice">Este aparato no tiene Face ID, huella ni bloqueo de pantalla disponible para el panel. Puedes seguir entrando con tu contraseña.</p>';
+  $('#users-view').innerHTML = `<div class="access-card passkey-card"><h2>Entrar con Face ID o huella</h2><p class="muted">Activa este aparato una sola vez. Después tocas «Entrar con Face ID o huella» y entras sin escribir la contraseña. Tu cara y tu huella no salen del teléfono.</p>${form}<p id="staff-message" role="status" aria-live="polite"></p><div id="passkey-list" class="passkey-list"></div></div>`;
+  message(notice);
+  renderPasskeys((await request('passkeys')).passkeys);
+  if (!$('#passkey-form')) return;
+  $('#passkey-form').onsubmit = async event => {
+    event.preventDefault(); if (busy) return;
+    const step = event.currentTarget, data = Object.fromEntries(new FormData(step));
+    busy = true; $('#passkey-continue').disabled = true; message('');
+    let options;
+    try { options = await request('passkey-register-options', { password: data.password }); }
+    catch (e) { message(e.message, true); return; }
+    finally { busy = false; if ($('#passkey-continue')) $('#passkey-continue').disabled = false; }
+    // Segundo toque: el teléfono solo pide Face ID o huella justo después de un toque.
+    step.innerHTML = '<p>Contraseña confirmada. Ahora toca «Activar» y usa Face ID o tu huella.</p><button type="button" class="primary" id="passkey-activate">Activar Face ID o huella</button><button type="button" id="passkey-cancel">Cancelar</button>';
+    $('#passkey-activate').focus();
+    $('#passkey-cancel').onclick = () => showPasskeys().catch(e => message(e.message, true));
+    $('#passkey-activate').onclick = async () => {
+      if (busy) return; busy = true; $('#passkey-activate').disabled = true; message('');
+      try {
+        const created = await navigator.credentials.create({ publicKey: { challenge: toBytes(options.challenge), rp: options.rp, user: { id: toBytes(options.user.id), name: options.user.name, displayName: options.user.displayName },
+          pubKeyCredParams: options.pubKeyCredParams, timeout: options.timeout, attestation: 'none', authenticatorSelection: options.authenticatorSelection, excludeCredentials: options.excludeCredentials.map(item => ({ type: item.type, id: toBytes(item.id) })) } });
+        await request('passkey-register', { label: data.label, credentialId: toBase64url(created.rawId), clientDataJSON: toBase64url(created.response.clientDataJSON), attestationObject: toBase64url(created.response.attestationObject) });
+        devicePreference('enrolled'); busy = false;
+        await showPasskeys('Listo. La próxima vez toca «Entrar con Face ID o huella».');
+      } catch (error) {
+        busy = false;
+        if (error.code === 'PASSKEY_EXPIRED' || error.code === 'PASSKEY_INVALID') { await showPasskeys(error.message).catch(() => {}); message(error.message, true); return; }
+        message(passkeyError(error), true); if ($('#passkey-activate')) $('#passkey-activate').disabled = false;
+      }
+    };
+  };
+}
 const roleFields = roles => `<fieldset><legend>Permisos</legend>${[['admin','Administrador (maneja usuarios)'],['inventario','Inventario (productos, fotos, stock, categorías)'],['celebraciones','Celebraciones']].map(([role,label]) => `<label class="role-option"><input type="checkbox" name="roles" value="${role}" ${roles.includes(role) ? 'checked' : ''}>${label}</label>`).join('')}</fieldset>`;
 async function showUsers() {
   hideViews(); $('#users-view').hidden = false;
   const { users } = await request('users');
   const first = !users.some(u => u.status === 'active' && u.roles.includes('admin'));
   $('#feedback').textContent = '';
-  $('#users-view').innerHTML = `<h2>${portal ? 'Usuarios' : 'Usuarios de /inventarios'}</h2>${portal ? '' : '<p class="notice">Llave maestra: aquí entras con tu cuenta de Shopify. Desde aquí se crea el primer usuario y se recupera el acceso si se pierden las contraseñas.</p><button id="connect-external">Conectar acceso externo</button>'}<form id="invite-form" class="card user-form"><h3>${first ? 'Invitar al primer administrador' : 'Invitar a alguien'}</h3>${field('Nombre', 'name', 'text', 'maxlength="100"')}${field('Usuario', 'username', 'text', 'pattern="[a-z0-9._\\-]{3,32}" minlength="3" maxlength="32" autocomplete="off"')}${field('Correo', 'email', 'email', 'maxlength="254"')}${roleFields(first ? ['admin', 'inventario'] : ['inventario'])}<button class="primary">Enviar invitación</button></form><p id="staff-message" role="status" aria-live="polite"></p><div class="user-list">${users.map(u => `<article class="card user-card"><div><h3>${esc(u.name)}</h3><p>${esc(u.email)} · usuario: ${esc(u.username)}</p></div><div class="actions">${u.status === 'invited' ? `<button data-user="${esc(u.id)}" data-action="resend-invitation">Reenviar</button><button data-user="${esc(u.id)}" data-action="cancel-invitation">Cancelar</button>` : `<button data-user="${esc(u.id)}" data-action="edit">Editar permisos</button><button data-user="${esc(u.id)}" data-action="${u.status === 'disabled' ? 'active' : 'disabled'}">${u.status === 'disabled' ? 'Reactivar' : 'Desactivar'}</button>`}</div><div class="chips"><span class="badge">${u.status === 'active' ? 'Activa' : u.status === 'disabled' ? 'Desactivado' : `Invitación pendiente${u.invitationExpiresAt ? ' · vence ' + new Date(u.invitationExpiresAt).toLocaleString('es') : ' · pendiente de envío'}`}</span>${u.roles.map(r => `<span class="badge">${esc(r)}</span>`).join('')}${u.lastLoginAt ? `<span class="muted">Entró ${esc(new Date(u.lastLoginAt).toLocaleString('es'))}</span>` : ''}</div></article>`).join('')}</div><p class="muted">Desactivar cierra sus sesiones abiertas. Siempre debe quedar al menos un administrador activo.</p>`;
+  $('#users-view').innerHTML = `<h2>${portal ? 'Usuarios' : 'Usuarios de /inventarios'}</h2>${portal ? '' : '<p class="notice">Llave maestra: aquí entras con tu cuenta de Shopify. Desde aquí se crea el primer usuario y se recupera el acceso si se pierden las contraseñas.</p><button id="connect-external">Conectar acceso externo</button>'}<form id="invite-form" class="card user-form"><h3>${first ? 'Invitar al primer administrador' : 'Invitar a alguien'}</h3>${field('Nombre', 'name', 'text', 'maxlength="100"')}${field('Usuario', 'username', 'text', 'pattern="[a-z0-9._\\-]{3,32}" minlength="3" maxlength="32" autocomplete="off"')}${field('Correo', 'email', 'email', 'maxlength="254"')}${roleFields(first ? ['admin', 'inventario'] : ['inventario'])}<button class="primary">Enviar invitación</button></form><p id="staff-message" role="status" aria-live="polite"></p><div class="user-list">${users.map(u => `<article class="card user-card"><div><h3>${esc(u.name)}</h3><p>${esc(u.email)} · usuario: ${esc(u.username)}</p></div><div class="actions">${u.status === 'invited' ? `<button data-user="${esc(u.id)}" data-action="resend-invitation">Reenviar</button><button data-user="${esc(u.id)}" data-action="cancel-invitation">Cancelar</button>` : `<button data-user="${esc(u.id)}" data-action="edit">Editar permisos</button><button data-user="${esc(u.id)}" data-action="${u.status === 'disabled' ? 'active' : 'disabled'}">${u.status === 'disabled' ? 'Reactivar' : 'Desactivar'}</button>`}</div><div class="chips"><span class="badge">${u.status === 'active' ? 'Activa' : u.status === 'disabled' ? 'Desactivado' : `Invitación pendiente${u.invitationExpiresAt ? ' · vence ' + new Date(u.invitationExpiresAt).toLocaleString('es') : ' · pendiente de envío'}`}</span>${u.roles.map(r => `<span class="badge">${esc(r)}</span>`).join('')}${u.passkeys ? `<span class="badge">Face ID / huella: ${u.passkeys}</span>` : ''}${u.lastLoginAt ? `<span class="muted">Entró ${esc(new Date(u.lastLoginAt).toLocaleString('es'))}</span>` : ''}</div></article>`).join('')}</div><p class="muted">Desactivar cierra sus sesiones abiertas. Siempre debe quedar al menos un administrador activo.</p>`;
   $('#invite-form').onsubmit = async event => {
     event.preventDefault(); const form = event.currentTarget, button = form.querySelector('button'); button.disabled = true;
     try { const data = new FormData(form); await request('invite', { ...Object.fromEntries(data), roles: data.getAll('roles') }); await showUsers(); message('Invitación enviada. Vence en 48 horas.'); }

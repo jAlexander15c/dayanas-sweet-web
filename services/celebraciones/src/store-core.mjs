@@ -325,6 +325,7 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
           }
           apply(actor, snapshot);
           if (!actor.isStaff && action==='comment') staffAlerts.enqueue(actor.shop,snapshot,`comment:${actor.principal}:${operationId}`,{kind:'comment'});
+          if (!actor.isStaff && action==='accept') staffAlerts.enqueue(actor.shop,snapshot,`accept:${snapshot.acceptedProposal.version}`,{kind:'accept',totalCents:snapshot.acceptedProposal.totalCents,paymentMode:paymentMode(snapshot)});
           if(['accept','setStatus'].includes(action)){
             const state=paymentState(actor,id);
             if(state)updatePaymentJob(actor,snapshot,{...state,updatedAt:Date.now()});
@@ -366,6 +367,7 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
             db.prepare('INSERT INTO guest_access(shop,request_id,capability_hash,reference) VALUES(?,?,?,?)').run(shop,id,digest,reference);
             db.prepare("INSERT INTO guest_email_jobs(shop,request_id,encrypted_access,status,due_at) VALUES(?,?,?,'pending',?)").run(shop,id,encryptedAccess,now);
             db.prepare('INSERT INTO guest_creations(shop,request_id,rate_key,created_at) VALUES(?,?,?,?)').run(shop,id,rateKey,now);
+            staffAlerts.enqueue(shop,snapshot,'request',{kind:'request',pickupAt:details?.pickupAt??null});
             insertOperation.run(shop,principal,CREATE_SCOPE,operationId,hash,id);
             return view(identity(guestActor(shop,id)),snapshot);
           });
@@ -456,6 +458,7 @@ export function createStoreWithDatabase(db, { transaction: runTransaction } = {}
             db.prepare('INSERT INTO requests(shop,id,customer_id,version,snapshot) VALUES (?,?,?,?,?)')
               .run(actor.shop, snapshot.id, actor.id, snapshot.version, JSON.stringify(snapshot));
             insertOperation.run(actor.shop, actor.principal, CREATE_SCOPE, operationId, hash, snapshot.id);
+            staffAlerts.enqueue(actor.shop, snapshot, 'request', {kind:'request', pickupAt:details?.pickupAt ?? null});
             return view(actor, snapshot);
           });
         });

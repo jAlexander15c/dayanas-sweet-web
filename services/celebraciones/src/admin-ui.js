@@ -508,9 +508,11 @@ function startPanel() {
       if(!result.alerts.length)container.append(node('p','No tienes avisos nuevos.','ds-muted'));
       for(const alert of result.alerts) {
         const item=node('article',undefined,`ds-staff-alert${alert.read?'':' is-unread'}`);
-        item.append(node('strong',alert.kind==='payment'?`Pago confirmado · ${usd(alert.amountCents)}`:'Nuevo mensaje de la clienta'));
+        const alertTitles={payment:()=>`Pago confirmado · ${usd(alert.amountCents)}`,request:()=>'Nueva solicitud de pastel',accept:()=>Number.isSafeInteger(alert.totalCents)?`Propuesta aceptada · ${usd(alert.totalCents)}`:'Propuesta aceptada'};
+        const alertTexts={payment:()=>`Saldo pendiente al confirmar: ${usd(alert.balanceDueCents)}.`,request:()=>'Revisa los detalles y envía la propuesta.',accept:()=>({deposit:'Falta el pago del anticipo para reservar la fecha.',full:'Falta el pago completo para reservar la fecha.',delivery:'Pago contra entrega: la fecha quedó reservada.'})[alert.paymentMode]||'Revisa el estado del pago.'};
+        item.append(node('strong',alertTitles[alert.kind]?.()||'Nuevo mensaje de la clienta'));
         item.append(node('p',`${alert.reference||'Solicitud de pastel'} · ${new Date(alert.createdAt).toLocaleString('es')}`,'ds-muted'));
-        item.append(node('p',alert.kind==='payment'?`Saldo pendiente al confirmar: ${usd(alert.balanceDueCents)}.`:'Hay una respuesta para revisar en la conversación.'));
+        item.append(node('p',alertTexts[alert.kind]?.()||'Hay una respuesta para revisar en la conversación.'));
         const mailStates={pending:'Correo pendiente de envío',sending:'Correo en proceso',sent:'Correo aceptado por el proveedor',failed:'No se pudo enviar el correo',unknown:'No se pudo confirmar el envío del correo'};
         item.append(node('p',mailStates[alert.emailStatus]||'Estado del correo no disponible','ds-muted'));
         const actions=node('div',undefined,'ds-actions'),open=node('button','Ver solicitud','ds-primary');open.type='button';

@@ -37,25 +37,29 @@ test('actual Worker queues staff events, persists alarms and delivers guest link
   const created=await mf.dispatchFetch(...proxy('',{input:{requestText:'Pastel',pickup:{label:'Houston'},details:{pickupAt:pickupAt.toISOString(),urgent:false,tiers:[{diameter:6,sponges:['Vainilla','Vainilla'],fillings:['Fresa','Fresa']}],coating:'Crema',decorations:[]}},contact:{name:'Ana',email:'ana@example.test',phone:'5551234567'},capability,operationId:'create',website:''}));
   assert.equal(created.status,200);const request=await created.json();
   const ns=await mf.getDurableObjectNamespace('CELEBRATIONS'),stub=ns.get(ns.idFromName(shop));
-  await stub.fetch('https://local.test/test/alarm');assert.equal(sent.length,1);
+  // The new request emails the customer her private link and tells Dayana it arrived.
+  await stub.fetch('https://local.test/test/alarm');assert.equal(sent.length,2);
+  const staffMail=sent.find(mail=>/Nueva solicitud de pastel/.test(mail.subject));
+  assert.deepEqual(staffMail.to,['Dayanaoramasgalano@gmail.com']);assert.ok(!JSON.stringify(staffMail).includes('ana@example.test'));
+  assert.ok(sent.some(mail=>/Recibimos tu solicitud/.test(mail.subject)));
   const body={proposal:{baseCents:10000,surchargeCents:0,display:'total',canPrepare:'Sí',changes:'',reply:'Propuesta'},operationId:'proposal'};
   assert.equal((await mf.dispatchFetch(...admin(request.id,'proposals',body))).status,200);
   assert.equal((await mf.dispatchFetch(...admin(request.id,'proposals',body))).status,200);
   assert.equal((await (await stub.fetch('https://local.test/test/alarm')).json()).scheduled,true);
-  assert.equal(sent.length,2);assert.match(sent[1].subject,/Nueva propuesta/);
-  const token=sent[1].text.match(/#acceso=([a-f0-9]{64})/)[1];
+  assert.equal(sent.length,3);assert.match(sent[2].subject,/Nueva propuesta/);
+  const token=sent[2].text.match(/#acceso=([a-f0-9]{64})/)[1];
   assert.equal((await mf.dispatchFetch(...proxy(`/${request.id}/tracking`,{capability:token}))).status,200);
   assert.equal((await mf.dispatchFetch(...admin(request.id,'comments',{text:'Actualización',operationId:'message'}))).status,200);
   assert.equal((await (await stub.fetch('https://local.test/test/alarm')).json()).scheduled,true);
-  assert.equal(sent.length,3);assert.match(sent[2].subject,/Nuevo mensaje/);
+  assert.equal(sent.length,4);assert.match(sent[3].subject,/Nuevo mensaje/);
   emailStatus=403;
   const failedMessage=await(await mf.dispatchFetch(...admin(request.id,'comments',{text:'Aviso a reintentar',operationId:'failed-message'}))).json();
   const notificationId=failedMessage.notifications[0].id;
-  await stub.fetch('https://local.test/test/alarm');assert.equal(sent.length,4);
+  await stub.fetch('https://local.test/test/alarm');assert.equal(sent.length,5);
   emailStatus=200;
   assert.equal((await mf.dispatchFetch(...admin(request.id,'email-retry',{notificationId,operationId:'retry-failed'}))).status,200);
-  assert.equal((await(await stub.fetch('https://local.test/test/alarm')).json()).scheduled,true);assert.equal(sent.length,5);
+  assert.equal((await(await stub.fetch('https://local.test/test/alarm')).json()).scheduled,true);assert.equal(sent.length,6);
   assert.equal((await mf.dispatchFetch(...admin(request.id,'email-retry',{notificationId,operationId:'retry-failed'}))).status,200);
-  await stub.fetch('https://local.test/test/alarm');assert.equal(sent.length,5);
+  await stub.fetch('https://local.test/test/alarm');assert.equal(sent.length,6);
  }finally{await mf.dispose();}
 });

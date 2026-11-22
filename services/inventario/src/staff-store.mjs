@@ -6,6 +6,10 @@ const columns = {
   recovery_codes: ['hash', 'user_id', 'created_at', 'expires_at', 'attempts', 'used_at'],
   login_attempts: ['hash', 'failures', 'window_at', 'locked_until'],
   offline_credentials: ['id', 'ciphertext'],
+  // Passkeys: public keys only (JWK), never a secret. One row per device a person activated.
+  passkeys: ['id', 'user_id', 'public_key', 'alg', 'sign_count', 'label', 'created_at', 'last_used_at'],
+  // Challenges are signed and stateless; only the ones already used are kept, until they expire.
+  passkey_challenges: ['hash', 'expires_at'],
 };
 export function createStaffStore(storage, { identity = true, offline = true } = {}) {
   const sql = storage.sql;
@@ -15,7 +19,9 @@ export function createStaffStore(storage, { identity = true, offline = true } = 
   sql.exec(`CREATE TABLE IF NOT EXISTS invitations (hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at INTEGER NOT NULL, used_at INTEGER)`);
   sql.exec(`CREATE TABLE IF NOT EXISTS recovery_codes (hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, attempts INTEGER NOT NULL, used_at INTEGER)`);
   sql.exec(`CREATE TABLE IF NOT EXISTS login_attempts (hash TEXT PRIMARY KEY, failures INTEGER NOT NULL, window_at INTEGER NOT NULL, locked_until INTEGER NOT NULL)`);
-  for (const table of ['sessions', 'invitations', 'recovery_codes']) sql.exec(`CREATE INDEX IF NOT EXISTS ${table}_user ON ${table}(user_id)`);
+  sql.exec(`CREATE TABLE IF NOT EXISTS passkeys (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, public_key TEXT NOT NULL, alg INTEGER NOT NULL, sign_count INTEGER NOT NULL, label TEXT NOT NULL, created_at INTEGER NOT NULL, last_used_at INTEGER)`);
+  sql.exec(`CREATE TABLE IF NOT EXISTS passkey_challenges (hash TEXT PRIMARY KEY, expires_at INTEGER NOT NULL)`);
+  for (const table of ['sessions', 'invitations', 'recovery_codes', 'passkeys']) sql.exec(`CREATE INDEX IF NOT EXISTS ${table}_user ON ${table}(user_id)`);
   }
   if (offline) sql.exec(`CREATE TABLE IF NOT EXISTS offline_credentials (id TEXT PRIMARY KEY, ciphertext TEXT NOT NULL)`);
   return {

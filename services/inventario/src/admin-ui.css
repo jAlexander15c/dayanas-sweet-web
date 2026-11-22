@@ -74,3 +74,6 @@ button.danger-fill:hover{background:#7a2420}
 .order-sheet{width:100%;max-width:none;margin:auto 0 0;border-radius:20px 20px 0 0;max-height:94dvh}
 .refund-line,.edit-line{flex-wrap:wrap}
 .refund-line label{width:100%}}
+/* Passkeys: Face ID o huella */
+.access-divider{text-align:center;margin:0;font-size:14px}.passkey-offer{display:grid;gap:8px;margin:12px 0}.passkey-offer p{margin:0}.passkey-offer .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:0;justify-content:flex-start;flex-direction:row}.passkey-list{display:grid;gap:8px}.passkey-list h3{font-family:Georgia,serif;margin:8px 0 0}.passkey-item{display:flex;justify-content:space-between;gap:12px;align-items:center}.passkey-item p{margin:4px 0 0;overflow-wrap:anywhere}.passkey-card #passkey-form{display:grid;gap:8px}.passkey-card #passkey-form p{margin:0}
+@media(max-width:600px){.passkey-item{flex-wrap:wrap}.passkey-item button{width:100%}}

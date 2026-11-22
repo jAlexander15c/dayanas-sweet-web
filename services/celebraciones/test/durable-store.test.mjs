@@ -55,8 +55,9 @@ async function fixture(t) {
 test('Durable SQL preserves staff alerts, read state and queued email on recreation',async t=>{
  const {store,open}=await fixture(t);const {id}=store.createRequest(customer,input,'alert-create');
  store.comment(customer,id,'Pregunta','alert-comment');
- const restored=open(),result=restored.listStaffAlerts(staff);assert.equal(result.unread,1);
- restored.readStaffAlert(staff,result.alerts[0].id);assert.equal(open().listStaffAlerts(staff).unread,0);
+ const restored=open(),result=restored.listStaffAlerts(staff);assert.equal(result.unread,2);
+ assert.deepEqual(result.alerts.map(a=>a.kind).sort(),['comment','request']);
+ restored.readStaffAlert(staff,result.alerts[0].id);assert.equal(open().listStaffAlerts(staff).unread,1);
  assert.ok(open().nextStaffAlertDue(staff.shop));
 });
 

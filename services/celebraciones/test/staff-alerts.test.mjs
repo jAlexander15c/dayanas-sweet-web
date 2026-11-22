@@ -5,9 +5,13 @@ import {createStoreWithDatabase} from '../src/store-core.mjs';
 import {runStaffAlertJobs,staffRecipient} from '../src/staff-alerts.mjs';
 import {createResendTransport} from '../src/resend-email.mjs';
 const shop='sweet.myshopify.com',staff={shop,role:'staff',staffId:'9'},customer={shop,customerId:'7'};
+// Most tests here are about comment and payment alerts; the new-request and accepted-proposal
+// alerts have their own tests below, so these start from an inbox without them.
+const clearLifecycle=db=>db.prepare("DELETE FROM staff_alerts WHERE json_extract(event,'$.kind') IN ('request','accept')").run();
 function setup(t) {
   const db=new DatabaseSync(':memory:');t.after(()=>db.close());const store=createStoreWithDatabase(db);
   const request=store.createRequest(customer,{requestText:'Pastel',pickup:{label:'Recoger'}},'create');
+  clearLifecycle(db);
   return {db,store,id:request.id};
 }
 test('comment burst is limited per request, grouped durably, and payments take priority',async t=>{
@@ -38,7 +42,7 @@ test('grouping never changes an attempted email and another request has its own 
  for(let n=0;n<3;n++)store.comment(customer,id,`Otro ${n}`,`extra-${n}`);
  assert.throws(()=>store.comment(customer,id,'Limite','limit'),{code:'RATE_LIMITED'});
  store.comment(staff,id,'Respuesta de pastelera','staff-reply');
- const other=store.createRequest(customer,{requestText:'Otro pastel',pickup:{label:'Recoger'}},'other');
+ const other=store.createRequest(customer,{requestText:'Otro pastel',pickup:{label:'Recoger'}},'other');clearLifecycle(db);
  store.comment(customer,other.id,'Otra solicitud','other-comment');
  assert.equal(store.getTracking(customer,other.id).comments.length,1);
  assert.equal(store.listStaffAlerts(staff).alerts.find(a=>a.id===claim.id).commentCount,1);
@@ -58,16 +62,16 @@ test('customer comment queues one private alert, replays and staff replies do no
 test('guest replies also notify staff; an outbox failure rolls back the customer comment',t=>{
   const {db,store}=setup(t),capability='ab'.repeat(32);
   const guest=store.createGuestRequest({shop},{requestText:'Pastel',pickup:{label:'Recoger'}},{name:'Ana',email:'ana@example.test',phone:'5551234567'},capability,'guest',{encryptedAccess:'fixture',now:Date.now()});
-  const actor=store.authenticateGuest(shop,guest.id,capability);
+  const actor=store.authenticateGuest(shop,guest.id,capability);clearLifecycle(db);
   store.comment(actor,guest.id,'Hola','guest-comment');assert.equal(store.listStaffAlerts(staff).unread,1);
   db.exec("CREATE TRIGGER fail_staff_outbox BEFORE UPDATE ON staff_alerts BEGIN SELECT RAISE(ABORT,'failed'); END");
   assert.throws(()=>store.comment(actor,guest.id,'No debe guardarse','failed-comment'),{code:'UNAVAILABLE'});
   assert.equal(store.getTracking(actor,guest.id).comments.length,1);
 });
 test('verified partial and final payments alert once per transaction, including repeated sync and refunds',t=>{
-  const {store,id}=setup(t);
+  const {db,store,id}=setup(t);
   store.propose(staff,id,{baseCents:10000,surchargeCents:0,display:'total',canPrepare:'Pastel',changes:'',reply:'Si'},'quote');
-  store.accept(customer,id,1,'accept');
+  store.accept(customer,id,1,'accept');clearLifecycle(db);
   let n=0;
   function checkpoint(payments,paid){const claim=store.claimPayment(customer,id,`sync${++n}`,'sync',Date.now());store.checkpointPayment(customer,id,claim.token,{}, {billing:{source:'shopify',proposalVersion:1,totalCents:10000,netPaidCents:paid,balanceDueCents:10000-paid},payments},true);}
   const partial={id:'sale1',amountCents:6000,status:'confirmed'};
@@ -84,8 +88,8 @@ test('durable inbox survives reopen without retroactive comment notifications',t
   restored.comment(customer,id,'Mensaje','message');assert.equal(restored.listStaffAlerts(staff).unread,1);
 });
 test('a confirmed payment awaits reliable billing after interrupted sync, then alerts once',t=>{
-  const {store,id}=setup(t);
-  store.propose(staff,id,{baseCents:10000,surchargeCents:0,display:'total',canPrepare:'Pastel',changes:'',reply:'Si'},'quote');store.accept(customer,id,1,'accept');
+  const {db,store,id}=setup(t);
+  store.propose(staff,id,{baseCents:10000,surchargeCents:0,display:'total',canPrepare:'Pastel',changes:'',reply:'Si'},'quote');store.accept(customer,id,1,'accept');clearLifecycle(db);
   const payments=[{id:'sale-later',amountCents:6000,status:'confirmed'}];
   let claim=store.claimPayment(customer,id,'first','sync',Date.now());store.checkpointPayment(customer,id,claim.token,{}, {payments},true);
   assert.equal(store.listStaffAlerts(staff).unread,0);
@@ -128,4 +132,42 @@ test('staff messages pass existing Resend validation and use stable provider ide
   // Verify through the same transport without sending a real message.
   await runStaffAlertJobs({store,shop,clientId:'app',now:()=>Date.now()+60001,send});
   assert.deepEqual(payload.to,[staffRecipient]);assert.match(payload.html,/Abrir en Shopify/);assert.match(payload.html,/href="https:\/\/admin.shopify.com/);assert.equal(store.listStaffAlerts(staff).alerts[0].emailStatus,'sent');
+});
+test('a new request alerts Dayana once, for signed-in and guest customers, without customer data',async t=>{
+  const db=new DatabaseSync(':memory:');t.after(()=>db.close());const store=createStoreWithDatabase(db);
+  const day=new Date(Date.now()+14*86400000).toISOString().slice(0,10),pickupAt=`${day}T20:00:00.000Z`;
+  const input={requestText:'Pastel PRIVATE-TEXT',pickup:{label:'Recoger'},details:{pickupAt,urgent:false,tiers:[{diameter:10,sponges:['Vainilla','Vainilla'],fillings:['Coco','Coco']}],coating:'Buttercream',decorations:[]}};
+  const expectedDay=new Intl.DateTimeFormat('es-US',{timeZone:'America/Chicago',day:'numeric',month:'long',year:'numeric'}).format(new Date(pickupAt));
+  const signed=store.createRequest(customer,input,'signed');store.createRequest(customer,input,'signed');
+  const capability='cd'.repeat(32);
+  const guest=store.createGuestRequest({shop},input,{name:'Ana PRIVATE-NAME',email:'ana@example.test',phone:'5551234567'},capability,'guest',{encryptedAccess:'fixture',now:Date.now()});
+  store.createGuestRequest({shop},input,{name:'Ana PRIVATE-NAME',email:'ana@example.test',phone:'5551234567'},capability,'guest',{encryptedAccess:'fixture',now:Date.now()});
+  const alerts=store.listStaffAlerts(staff).alerts.filter(a=>a.kind==='request');
+  assert.equal(alerts.length,2);assert.deepEqual(new Set(alerts.map(a=>a.requestId)),new Set([signed.id,guest.id]));
+  assert.equal(alerts.find(a=>a.requestId===guest.id).reference,guest.reference);
+  const sent=[];
+  await runStaffAlertJobs({store,shop,clientId:'app',portalEnabled:true,now:()=>Date.now(),send:async value=>{sent.push(value);return {status:'sent'};}});
+  assert.equal(sent.length,2);
+  for(const mail of sent){
+    assert.equal(mail.recipient,staffRecipient);
+    const [head,body]=mail.message.split('\r\n\r\n'),text=Buffer.from(body.replace(/\r\n/g,''),'base64').toString();
+    assert.match(head,/Subject: Nueva solicitud de pastel/);assert.match(text,/Llegó una solicitud nueva/);
+    assert.match(text,/dayanassweet\.com\/apps\/inventario#celebraciones\//);
+    for(const secret of ['PRIVATE-TEXT','PRIVATE-NAME','ana@example.test','5551234567',capability])assert.ok(!text.includes(secret)&&!head.includes(secret));
+    assert.ok(text.includes(expectedDay),expectedDay);
+  }
+});
+test('an accepted proposal alerts Dayana once with the total and the payment terms; staff actions never do',async t=>{
+  const {db,store,id}=setup(t);
+  store.propose(staff,id,{baseCents:12500,surchargeCents:0,display:'total',canPrepare:'Pastel',changes:'',reply:'Si'},'quote');
+  assert.equal(store.listStaffAlerts(staff).alerts.length,0);
+  store.accept(customer,id,1,'accept');store.accept(customer,id,1,'accept');
+  let alerts=store.listStaffAlerts(staff).alerts;
+  assert.equal(alerts.length,1);assert.equal(alerts[0].kind,'accept');assert.equal(alerts[0].totalCents,12500);assert.equal(alerts[0].paymentMode,'deposit');
+  let sent;await runStaffAlertJobs({store,shop,clientId:'app',now:()=>Date.now(),send:async value=>{sent=value;return {status:'sent'};}});
+  const text=Buffer.from(sent.message.split('\r\n\r\n')[1].replace(/\r\n/g,''),'base64').toString();
+  assert.match(text,/Propuesta aceptada/);assert.match(text,/\$125\.00/);assert.match(text,/anticipo/);
+  store.comment(staff,id,'Gracias','staff-thanks');
+  alerts=store.listStaffAlerts(staff).alerts;assert.equal(alerts.length,1);
+  void db;
 });
