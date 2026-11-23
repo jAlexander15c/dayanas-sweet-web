@@ -158,3 +158,5 @@ body[data-portal=true] nav[aria-label="Pantallas"] button[aria-current=page]{bac
 .product-card button.compact{flex:none;min-height:44px;padding:0 14px}
 .product-card .edit.compact{width:auto;margin-top:12px}
 @media(max-width:360px){.product-card .stock .actions.stock-actions{flex-wrap:wrap}}
+/* Enlace con forma de botón (p. ej. «Reembolsar en Shopify»): mismo alto táctil que los botones. */
+a.action-link{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-weight:600;text-decoration:none}

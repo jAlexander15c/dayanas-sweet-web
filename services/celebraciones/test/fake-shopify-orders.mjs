@@ -89,7 +89,7 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
     if (active.some(line => line.fulfilled > 0)) return 'PARTIALLY_FULFILLED';
     return 'UNFULFILLED';
   }
-  function render(order) {
+  function render(order, lineLimit = 100) {
     const { subtotal, total } = totals(order);
     return {
       id: `gid://shopify/Order/${order.id}`, name: order.name, createdAt: order.createdAt, cancelledAt: order.cancelledAt, closed: false,
@@ -99,9 +99,9 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
       totalOutstandingSet: money(order.outstandingCents), totalReceivedSet: money(order.receivedCents), totalRefundedSet: money(order.refundedCents),
       netPaymentSet: money(order.receivedCents - order.refundedCents),
       shippingLine: { title: order.shipping.title, code: order.shipping.code, source: 'shopify', deliveryCategory: order.shipping.deliveryCategory },
-      lineItems: { nodes: order.lines.map(line => ({ id: `gid://shopify/LineItem/${line.id}`, title: line.title, variantTitle: line.variantTitle, sku: line.sku,
+      lineItems: { nodes: order.lines.slice(0, lineLimit).map(line => ({ id: `gid://shopify/LineItem/${line.id}`, title: line.title, variantTitle: line.variantTitle, sku: line.sku,
         quantity: line.quantity, currentQuantity: line.current, unfulfilledQuantity: Math.max(0, line.current - line.fulfilled), refundableQuantity: line.current,
-        originalUnitPriceSet: money(line.unitCents), discountedUnitPriceAfterAllDiscountsSet: money(line.unitCents), variant: { id: line.variantId } })), pageInfo: { hasNextPage: false } },
+        originalUnitPriceSet: money(line.unitCents), discountedUnitPriceAfterAllDiscountsSet: money(line.unitCents), variant: { id: line.variantId } })), pageInfo: { hasNextPage: order.lines.length > lineLimit } },
       transactions: order.transactions.map(t => ({ id: t.id, kind: t.kind, status: t.status, gateway: t.gateway, createdAt: t.createdAt, manualPaymentGateway: t.manualPaymentGateway ?? (t.gateway === 'manual'), amountSet: money(t.cents) })),
       refunds: order.refunds.map(r => ({ id: r.id, createdAt: r.createdAt, note: r.note, totalRefundedSet: money(r.cents) })),
       fulfillments: order.fulfillments.map(f => ({ id: f.id, status: f.status, displayStatus: f.displayStatus, createdAt: f.createdAt, trackingInfo: f.trackingInfo })),
@@ -111,7 +111,7 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
   const userError = message => ({ field: null, message, code: 'INVALID' });
 
   const handlers = {
-    PanelOrders: () => ({ orders: { nodes: [...state.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(render), pageInfo: { hasNextPage: false, endCursor: null } } }),
+    PanelOrders: () => ({ orders: { nodes: [...state.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(order => render(order, 20)), pageInfo: { hasNextPage: false, endCursor: null } } }),
     PanelOrder: v => ({ order: find(v.id) ? render(find(v.id)) : null }),
     PanelLineVariants: v => ({ order: find(v.id) ? { id: v.id, lineItems: { nodes: find(v.id).lines.map(line => ({ id: `gid://shopify/LineItem/${line.id}`, variant: { id: line.variantId } })) } } : null }),
     PanelFulfillmentOrders: v => {
@@ -152,7 +152,7 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
         line.current -= item.quantity; line.fulfilled = Math.min(line.fulfilled, line.current);
       }
       if (v.input.shipping?.fullRefund) order.shippingRefunded = order.shipping.cents;
-      const refund = { id: `gid://shopify/Refund/${nextId++}`, createdAt: clock(), note: v.input.note, cents, notify: v.input.notify };
+      const refund = { id: `gid://shopify/Refund/${nextId++}`, createdAt: clock(), note: v.input.note, cents, notify: v.input.notify, restock: (v.input.refundLineItems || []).map(item => item.restockType) };
       order.refunds.push(refund); order.refundedCents += cents; moneyCalls++;
       const result = { refund: { id: refund.id, note: refund.note, totalRefundedSet: money(cents) }, userErrors: [] };
       idempotency.set(v.key, result);

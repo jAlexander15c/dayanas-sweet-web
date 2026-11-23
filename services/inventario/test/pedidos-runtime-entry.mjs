@@ -36,7 +36,7 @@ globalThis.fetch = async (url, init) => {
 export class InventoryStore extends ProductionInventoryStore {
   constructor(ctx, env) {
     const transport = createShopifyAdminTransport({ shop: env.SHOPIFY_SHOP, clientId: 'synthetic-celebraciones', secret: 'synthetic-secret', fetchImpl: orders.fetch });
-    const ordersService = createOrdersService({ client: createShopifyOrdersClient({ transport }), store: createOrdersStore(sqlFromStorage(ctx.storage)) });
+    const ordersService = createOrdersService({ client: createShopifyOrdersClient({ transport }), store: createOrdersStore(sqlFromStorage(ctx.storage)), shop: env.SHOPIFY_SHOP });
     // Same contract as the RPC service binding: a structured clone of the input, nothing else.
     // rpcLost: Celebraciones handles the call (and may apply it), then the RPC answer is lost.
     const binding = { handle: async input => {

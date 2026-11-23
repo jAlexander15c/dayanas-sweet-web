@@ -52,6 +52,7 @@ function paymentBadges(order) {
   else if (order.financial !== 'REFUNDED') badges.push('<span class="badge badge-paid">Pagado</span>');
   if (order.financial === 'PARTIALLY_REFUNDED') badges.push('<span class="badge badge-refund">Reembolso parcial</span>');
   if (order.financial === 'REFUNDED') badges.push('<span class="badge badge-refund">Reembolsado</span>');
+  if (order.unrefundedCents > 0) badges.push(`<span class="badge badge-due">Sin devolver ${usd(order.unrefundedCents)}</span>`);
   return badges.join('');
 }
 function itemSummary(items) {
@@ -75,7 +76,7 @@ async function showList(reload = true) {
 function renderList() {
   const tiles = list.bake.products.slice(0, 3).map(item => `<div class="bake-tile"><div class="bake-number">${item.quantity}</div><div>${esc(item.title)}</div></div>`).join('');
   view().innerHTML = `<div class="orders-head"><p class="eyebrow">Pedidos de la tienda · últimos ${list.days} días</p><h2 class="orders-title">Pedidos</h2></div>
-  <section class="card bake"><h3>Para hornear</h3><p class="muted">Suma de los pedidos sin despachar ni retirar.</p>
+  <section class="card bake"><h3>Para hornear</h3><p class="muted">Suma de los pedidos sin despachar ni retirar.</p>${list.bakeComplete === false ? '<p class="notice">Conteo parcial: hay pedidos o productos que el panel no alcanzó a leer. Completa la cuenta en Shopify con los pedidos marcados «y más».</p>' : ''}
     <div class="bake-tiles">${tiles}<div class="bake-tile"><div class="bake-number">${list.bake.orders}</div><div>pedidos en total</div></div></div>
     <button type="button" id="bake-toggle" aria-expanded="${bakeOpen}" aria-controls="bake-detail">Ver detalle por sabor y hoja de empaque</button>
     <div id="bake-detail" ${bakeOpen ? '' : 'hidden'}>
@@ -156,6 +157,9 @@ function actionButtons(order) {
       else if (order.cancelPending) notes.push('<p class="notice">Shopify está procesando la cancelación de este pedido. Vuelve a abrirlo en unos segundos.</p>');
       else notes.push('<p class="muted">Un pedido despachado ya no se cancela: se reembolsa.</p>');
     }
+  } else if (order.unrefundedCents > 0) {
+    notes.push(`<p class="notice notice-due">Pedido cancelado con ${usd(order.unrefundedCents)} pagados sin devolver. El panel no reembolsa pedidos cancelados: hazlo desde Shopify.</p>`);
+    if (order.adminUrl) notes.push(`<p><a class="action-link" href="${esc(order.adminUrl)}" target="_blank" rel="noopener">Reembolsar en Shopify</a></p>`);
   } else notes.push('<p class="notice">Este pedido está cancelado.</p>');
   return `${buttons.length ? `<div class="order-actions">${buttons.join('')}</div>` : ''}${notes.join('')}<p class="muted">Cobrar, editar, reembolsar y cancelar: solo la administradora, con su contraseña.</p>`;
 }
@@ -309,12 +313,13 @@ function openAction(action) {
     const items = order.lines.filter(line => line.quantity > 0).map(line => `${line.quantity} ${line.title}`).join(' y ');
     return openSheet({ action, needsPassword: true, danger: true, eyebrow: `Pedido ${order.name} · ${order.customer.name} · ${usd(order.totalCents)}`, title: 'Cancelar pedido', confirm: 'Cancelar pedido', backLabel: 'No cancelar',
       fields: `<label>Motivo<select id="cancel-reason">${CANCEL_REASONS.map(([value, label]) => `<option value="${value}">${label}</option>`).join('')}</select></label>
+        ${order.netPaymentCents > 0 ? `<p class="notice notice-due" id="cancel-refund-note" hidden>Quedarán ${usd(order.netPaymentCents)} pagados sin devolver. Después solo se pueden devolver desde Shopify.</p>` : ''}
         ${order.netPaymentCents > 0 ? `<label class="check"><input type="checkbox" id="cancel-refund" checked><span>Reembolsar ${usd(order.netPaymentCents)} a la forma de pago original</span></label>` : ''}
         <label class="check"><input type="checkbox" id="cancel-restock" checked><span>Regresar las cajas al stock <small>${esc(items)} vuelven a estar a la venta.</small></span></label>
         <label class="check"><input type="checkbox" id="notify" checked><span>Avisar a la clienta por correo</span></label>${password().replace('<small>Se pide en cada cobro, reembolso, edición o cancelación.</small>', '')}`,
       foot: 'Un pedido despachado ya no se cancela: se reembolsa. La cancelación no se puede deshacer.',
       build: () => ({ reason: $('#cancel-reason').value, refund: !!$('#cancel-refund')?.checked, restock: $('#cancel-restock').checked, notify: $('#notify').checked }),
-      after: done('Pedido cancelado.') });
+      after: done('Pedido cancelado.') }), $('#cancel-refund') && ($('#cancel-refund').onchange = event => { $('#cancel-refund-note').hidden = event.currentTarget.checked; });
   }
   if (action === 'refund') { location.hash = `pedidos/${order.id}/reembolsar`; return; }
   if (action === 'edit') { location.hash = `pedidos/${order.id}/editar`; return; }
@@ -424,9 +429,9 @@ async function showRefund(id) {
   const order = detail; preview = null;
   view().innerHTML = `<div class="order-top">${back({ aria: 'Volver al pedido', href: `/${order.id}` })}<h2 id="order-title">Reembolsar ${esc(order.name)}</h2></div>
   <p>Elige qué se devuelve. Shopify calcula el monto; nunca puede pasar de lo que la clienta pagó.</p>
-  <section class="card"><h3>Productos</h3>${order.lines.filter(line => line.refundable > 0).map(line => `<div class="refund-line"><div><div>${esc(lineName(line))}</div><small>${usd(line.unitCents)} c/u · compró ${line.quantity}</small></div>
+  <section class="card"><h3>Productos</h3>${order.lines.filter(line => line.refundable > 0).map(line => `<div class="refund-line"><div><div>${esc(lineName(line))}</div><small>${usd(line.unitCents)} c/u · compró ${line.quantity} · ${line.unfulfilled > 0 ? `${line.unfulfilled} sin despachar: ${line.unfulfilled === 1 ? 'puede' : 'pueden'} volver al stock` : 'despachada: no vuelve al stock'}</small></div>
       <label>Devolver<select data-refund-line="${esc(line.id)}" aria-label="Cantidad a devolver de ${esc(line.title)}">${Array.from({ length: line.refundable + 1 }, (_, n) => `<option>${n}</option>`).join('')}</select></label></div>`).join('') || '<p class="muted">No quedan productos por devolver.</p>'}
-    <label class="check"><input type="checkbox" id="refund-restock"><span>Regresar al stock <small>Solo si la caja sigue en condiciones de venderse en esta tanda.</small></span></label></section>
+    <label class="check"><input type="checkbox" id="refund-restock"><span>Regresar al stock <small id="refund-restock-note">Solo las cajas sin despachar, si siguen en condiciones de venderse en esta tanda.</small></span></label></section>
   <section class="card"><h3>Envío y otro monto</h3>
     <label class="check"><input type="checkbox" id="refund-shipping" ${order.shippingCents ? '' : 'disabled'}><span>Devolver el envío <small>${order.shippingCents ? `Envío de ${usd(order.shippingCents)}.` : 'Este pedido tuvo envío gratis.'}</small></span></label>
     <label>Monto adicional <small>(opcional, por ejemplo una caja dañada)</small><input type="text" id="refund-extra" inputmode="decimal" placeholder="$0.00" maxlength="10" autocomplete="off"></label>
@@ -452,7 +457,12 @@ function schedulePreview() {
     try {
       const result = await portal.request(`pedidos/orders/${detail.id}/refund-preview`, { body: { lines: body.lines, refundShipping: body.refundShipping, extraCents: body.extraCents } });
       if (seq !== previewSeq) return;
-      preview = { ...result, body };
+      const restock = $('#refund-restock');
+      restock.disabled = !result.restockableQuantity;
+      if (restock.disabled) restock.checked = false;
+      $('#refund-restock-note').textContent = result.restockableQuantity ? `Vuelven ${result.restockableQuantity} al stock si lo marcas. Las despachadas no vuelven.`
+        : body.lines.length ? 'Lo elegido ya se despachó: no vuelve al stock.' : 'Solo las cajas sin despachar, si siguen en condiciones de venderse en esta tanda.';
+      preview = { ...result, body: { ...body, restock: body.restock && result.restockableQuantity > 0 } };
       $('#refund-total').textContent = usd(result.totalCents);
       $('#refund-max').textContent = `Máximo ${usd(result.maximumCents)}`;
       $('#refund-review').textContent = `Revisar y reembolsar ${usd(result.totalCents)}`;
@@ -472,7 +482,7 @@ function reviewRefund() {
   op = null;
   openSheet({ action: 'refund', eyebrow: `Pedido ${order.name} · ${order.customer.name}`, title: 'Revisa el reembolso', confirm: `Reembolsar ${usd(totalCents)}`,
     fields: `<ul class="summary-list">${lines}${body.refundShipping ? '<li>Envío</li>' : ''}${body.extraCents ? `<li>Monto adicional ${usd(body.extraCents)}</li>` : ''}</ul>
-      <div class="amount-box"><div>Se devuelve</div><div class="amount">${usd(totalCents)}</div><div class="muted">Motivo: ${esc(reason)}${body.restock ? ' · regresa al stock' : ''}${body.notify ? ' · se avisa a la clienta' : ''}</div></div>${password()}`,
+      <div class="amount-box"><div>Se devuelve</div><div class="amount">${usd(totalCents)}</div><div class="muted">Motivo: ${esc(reason)}${body.restock ? ` · regresan ${preview.restockableQuantity} al stock` : ''}${body.notify ? ' · se avisa a la clienta' : ''}</div></div>${password()}`,
     foot: 'Un reembolso no se puede deshacer. Si la conexión falla, el panel consulta el mismo reembolso y no lo repite.',
     build: () => ({ ...body, expectedTotalCents: totalCents }), needsPassword: true,
     after: async () => goDetail(order.id, `Reembolso de ${usd(totalCents)} registrado.`) });

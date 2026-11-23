@@ -28,7 +28,7 @@ function setup(options) {
   const transport = createShopifyAdminTransport({ shop: SHOP, clientId: 'client', secret: 'secret', fetchImpl: fake.fetch, timeoutMs: 2000 });
   const store = createOrdersStore(memorySql());
   let clock = Date.parse('2026-11-06T15:20:00Z');
-  const service = createOrdersService({ client: createShopifyOrdersClient({ transport }), store, now: () => clock });
+  const service = createOrdersService({ client: createShopifyOrdersClient({ transport }), store, now: () => clock, shop: SHOP });
   const call = (method, path, body, who = ADMIN) => handleStaffGateway({ actor: who, method, path, body }, { config: { shop: SHOP }, ordersService: service });
   return { fake, store, call, advance: ms => { clock += ms; } };
 }
@@ -624,4 +624,58 @@ test('the orders service never writes to the console', async () => {
     await call('GET', '/orders/1042');
   } finally { Object.assign(console, original); }
   assert.deepEqual(seen, []);
+});
+
+// Revisión Codex P01: una caja despachada no vuelve al stock y el recibo dice exactamente cuánto volvió.
+test('refund restock: only unshipped boxes go back to stock and the receipt says how many', async () => {
+  const { call, fake, store } = setup();
+  const refund = async (id, line, n) => {
+    const lines = [{ lineItemId: `gid://shopify/LineItem/${line}`, quantity: 1 }];
+    const preview = await call('POST', `/orders/${id}/refund-preview`, { lines, refundShipping: false, extraCents: 0 });
+    assert.equal(preview.status, 200);
+    const result = await call('POST', `/orders/${id}/refund`, { operationId: op(n), lines, restock: true, refundShipping: false, extraCents: 0, reason: 'damaged', notify: false, expectedTotalCents: preview.body.totalCents });
+    assert.equal(result.status, 200);
+    return { preview: preview.body, summary: store.getOperation(op(n)).summary, restock: fake.raw(id).refunds.at(-1).restock };
+  };
+  const shipped = await refund('1045', 41, 90);
+  assert.equal(shipped.preview.restockableQuantity, 0);
+  assert.deepEqual(shipped.restock, ['NO_RESTOCK']);
+  assert.match(shipped.summary, /no regresó al stock \(ya despachado\)$/);
+  assert.doesNotMatch(shipped.summary, /regresaron/);
+  const open = await refund('1042', 11, 91);
+  assert.equal(open.preview.restockableQuantity, 1);
+  assert.deepEqual(open.restock, ['CANCEL']);
+  assert.match(open.summary, /regresaron 1 al stock$/);
+});
+
+// Revisión Codex P02: «Para hornear» suma todas las líneas aunque la lista traiga solo 20 por pedido.
+test('bake list completes orders with more than 20 lines and marks a partial count when it cannot', async () => {
+  const many = n => { const base = sampleOrders()[1]; return { ...base, lines: Array.from({ length: n }, (_, i) => ({ id: String(900 + i), title: `Sabor ${i + 1}`, variantTitle: null, sku: `S-${i}`, unitCents: 100, quantity: 1, current: 1, fulfilled: 0, variantId: `gid://shopify/ProductVariant/${700 + i}` })) }; };
+  let { call } = setup({ orders: [many(21)] });
+  let list = await call('GET', '/orders');
+  assert.equal(list.status, 200);
+  assert.equal(list.body.bake.products.length, 21);
+  assert.equal(list.body.bakeComplete, true);
+  assert.equal(list.body.orders[0].itemsTruncated, false);
+  ({ call } = setup({ orders: [many(101)] }));
+  list = await call('GET', '/orders');
+  assert.equal(list.body.bakeComplete, false);
+  assert.equal(list.body.bake.products.length, 100);
+});
+
+// Revisión Codex P06: un cancelado con dinero sin devolver lo dice y enlaza al pedido en Shopify; el panel no reembolsa.
+test('cancelled order shows the unrefunded amount and a Shopify admin link; refunds stay blocked', async () => {
+  const { call, fake } = setup();
+  fake.raw('1042').cancelledAt = '2026-11-06T10:00:00Z';
+  const detail = await call('GET', '/orders/1042');
+  assert.equal(detail.status, 200);
+  assert.equal(detail.body.unrefundedCents, detail.body.netPaymentCents);
+  assert.ok(detail.body.unrefundedCents > 0);
+  assert.equal(detail.body.adminUrl, 'https://admin.shopify.com/store/dayanas-test/orders/1042');
+  const list = await call('GET', '/orders');
+  const row = list.body.orders.find(order => order.id === '1042');
+  assert.deepEqual([row.stage, row.unrefundedCents], ['cancelado', detail.body.unrefundedCents]);
+  assert.equal(list.body.orders.find(order => order.id === '1043').unrefundedCents, 0);
+  const preview = await call('POST', '/orders/1042/refund-preview', { lines: [{ lineItemId: 'gid://shopify/LineItem/11', quantity: 1 }], refundShipping: false, extraCents: 0 });
+  assert.deepEqual([preview.status, preview.body.code], [409, 'ORDER_CANCELLED']);
 });

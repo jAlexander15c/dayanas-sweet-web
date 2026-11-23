@@ -93,7 +93,9 @@ function failure(error) {
   return { status, body };
 }
 
-export function createOrdersService({ client, store, now = () => Date.now(), days = 60 }) {
+export function createOrdersService({ client, store, now = () => Date.now(), days = 60, shop = null }) {
+  // Enlace al pedido en el admin de Shopify (lo que el panel no hace, p. ej. reembolsar un pedido cancelado).
+  const adminUrl = order => shop ? `https://admin.shopify.com/store/${shop.replace('.myshopify.com', '')}/orders/${numeric(order.id)}` : null;
   let tail = Promise.resolve();
   const serial = fn => { const run = tail.then(fn, fn); tail = run.catch(() => {}); return run; };
   const readOrder = id => client.order(orderGid(id));
@@ -195,11 +197,13 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
           if (take > 0) { transactions.push({ orderId: order.id, parentId: t.parentId, gateway: t.gateway, kind: 'REFUND', amount: decimal(take) }); remaining -= take; }
         }
         if (remaining) throw bad(`El reembolso pasa de lo que se puede devolver: máximo ${usd(totalCents - remaining)}.`, 'REFUND_LIMIT');
-        const byId = new Map(order.lineItems.nodes.map(line => [line.id, line]));
         const tag = `panel ${operationId.slice(0, 8)}`;
-        return { amountCents: totalCents, summary: `Reembolsó ${usd(totalCents)} · ${REFUND_REASONS[params.reason]}${params.restock ? ' · regresó al stock' : ''}`,
+        const refundLineItems = params.lines.map(line => ({ lineItemId: line.lineItemId, quantity: line.quantity, restockType: params.restock && restockable(order, line) ? 'CANCEL' : 'NO_RESTOCK' }));
+        const restocked = refundLineItems.reduce((sum, line) => sum + (line.restockType === 'CANCEL' ? line.quantity : 0), 0);
+        const stockNote = !params.restock ? '' : restocked ? ` · regresaron ${restocked} al stock` : ' · no regresó al stock (ya despachado)';
+        return { amountCents: totalCents, summary: `Reembolsó ${usd(totalCents)} · ${REFUND_REASONS[params.reason]}${stockNote}`,
           plan: { tag, totalCents, input: { orderId: order.id, note: `${REFUND_REASONS[params.reason]} (${tag})`, notify: params.notify,
-            refundLineItems: params.lines.map(line => ({ lineItemId: line.lineItemId, quantity: line.quantity, restockType: params.restock && byId.get(line.lineItemId).unfulfilledQuantity >= line.quantity ? 'CANCEL' : 'NO_RESTOCK' })),
+            refundLineItems,
             ...(params.refundShipping ? { shipping: { fullRefund: true } } : {}), transactions } } };
       },
       // refundCreate carries @idempotent(key: operationId): Shopify returns the same refund for the same key.
@@ -336,6 +340,11 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
     if (new Set(lines.map(l => l.lineItemId)).size !== lines.length) throw bad('Productos repetidos.');
     return lines;
   }
+  // Una caja despachada no vuelve a la venta (decisión del negocio): solo lo que sigue sin despachar.
+  function restockable(order, line) {
+    const current = order.lineItems.nodes.find(item => item.id === line.lineItemId);
+    return !!current && current.unfulfilledQuantity >= line.quantity;
+  }
   function checkRefundLines(order, lines) {
     const byId = new Map(order.lineItems.nodes.map(line => [line.id, line]));
     for (const line of lines) {
@@ -394,6 +403,7 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
       cash: (order.paymentGatewayNames || []).some(name => gatewayLabel(name) === 'Efectivo'),
       items: lines.filter(line => line.currentQuantity > 0).map(line => ({ title: line.title, variantTitle: line.variantTitle || null, quantity: line.currentQuantity, unfulfilled: line.unfulfilledQuantity })),
       itemsTruncated: !!order.lineItems?.pageInfo?.hasNextPage,
+      unrefundedCents: order.cancelledAt ? Math.max(0, optionalCents(order.netPaymentSet)) : 0,
     };
   }
   function timeline(order, operations, pickup) {
@@ -422,6 +432,12 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
       try {
         const since = new Date(now() - days * 86_400_000).toISOString().slice(0, 10);
         const { nodes, complete } = await client.listOrders({ since });
+        for (const [index, order] of nodes.entries()) {
+          if (order.cancelledAt || !order.lineItems?.pageInfo?.hasNextPage) continue;
+          try { const full = await client.order(order.id); if (full?.lineItems) nodes[index] = { ...order, lineItems: full.lineItems }; }
+          catch { /* queda truncado: la suma se marca como parcial */ }
+        }
+        const bakeComplete = complete && !nodes.some(order => !order.cancelledAt && order.lineItems?.pageInfo?.hasNextPage);
         // Cancelled orders come back as stage 'cancelado' (panel history only): never baked, packed or counted as active.
         const open = nodes.filter(order => !order.cancelledAt);
         const ready = store.readyOrders(open.map(order => numeric(order.id)));
@@ -440,7 +456,7 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
         }
         const counts = { preparar: 0, listo: 0, entregado: 0, cancelado: 0 };
         for (const order of orders) counts[order.stage]++;
-        return { status: 200, body: { orders, counts, complete, days,
+        return { status: 200, body: { orders, counts, complete, bakeComplete, days,
           bake: { orders: bakeOrders, products: [...products].map(([title, quantity]) => ({ title, quantity })).sort((a, b) => b.quantity - a.quantity || a.title.localeCompare(b.title)),
             variants: [...variants.values()].sort((a, b) => a.title.localeCompare(b.title) || String(a.variantTitle).localeCompare(String(b.variantTitle))) } } };
       } catch (error) { return failure(error); }
@@ -479,6 +495,7 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
           payment: [...new Set((order.paymentGatewayNames || []).map(gatewayLabel))],
           cashAllowed: cashAllowed(order),
           fulfillments: activeFulfillments(order).map(f => ({ createdAt: f.createdAt, displayStatus: f.displayStatus, tracking: (f.trackingInfo || []).map(t => ({ company: t.company || null, number: t.number || null, url: /^https:\/\//.test(t.url || '') ? t.url : null })) })),
+          adminUrl: adminUrl(order), unrefundedCents: order.cancelledAt ? Math.max(0, optionalCents(order.netPaymentSet)) : 0,
           shipped, cancelPending, canCancel: !order.cancelledAt && !shipped && !cancelPending, timeline: timeline(order, operations, pickup), note: store.getNote(id),
         } };
       } catch (error) { return failure(error); }
@@ -501,8 +518,9 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
         checkRefundLines(order, lines);
         const suggestion = await client.suggestRefund(order.id, { lines, refundShipping: params.refundShipping });
         const totalCents = suggestion.amountCents + params.extraCents;
+        const restockableQuantity = lines.reduce((sum, line) => sum + (restockable(order, line) ? line.quantity : 0), 0);
         return { status: 200, body: { amountCents: suggestion.amountCents, extraCents: params.extraCents, totalCents, maximumCents: suggestion.maximumCents,
-          shippingMaximumCents: suggestion.shippingMaximumCents, overLimit: totalCents > suggestion.maximumCents } };
+          shippingMaximumCents: suggestion.shippingMaximumCents, overLimit: totalCents > suggestion.maximumCents, restockableQuantity } };
       } catch (error) { return failure(error); }
     },
     async execute(action, id, body, actor) {

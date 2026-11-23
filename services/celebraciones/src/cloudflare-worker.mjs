@@ -37,7 +37,7 @@ export class CelebrationStore extends DurableObject {
     try {transport=createShopifyAdminTransport({shop:env.SHOPIFY_SHOP,clientId:env.SHOPIFY_CLIENT_ID,secret:env.SHOPIFY_APP_SECRET});} catch {transport=undefined;}
     const shopifyClient=createShopifyPaymentClient({shop:env.SHOPIFY_SHOP,clientId:env.SHOPIFY_CLIENT_ID,secret:env.SHOPIFY_APP_SECRET,storefrontOrigin:env.STOREFRONT_ORIGIN,...(transport?{transport}:{})});
     let ordersService;
-    try {ordersService=createOrdersService({client:createShopifyOrdersClient({transport}),store:createOrdersStore(sqlFromStorage(ctx.storage))});} catch {ordersService=undefined;}
+    try {ordersService=createOrdersService({client:createShopifyOrdersClient({transport}),store:createOrdersStore(sqlFromStorage(ctx.storage)),shop:env.SHOPIFY_SHOP});} catch {ordersService=undefined;}
     const paymentService=env.PAYMENTS_ENABLED==='true'?createPaymentService({store:this.store,mode:env.PAYMENTS_MODE||'TEST',storefrontOrigin:env.STOREFRONT_ORIGIN,onDiagnostic:diagnostic=>console.warn('payment-diagnostic '+JSON.stringify(diagnostic)),client:shopifyClient}):undefined;
     let email=null,sendEmail=null;
     try {sendEmail=createResendTransport({apiKey:env.RESEND_API_KEY});email=createQuoteEmail({key:env.GUEST_ACCESS_KEY,storefrontOrigin:env.STOREFRONT_ORIGIN,send:sendEmail});} catch { /* Guest creation stays disabled until configured. */ }

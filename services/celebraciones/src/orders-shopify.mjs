@@ -28,7 +28,7 @@ export const decimal = value => { if (!Number.isSafeInteger(value) || value < 0)
 export const orderGid = id => `gid://shopify/Order/${id}`;
 
 const listFields = `id name createdAt cancelledAt closed email displayFinancialStatus displayFulfillmentStatus tags paymentGatewayNames
-  customer { firstName lastName } ${bag('currentTotalPriceSet')} ${bag('totalOutstandingSet')} ${bag('totalRefundedSet')} ${bag('totalShippingPriceSet')}
+  customer { firstName lastName } ${bag('currentTotalPriceSet')} ${bag('totalOutstandingSet')} ${bag('totalRefundedSet')} ${bag('netPaymentSet')} ${bag('totalShippingPriceSet')}
   shippingLine { title code source deliveryCategory }
   lineItems(first: 20) { nodes { id title variantTitle currentQuantity unfulfilledQuantity } pageInfo { hasNextPage } }
   fulfillments(first: 5) { status displayStatus }`;

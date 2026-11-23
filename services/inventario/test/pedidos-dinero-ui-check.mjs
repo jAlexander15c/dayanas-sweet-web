@@ -139,6 +139,45 @@ try {
   await sheet(page).getByRole('button', { name: 'Guardar cambios del pedido' }).click();
   await page.getByText(/Pedido editado\. Quedan \$\d+\.\d\d por cobrar/).waitFor();
   check('editar: se envió sin aviso a la clienta', edit1043.length === 1 && edit1043[0].notify === false, JSON.stringify(edit1043));
+  // P01 · Reembolsar un pedido despachado: la casilla explica que no vuelve al stock y el recibo no lo afirma.
+  await page.evaluate(() => { location.hash = 'pedidos/1045/reembolsar'; });
+  await page.getByRole('heading', { name: 'Reembolsar #1045' }).waitFor();
+  check('reembolso despachado: cada producto dice que no vuelve al stock', (await page.locator('.refund-line').allTextContents()).every(text => text.includes('despachada: no vuelve al stock')));
+  await page.getByLabel('Cantidad a devolver de Brownie Box').selectOption('1');
+  await page.getByText('Lo elegido ya se despachó: no vuelve al stock.').waitFor();
+  check('reembolso despachado: «Regresar al stock» desactivado', await page.locator('#refund-restock').isDisabled() && !(await page.locator('#refund-restock').isChecked()));
+  await screenshots(page, 'reembolso-despachado');
+  await page.getByRole('button', { name: /Revisar y reembolsar \$/ }).click();
+  await page.getByRole('heading', { name: 'Revisa el reembolso' }).waitFor();
+  check('reembolso despachado: la revisión no promete stock', !(await sheet(page).textContent()).includes('al stock'));
+  await sheet(page).getByLabel('Tu contraseña').fill(password);
+  await sheet(page).getByRole('button', { name: /^Reembolsar \$/ }).click();
+  await page.getByText(/Reembolso de \$\d+\.\d\d registrado\./).waitFor();
+  check('reembolso despachado: el historial no dice que regresó al stock', !(await page.locator('#pedidos-view').textContent()).includes('regresó al stock'));
+
+  // P06 · Cancelar sin reembolsar: aviso en la hoja; en el detalle y en Historial, lo pagado sin devolver y el enlace a Shopify.
+  await page.evaluate(() => { location.hash = 'pedidos/1046'; });
+  await page.getByRole('heading', { name: 'Pedido #1046' }).waitFor();
+  await page.getByRole('button', { name: 'Cancelar pedido', exact: true }).click();
+  await sheet(page).getByRole('heading', { name: 'Cancelar pedido' }).waitFor();
+  check('cancelar: el aviso aparece solo al desmarcar el reembolso', await page.locator('#cancel-refund-note').isHidden());
+  await sheet(page).locator('#cancel-refund').uncheck();
+  check('cancelar: al desmarcar avisa que el dinero queda sin devolver', /pagados sin devolver/.test(await page.locator('#cancel-refund-note').textContent()) && await page.locator('#cancel-refund-note').isVisible());
+  await screenshots(page, 'cancelar-sin-reembolso');
+  await sheet(page).getByLabel('Tu contraseña').fill(password);
+  await sheet(page).getByRole('button', { name: 'Cancelar pedido', exact: true }).click();
+  const retry = sheet(page).getByRole('button', { name: 'Reintentar', exact: true });
+  await Promise.race([page.getByText('Pedido cancelado.').waitFor(), retry.waitFor()]);
+  if (await retry.isVisible()) { await retry.click(); await page.getByText('Pedido cancelado.').waitFor(); }
+  await page.getByText(/pagados sin devolver\. El panel no reembolsa pedidos cancelados/).waitFor();
+  const link = page.getByRole('link', { name: 'Reembolsar en Shopify' });
+  check('cancelado: enlace al pedido en el admin de Shopify, en otra pestaña', /^https:\/\/admin\.shopify\.com\/store\/[^/]+\/orders\/1046$/.test(await link.getAttribute('href')) && await link.getAttribute('target') === '_blank');
+  await screenshots(page, 'cancelado-sin-devolver');
+  await page.evaluate(() => { location.hash = 'pedidos'; });
+  await page.getByRole('button', { name: /^Historial/ }).click();
+  await page.getByRole('button', { name: /^Cancelados/ }).click();
+  check('Historial: el cancelado lleva «Sin devolver»', /Sin devolver \$\d+\.\d\d/.test(await card(page, '#1046').textContent()));
+
   check('sin errores de JavaScript', !errors.length, errors.join(' | '));
 } finally { await browser?.close(); await worker.stop(); }
 for (const r of results) console.log(`${r.ok ? 'PASS' : 'FAIL'} ${r.name}${r.ok || !r.detail ? '' : ` — ${r.detail}`}`);
