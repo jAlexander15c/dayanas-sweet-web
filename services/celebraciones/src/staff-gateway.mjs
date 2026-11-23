@@ -32,6 +32,18 @@ export function trustedPortalActor(input,shop) {
 const ORDER_WRITES=new Set(['note','fulfill','ready','delivered','refund-preview','cash','refund','edit','cancel']);
 const ADMIN_ONLY=new Set(['refund-preview','cash','refund','edit','cancel']);
 const STEP_UP=new Set(['cash','refund','edit','cancel']);
+async function handleCharges(input,actor,service,[,create,id,action]) {
+  if(!service)return {status:503,body:{code:'UNAVAILABLE'}};
+  if(!actor.roles.includes('admin'))return {status:403,body:{code:'ROLE_REQUIRED',message:'Solo la administradora puede hacer esto.'}};
+  if(input.method==='GET')return create||action?{status:404,body:{code:'NOT_FOUND'}}:service.list();
+  if(!create&&!action)return {status:404,body:{code:'NOT_FOUND'}};
+  const body=input.body;
+  let size=0;
+  try {size=new TextEncoder().encode(JSON.stringify(body)).length;} catch {size=Infinity;}
+  if(!body||typeof body!=='object'||Array.isArray(body)||size>32768||Object.hasOwn(body,'password'))return {status:422,body:{code:'VALIDATION'}};
+  if(actor.stepUp!==true)return {status:403,body:{code:'STEP_UP_REQUIRED',message:'Esta acción necesita la contraseña de la administradora.'}};
+  return create?service.create(body,actor):service.void(id,body,actor);
+}
 export async function handleOrdersGateway(input,options) {
   let actor;
   try {actor=portalOrdersActor(input?.actor,options.config.shop);} catch {return {status:401,body:{code:'AUTH_REQUIRED'}};}
@@ -39,6 +51,8 @@ export async function handleOrdersGateway(input,options) {
   if(!service)return {status:503,body:{code:'UNAVAILABLE'}};
   const path=input.path;
   if(path.length>200||/[\\\r\n?#]/.test(path))return {status:404,body:{code:'NOT_FOUND'}};
+  const charges=/^\/orders\/charges(?:\/(create)|\/(\d{1,20})\/(void))?$/.exec(path);
+  if(charges)return handleCharges(input,actor,options.chargesService,charges);
   if(input.method==='GET'){
     if(path==='/orders')return service.list(actor);
     const match=/^\/orders\/(\d{1,20})$/.exec(path);

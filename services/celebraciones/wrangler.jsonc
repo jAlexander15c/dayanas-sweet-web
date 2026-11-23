@@ -21,6 +21,7 @@
     "SHOPIFY_STAFF_IDS": "164797317424",
     "STOREFRONT_ORIGIN": "https://dayanassweet.com"
   },
+  "triggers": { "crons": ["17 * * * *"] },
   "durable_objects": {
     "bindings": [{ "name": "CELEBRATIONS", "class_name": "CelebrationStore" }]
   },

@@ -27,6 +27,7 @@ export function cents(value) {
 export const decimal = value => { if (!Number.isSafeInteger(value) || value < 0) throw orderError(422, 'VALIDATION', 'Monto inválido.'); return `${Math.floor(value / 100)}.${String(value % 100).padStart(2, '0')}`; };
 export const orderGid = id => `gid://shopify/Order/${id}`;
 
+const chargeFields = `id name status invoiceUrl email createdAt tags order { id name } customAttributes { key value } totalPriceSet { ${money} } lineItems(first: 10) { nodes { title quantity } }`;
 const listFields = `id name createdAt cancelledAt closed email displayFinancialStatus displayFulfillmentStatus tags paymentGatewayNames
   customer { firstName lastName } ${bag('currentTotalPriceSet')} ${bag('totalOutstandingSet')} ${bag('totalRefundedSet')} ${bag('netPaymentSet')} ${bag('totalShippingPriceSet')}
   shippingLine { title code source deliveryCategory }
@@ -123,6 +124,24 @@ export function createShopifyOrdersClient({ transport }) {
         transactions: (value.full.suggestedTransactions || []).filter(t => t.parentTransaction?.id).map(t => ({ parentId: t.parentTransaction.id, gateway: t.gateway, maximumCents: cents(t.maximumRefundableSet) })),
       };
     },
+    // Cobros del panel (pedidos borrador). draftOrderInvoiceSend no tiene clave de idempotencia: el servicio
+    // vuelve a leer el estado (OPEN → INVOICE_SENT) antes de repetirlo.
+    async chargeDrafts() {
+      const value = await graphql(`query PanelCharges($query: String!) { draftOrders(first: 50, sortKey: UPDATED_AT, reverse: true, query: $query) { nodes { ${chargeFields} } } }`, { query: 'tag:"ds-cobro"' }, 'draftOrders');
+      return Array.isArray(value?.nodes) ? value.nodes : [];
+    },
+    async chargesByOperation(operationId) {
+      const value = await graphql(`query PanelChargeByOperation($query: String!) { draftOrders(first: 2, query: $query) { nodes { ${chargeFields} } } }`, { query: `tag:"ds-cobro" AND tag:"ds-operation:${operationId}"` }, 'draftOrders');
+      return Array.isArray(value?.nodes) ? value.nodes : [];
+    },
+    chargeDraft: id => graphql(`query PanelCharge($id: ID!) { draftOrder(id: $id) { ${chargeFields} } }`, { id }, 'draftOrder'),
+    async createCharge(input) {
+      const value = await graphql(`mutation PanelChargeCreate($input: DraftOrderInput!) { draftOrderCreate(input: $input) { draftOrder { ${chargeFields} } userErrors { field message } } }`, { input }, 'draftOrderCreate', { mutation: true });
+      if (!value.draftOrder?.id) throw UNCERTAIN();
+      return value.draftOrder;
+    },
+    sendChargeInvoice: (id, email) => graphql(`mutation PanelChargeInvoice($id: ID!, $email: EmailInput) { draftOrderInvoiceSend(id: $id, email: $email) { draftOrder { id status } userErrors { field message } } }`, { id, email }, 'draftOrderInvoiceSend', { mutation: true }),
+    deleteCharge: id => graphql(`mutation PanelChargeDelete($input: DraftOrderDeleteInput!) { draftOrderDelete(input: $input) { deletedId userErrors { field message } } }`, { input: { id } }, 'draftOrderDelete', { mutation: true }),
     markAsPaid: id => graphql(`mutation PanelMarkAsPaid($input: OrderMarkAsPaidInput!) { orderMarkAsPaid(input: $input) { order { id displayFinancialStatus ${bag('totalOutstandingSet')} } userErrors { field message } } }`, { input: { id } }, 'orderMarkAsPaid', { mutation: true }),
     refund: (input, key) => graphql(`mutation PanelRefund($input: RefundInput!, $key: String!) { refundCreate(input: $input) @idempotent(key: $key) { refund { id note ${bag('totalRefundedSet')} } userErrors { field message } } }`, { input, key }, 'refundCreate', { mutation: true }),
     cancel: variables => graphql(`mutation PanelCancel($orderId: ID!, $reason: OrderCancelReason!, $restock: Boolean!, $notifyCustomer: Boolean, $staffNote: String, $refundMethod: OrderCancelRefundMethodInput) { orderCancel(orderId: $orderId, reason: $reason, restock: $restock, notifyCustomer: $notifyCustomer, staffNote: $staffNote, refundMethod: $refundMethod) { job { id done } orderCancelUserErrors { field message code } } }`, variables, 'orderCancel', { mutation: true, errorsField: 'orderCancelUserErrors' }),

@@ -7,7 +7,8 @@
 //  - reject: userErrors.
 const money = cents => ({ shopMoney: { amount: (cents / 100).toFixed(2), currencyCode: 'USD' } });
 const ROOTS = { PanelMarkAsPaid: 'orderMarkAsPaid', PanelRefund: 'refundCreate', PanelCancel: 'orderCancel', PanelFulfill: 'fulfillmentCreate', PanelReady: 'fulfillmentOrderLineItemsPreparedForPickup',
-  PanelEditBegin: 'orderEditBegin', PanelEditQuantity: 'orderEditSetQuantity', PanelEditAdd: 'orderEditAddVariant', PanelEditCommit: 'orderEditCommit' };
+  PanelEditBegin: 'orderEditBegin', PanelEditQuantity: 'orderEditSetQuantity', PanelEditAdd: 'orderEditAddVariant', PanelEditCommit: 'orderEditCommit',
+  PanelChargeCreate: 'draftOrderCreate', PanelChargeInvoice: 'draftOrderInvoiceSend', PanelChargeDelete: 'draftOrderDelete' };
 const MONEY_OPS = new Set(['PanelMarkAsPaid', 'PanelRefund', 'PanelCancel', 'PanelEditCommit']);
 
 export function sampleOrders() {
@@ -59,6 +60,13 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
   const idempotency = new Map();
   let moneyCalls = 0;
   const calc = new Map();
+  // Pedidos borrador de los cobros del panel.
+  const drafts = new Map(), invoices = [];
+  let nextDraft = 700, nextOrder = 1100;
+  const renderDraft = d => ({ id: `gid://shopify/DraftOrder/${d.id}`, name: `#D${d.id}`, status: d.status, invoiceUrl: `https://shop.test/invoices/${d.id}`, email: d.email,
+    createdAt: d.createdAt, tags: d.tags, order: d.orderId ? { id: `gid://shopify/Order/${d.orderId}`, name: `#${d.orderId}` } : null, customAttributes: d.customAttributes,
+    totalPriceSet: money(d.lines.reduce((sum, line) => sum + line.cents, 0)), lineItems: { nodes: d.lines.map(line => ({ title: line.title, quantity: 1 })) } });
+  const draftOf = gid => drafts.get(String(gid || '').split('/').pop());
   for (const source of orders) {
     const order = structuredClone(source);
     order.cancelledAt = null; order.refunds = []; order.fulfillments = []; order.transactions = order.transactions || [];
@@ -111,6 +119,17 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
   const userError = message => ({ field: null, message, code: 'INVALID' });
 
   const handlers = {
+    PanelCharges: v => ({ draftOrders: { nodes: [...drafts.values()].filter(d => v.query.includes('ds-cobro') && d.tags.includes('ds-cobro')).reverse().map(renderDraft) } }),
+    PanelChargeByOperation: v => { const op = /ds-operation:([a-f0-9-]+)/.exec(v.query)?.[1]; return { draftOrders: { nodes: [...drafts.values()].filter(d => d.tags.includes(`ds-operation:${op}`)).map(renderDraft) } }; },
+    PanelCharge: v => ({ draftOrder: draftOf(v.id) ? renderDraft(draftOf(v.id)) : null }),
+    PanelChargeCreate: v => {
+      const d = { id: String(nextDraft++), status: 'OPEN', email: v.input.email, createdAt: clock(), tags: v.input.tags, customAttributes: v.input.customAttributes, input: v.input,
+        lines: v.input.lineItems.map(line => ({ title: line.title, cents: Math.round(Number(line.originalUnitPriceWithCurrency.amount) * 100) })) };
+      drafts.set(d.id, d);
+      return { draftOrderCreate: { draftOrder: renderDraft(d), userErrors: [] } };
+    },
+    PanelChargeInvoice: v => { const d = draftOf(v.id); if (d.status === 'OPEN') d.status = 'INVOICE_SENT'; invoices.push({ id: d.id, ...v.email }); return { draftOrderInvoiceSend: { draftOrder: { id: v.id, status: d.status }, userErrors: [] } }; },
+    PanelChargeDelete: v => { const d = draftOf(v.input.id); if (!d || d.status === 'COMPLETED') return { draftOrderDelete: { deletedId: null, userErrors: [userError('No se puede borrar')] } }; drafts.delete(d.id); return { draftOrderDelete: { deletedId: v.input.id, userErrors: [] } }; },
     PanelOrders: () => ({ orders: { nodes: [...state.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(order => render(order, 20)), pageInfo: { hasNextPage: false, endCursor: null } } }),
     PanelOrder: v => ({ order: find(v.id) ? render(find(v.id)) : null }),
     PanelOrderLines: v => ({ order: find(v.id) ? { id: v.id, lineItems: render(find(v.id), 100).lineItems } : null }),
@@ -229,7 +248,18 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
     return Response.json({ data });
   }
   return {
-    fetch: fetchImpl, calls, state,
+    fetch: fetchImpl, calls, state, drafts, invoices,
+    /** La clienta paga el borrador: Shopify crea un pedido con las etiquetas del borrador. */
+    payDraft(id) {
+      const d = drafts.get(String(id)); d.status = 'COMPLETED'; d.orderId = String(nextOrder++);
+      state.set(d.orderId, { id: d.orderId, name: `#${d.orderId}`, createdAt: clock(), email: d.email, phone: '', note: '', tags: [...d.tags], customer: { firstName: 'Clienta', lastName: 'Cobro' },
+        shipping: { title: 'Retiro en Fulshear', code: 'pickup', deliveryCategory: 'pick-up', cents: 0 }, gateway: 'shopify_payments', paid: true,
+        cancelledAt: null, refunds: [], fulfillments: [], refundedCents: 0, shippingRefunded: 0,
+        lines: d.lines.map((line, i) => ({ id: `${d.orderId}${i}`, title: line.title, variantTitle: null, sku: null, unitCents: line.cents, quantity: 1, current: 1, fulfilled: 0, variantId: null })) });
+      const order = state.get(d.orderId), total = totals(order).total;
+      Object.assign(order, { receivedCents: total, outstandingCents: 0, transactions: [{ id: `gid://shopify/OrderTransaction/${d.orderId}1`, kind: 'SALE', status: 'SUCCESS', gateway: 'shopify_payments', createdAt: clock(), cents: total }] });
+      return d.orderId;
+    },
     get moneyCalls() { return moneyCalls; },
     next(op, mode) { queue.push({ op, mode }); },
     runJobs(options) { for (const id of jobs.keys()) finishJob(id, options); },

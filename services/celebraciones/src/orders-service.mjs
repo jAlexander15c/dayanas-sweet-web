@@ -44,6 +44,8 @@ export function isPickup(order) {
   return /pick/i.test(line.deliveryCategory || '') || /retiro|pickup|pick up|recoger|fulshear/i.test(`${line.title || ''} ${line.code || ''}`);
 }
 const isCelebraciones = order => Array.isArray(order.tags) && order.tags.includes('ds-celebraciones');
+// Pedido pagado desde un cobro del panel: Shopify copia las etiquetas del borrador al pedido.
+const chargeKind = order => !Array.isArray(order.tags) || !order.tags.includes('ds-cobro') ? null : order.tags.includes('ds-tipo:cotizacion') ? 'cotizacion' : 'cobro';
 const activeFulfillments = order => (order.fulfillments || []).filter(f => !['CANCELLED', 'ERROR', 'FAILURE'].includes(f.status));
 function customerLabel(order, full = false) {
   const first = order.customer?.firstName?.trim() || '', last = order.customer?.lastName?.trim() || '';
@@ -416,7 +418,7 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
       id: numeric(order.id), name: order.name, customer: customerLabel(order), email: order.email || '', createdAt: order.createdAt,
       totalCents: cents(order.currentTotalPriceSet), outstandingCents: cents(order.totalOutstandingSet), refundedCents: optionalCents(order.totalRefundedSet),
       shippingCents: optionalCents(order.totalShippingPriceSet), financial: order.displayFinancialStatus, fulfillment: order.displayFulfillmentStatus,
-      delivery: pickup ? 'pickup' : 'shipping', shippingTitle: order.shippingLine?.title || null, stage: order.cancelledAt ? 'cancelado' : stageOf(order, ready), celebraciones: isCelebraciones(order),
+      delivery: pickup ? 'pickup' : 'shipping', shippingTitle: order.shippingLine?.title || null, stage: order.cancelledAt ? 'cancelado' : stageOf(order, ready), celebraciones: isCelebraciones(order), charge: chargeKind(order),
       cash: (order.paymentGatewayNames || []).some(name => gatewayLabel(name) === 'Efectivo'),
       items: lines.filter(line => line.currentQuantity > 0).map(line => ({ title: line.title, variantTitle: line.variantTitle || null, quantity: line.currentQuantity, unfulfilled: line.unfulfilledQuantity })),
       itemsTruncated: !!order.lineItems?.pageInfo?.hasNextPage,
@@ -457,7 +459,7 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
         const orders = nodes.map(order => summarize(order, !order.cancelledAt && ready.has(numeric(order.id))));
         const products = new Map(), variants = new Map(); let bakeOrders = 0;
         for (const order of orders) {
-          if (order.stage === 'entregado' || order.stage === 'cancelado' || order.celebraciones) continue;
+          if (order.stage === 'entregado' || order.stage === 'cancelado' || order.celebraciones || order.charge) continue;
           const pending = order.items.filter(item => item.unfulfilled > 0);
           if (!pending.length) continue;
           bakeOrders++;

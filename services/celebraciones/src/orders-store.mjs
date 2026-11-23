@@ -20,6 +20,9 @@ export function createOrdersStore(sql) {
   // Tables created before `progress` existed get the column once; a duplicate-column error means it is there.
   try { sql.run('ALTER TABLE order_operations ADD COLUMN progress TEXT'); } catch { /* already present */ }
   sql.run('CREATE INDEX IF NOT EXISTS order_operations_order ON order_operations (order_id, created_at)');
+  sql.run(`CREATE TABLE IF NOT EXISTS charge_records (
+    draft_id TEXT PRIMARY KEY, kind TEXT NOT NULL, total_cents INTEGER NOT NULL, concept TEXT NOT NULL,
+    state TEXT NOT NULL CHECK (state IN ('anulado','vencido')), at INTEGER NOT NULL)`);
   sql.run(`CREATE TABLE IF NOT EXISTS order_notes (
     order_id TEXT PRIMARY KEY, text TEXT NOT NULL, version INTEGER NOT NULL,
     staff_id TEXT NOT NULL, staff_name TEXT NOT NULL, updated_at INTEGER NOT NULL)`);
@@ -54,6 +57,12 @@ export function createOrdersStore(sql) {
       const rows = sql.all(`SELECT DISTINCT order_id FROM order_operations WHERE action = 'ready' AND state = 'succeeded' AND order_id IN (${orderIds.map(() => '?').join(',')})`, ...orderIds);
       return new Set(rows.map(row => row.order_id));
     },
+    recordCharge({ draftId, kind, totalCents, concept, state, at }) {
+      sql.run(`INSERT INTO charge_records (draft_id, kind, total_cents, concept, state, at) VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(draft_id) DO NOTHING`, draftId, kind, totalCents, String(concept).slice(0, 900), state, at);
+    },
+    chargeRecords: (limit = 50) => sql.all('SELECT * FROM charge_records ORDER BY at DESC LIMIT ?', limit)
+      .map(row => ({ id: row.draft_id, kind: row.kind, totalCents: row.total_cents, concept: row.concept, status: row.state, at: row.at })),
     getNote(orderId) {
       const row = sql.all('SELECT * FROM order_notes WHERE order_id = ?', orderId)[0];
       return row ? { text: row.text, version: row.version, staffName: row.staff_name, updatedAt: row.updated_at } : { text: '', version: 0, staffName: null, updatedAt: null };

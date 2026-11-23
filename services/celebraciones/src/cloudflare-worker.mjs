@@ -8,6 +8,7 @@ import { createShopifyAdminTransport, createShopifyPaymentClient } from './shopi
 import { createShopifyOrdersClient } from './orders-shopify.mjs';
 import { createOrdersStore, sqlFromStorage } from './orders-store.mjs';
 import { createOrdersService } from './orders-service.mjs';
+import { createChargesService } from './charges-service.mjs';
 import { createPaymentService } from './payment-service.mjs';
 import { createPaymentScheduler } from './payment-scheduler.mjs';
 import { createQuoteEmail, runQuoteEmailJobs } from './quote-email.mjs';
@@ -36,8 +37,13 @@ export class CelebrationStore extends DurableObject {
     let transport;
     try {transport=createShopifyAdminTransport({shop:env.SHOPIFY_SHOP,clientId:env.SHOPIFY_CLIENT_ID,secret:env.SHOPIFY_APP_SECRET});} catch {transport=undefined;}
     const shopifyClient=createShopifyPaymentClient({shop:env.SHOPIFY_SHOP,clientId:env.SHOPIFY_CLIENT_ID,secret:env.SHOPIFY_APP_SECRET,storefrontOrigin:env.STOREFRONT_ORIGIN,...(transport?{transport}:{})});
-    let ordersService;
-    try {ordersService=createOrdersService({client:createShopifyOrdersClient({transport}),store:createOrdersStore(sqlFromStorage(ctx.storage)),shop:env.SHOPIFY_SHOP});} catch {ordersService=undefined;}
+    let ordersService,chargesService;
+    try {
+      const ordersClient=createShopifyOrdersClient({transport}),ordersStore=createOrdersStore(sqlFromStorage(ctx.storage));
+      ordersService=createOrdersService({client:ordersClient,store:ordersStore,shop:env.SHOPIFY_SHOP});
+      chargesService=createChargesService({client:ordersClient,store:ordersStore});
+    } catch {ordersService=undefined;chargesService=undefined;}
+    this.chargesService=chargesService;
     const paymentService=env.PAYMENTS_ENABLED==='true'?createPaymentService({store:this.store,mode:env.PAYMENTS_MODE||'TEST',storefrontOrigin:env.STOREFRONT_ORIGIN,onDiagnostic:diagnostic=>console.warn('payment-diagnostic '+JSON.stringify(diagnostic)),client:shopifyClient}):undefined;
     let email=null,sendEmail=null;
     try {sendEmail=createResendTransport({apiKey:env.RESEND_API_KEY});email=createQuoteEmail({key:env.GUEST_ACCESS_KEY,storefrontOrigin:env.STOREFRONT_ORIGIN,send:sendEmail});} catch { /* Guest creation stays disabled until configured. */ }
@@ -51,7 +57,7 @@ export class CelebrationStore extends DurableObject {
         await runNotificationJobs({store:this.store,shop:env.SHOPIFY_SHOP,email,resolveCustomer:id=>shopifyClient.getCustomerContact(id)});
       }}:{})}):null;
     if(this.scheduler)ctx.blockConcurrencyWhile(()=>this.scheduler.ensure());
-    this.handlerOptions = { store: this.store, paymentService, ordersService,
+    this.handlerOptions = { store: this.store, paymentService, ordersService, chargesService,
       mailTest:env.GUEST_QA_ENABLED==='true'&&email?createAdminMailTest({storage:ctx.storage,lock:fn=>ctx.blockConcurrencyWhile(fn),send:sendEmail,transport:'resend'}):undefined,
       guestEmail:email?{seal:email.seal,wake:()=>this.scheduler.ensure()}:undefined, config: {
       guestEnabled: env.GUEST_ENABLED==='true' && email!==null,
@@ -86,6 +92,11 @@ export class CelebrationStore extends DurableObject {
     try{return await this.handler(request);}
     finally{await this.scheduler.end();}
   }
+  /** Cron: cotizaciones vencidas. */
+  async expireCharges(){
+    if(!configured(this.env)||this.env.EXTERNAL_STAFF_ENABLED!=='true'||!this.chargesService)return {expired:0};
+    return this.chargesService.expire();
+  }
   async alarm(){
     if(!configured(this.env)||!this.scheduler){await this.ctx.storage.deleteAlarm();return;}
     await this.scheduler.run();
@@ -102,6 +113,11 @@ export class StaffGateway extends WorkerEntrypoint {
 }
 
 export default {
+  async scheduled(event, env, ctx) {
+    if(!configured(env))return;
+    const id=env.CELEBRATIONS.idFromName(env.SHOPIFY_SHOP);
+    ctx.waitUntil(env.CELEBRATIONS.get(id).expireCharges());
+  },
   async fetch(request, env) {
     const path = new URL(request.url).pathname;
     if(request.method==='GET'){
