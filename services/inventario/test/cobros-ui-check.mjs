@@ -124,8 +124,37 @@ try {
   check('«Copiar enlace» copia el enlace de pago', copied === url && /invoices\/\d+$/.test(url), String(copied));
   await screenshots(page, 'enviado');
 
-  // Un cobro directo, que después se anula.
-  await page.getByRole('link', { name: 'Volver a Cobros' }).click();
+  // Revisión F6: tras «Reintentar», un rechazo definitivo (422 o 5xx con final:true) deja la hoja con «Cerrar» y Escape.
+  for (const [label, finalStatus] of [['422 tras 202', 422], ['502 final', 502]]) {
+    await page.getByRole('link', { name: 'Volver a Cobros' }).click().catch(() => {});
+    await page.evaluate(() => { location.hash = 'cobros/nuevo'; });
+    await page.getByRole('heading', { name: 'Nuevo cobro' }).waitFor();
+    await page.getByLabel('Nombre de la clienta').fill('Prueba Final');
+    await page.getByLabel('Correo').fill('final@ejemplo.com');
+    await page.getByLabel('Concepto').first().fill('Galletas');
+    await page.getByLabel('Monto').first().fill('20');
+    let posts = 0;
+    await page.route('**/api/pedidos/charges/create', route => {
+      posts++;
+      if (finalStatus === 422 && posts === 1) return route.fulfill({ status: 202, contentType: 'application/json', body: JSON.stringify({ code: 'PROCESSING', state: 'processing', message: 'Shopify todavía no confirma el cobro.' }) });
+      return route.fulfill({ status: finalStatus, contentType: 'application/json', body: JSON.stringify({ code: finalStatus === 422 ? 'VALIDATION' : 'REVIEW_REQUIRED', final: true, message: 'Rechazo definitivo de prueba.' }) });
+    });
+    await page.getByRole('button', { name: 'Revisar y enviar' }).click();
+    await sheet(page).getByLabel('Tu contraseña').fill(password);
+    await sheet(page).getByRole('button', { name: /^Enviar cobro/ }).click();
+    if (finalStatus === 422) await sheet(page).getByRole('button', { name: 'Reintentar' }).click();
+    await sheet(page).getByText('Rechazo definitivo de prueba.').waitFor();
+    const state = await page.evaluate(() => ({ close: [...document.querySelectorAll('#cobros-sheet button')].filter(b => !b.hidden && b.getClientRects().length).map(b => b.textContent) }));
+    check(`F6 ${label}: queda solo «Cerrar», sin reintentar`, JSON.stringify(state.close) === '["Cerrar"]', JSON.stringify(state));
+    await page.keyboard.press('Escape');
+    check(`F6 ${label}: Escape cierra la hoja`, await page.locator('#cobros-sheet').evaluate(d => !d.open));
+    await page.unroute('**/api/pedidos/charges/create');
+    check(`F6 ${label}: ${finalStatus === 422 ? 'dos envíos (202 y rechazo)' : 'un solo envío'}`, posts === (finalStatus === 422 ? 2 : 1), String(posts));
+  }
+
+  // Un cobro directo cuyo correo no se pudo confirmar (y que después se anula).
+  await worker.fetch('/__test/pedidos-next?op=PanelChargeInvoice&mode=down');
+  await page.evaluate(() => { location.hash = 'cobros'; });
   await page.locator('.cobro-card', { hasText: 'Mariela Vera' }).waitFor();
   await page.getByRole('button', { name: 'Nuevo cobro', exact: true }).click();
   await page.getByRole('heading', { name: 'Nuevo cobro' }).waitFor();
@@ -138,6 +167,8 @@ try {
   await sheet(page).getByLabel('Tu contraseña').fill(password);
   await sheet(page).getByRole('button', { name: 'Enviar cobro $40.00' }).click();
   await page.getByRole('heading', { name: 'Cobro enviado' }).waitFor();
+  check('correo sin confirmar: lo avisa y ofrece el enlace', /No pudimos confirmar que el correo salió/.test(await view(page).textContent()) && await page.getByRole('button', { name: 'Copiar enlace' }).isVisible());
+  check('correo sin confirmar: nunca se reenvía', (await shop()).invoices.filter(item => item.to === 'carlos@ejemplo.com').length === 0);
   await page.getByRole('link', { name: 'Volver a Cobros' }).click();
   await page.locator('.cobro-card', { hasText: 'Carlos Ruiz' }).waitFor();
   check('lista: dos cobros abiertos', await page.locator('.cobro-card').count() === 2 && /Abiertos \(2\)/.test(await view(page).textContent()));

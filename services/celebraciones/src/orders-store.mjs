@@ -23,6 +23,9 @@ export function createOrdersStore(sql) {
   sql.run(`CREATE TABLE IF NOT EXISTS charge_records (
     draft_id TEXT PRIMARY KEY, kind TEXT NOT NULL, total_cents INTEGER NOT NULL, concept TEXT NOT NULL,
     state TEXT NOT NULL CHECK (state IN ('anulado','vencido')), at INTEGER NOT NULL)`);
+  // Pedido que salió de un cobro pagado (draftOrder.order): así se reconoce aunque no lleve las etiquetas.
+  sql.run(`CREATE TABLE IF NOT EXISTS charge_orders (
+    order_id TEXT PRIMARY KEY, draft_id TEXT NOT NULL, kind TEXT NOT NULL CHECK (kind IN ('cobro','cotizacion')), at INTEGER NOT NULL)`);
   sql.run(`CREATE TABLE IF NOT EXISTS order_notes (
     order_id TEXT PRIMARY KEY, text TEXT NOT NULL, version INTEGER NOT NULL,
     staff_id TEXT NOT NULL, staff_name TEXT NOT NULL, updated_at INTEGER NOT NULL)`);
@@ -60,6 +63,14 @@ export function createOrdersStore(sql) {
     recordCharge({ draftId, kind, totalCents, concept, state, at }) {
       sql.run(`INSERT INTO charge_records (draft_id, kind, total_cents, concept, state, at) VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(draft_id) DO NOTHING`, draftId, kind, totalCents, String(concept).slice(0, 900), state, at);
+    },
+    linkChargeOrder({ orderId, draftId, kind, at }) {
+      sql.run('INSERT INTO charge_orders (order_id, draft_id, kind, at) VALUES (?, ?, ?, ?) ON CONFLICT(order_id) DO NOTHING', orderId, draftId, kind, at);
+    },
+    chargeOrderKinds(orderIds) {
+      if (!orderIds.length) return new Map();
+      const rows = sql.all(`SELECT order_id, kind FROM charge_orders WHERE order_id IN (${orderIds.map(() => '?').join(',')})`, ...orderIds);
+      return new Map(rows.map(row => [row.order_id, row.kind]));
     },
     chargeRecords: (limit = 50) => sql.all('SELECT * FROM charge_records ORDER BY at DESC LIMIT ?', limit)
       .map(row => ({ id: row.draft_id, kind: row.kind, totalCents: row.total_cents, concept: row.concept, status: row.state, at: row.at })),

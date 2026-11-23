@@ -45,7 +45,8 @@ export function isPickup(order) {
 }
 const isCelebraciones = order => Array.isArray(order.tags) && order.tags.includes('ds-celebraciones');
 // Pedido pagado desde un cobro del panel: Shopify copia las etiquetas del borrador al pedido.
-const chargeKind = order => !Array.isArray(order.tags) || !order.tags.includes('ds-cobro') ? null : order.tags.includes('ds-tipo:cotizacion') ? 'cotizacion' : 'cobro';
+// Cobro del panel: por sus etiquetas (heredadas del borrador) o, si faltan, por la relación borrador → pedido que guarda Cobros.
+const chargeTag = order => !Array.isArray(order.tags) || !order.tags.includes('ds-cobro') ? null : order.tags.includes('ds-tipo:cotizacion') ? 'cotizacion' : 'cobro';
 const activeFulfillments = order => (order.fulfillments || []).filter(f => !['CANCELLED', 'ERROR', 'FAILURE'].includes(f.status));
 function customerLabel(order, full = false) {
   const first = order.customer?.firstName?.trim() || '', last = order.customer?.lastName?.trim() || '';
@@ -412,13 +413,15 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
     return attempt(def, operation);
   }
 
-  function summarize(order, ready) {
+  const linkedCharges = ids => store.chargeOrderKinds?.(ids) || new Map();
+  const chargeKind = (order, linked = linkedCharges([numeric(order.id)])) => chargeTag(order) || linked.get(numeric(order.id)) || null;
+  function summarize(order, ready, linked) {
     const pickup = isPickup(order), lines = order.lineItems?.nodes || [];
     return {
       id: numeric(order.id), name: order.name, customer: customerLabel(order), email: order.email || '', createdAt: order.createdAt,
       totalCents: cents(order.currentTotalPriceSet), outstandingCents: cents(order.totalOutstandingSet), refundedCents: optionalCents(order.totalRefundedSet),
       shippingCents: optionalCents(order.totalShippingPriceSet), financial: order.displayFinancialStatus, fulfillment: order.displayFulfillmentStatus,
-      delivery: pickup ? 'pickup' : 'shipping', shippingTitle: order.shippingLine?.title || null, stage: order.cancelledAt ? 'cancelado' : stageOf(order, ready), celebraciones: isCelebraciones(order), charge: chargeKind(order),
+      delivery: pickup ? 'pickup' : 'shipping', shippingTitle: order.shippingLine?.title || null, stage: order.cancelledAt ? 'cancelado' : stageOf(order, ready), celebraciones: isCelebraciones(order), charge: chargeKind(order, linked),
       cash: (order.paymentGatewayNames || []).some(name => gatewayLabel(name) === 'Efectivo'),
       items: lines.filter(line => line.currentQuantity > 0).map(line => ({ title: line.title, variantTitle: line.variantTitle || null, quantity: line.currentQuantity, unfulfilled: line.unfulfilledQuantity })),
       itemsTruncated: !!order.lineItems?.pageInfo?.hasNextPage,
@@ -456,7 +459,8 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
         // Cancelled orders come back as stage 'cancelado' (panel history only): never baked, packed or counted as active.
         const open = nodes.filter(order => !order.cancelledAt);
         const ready = store.readyOrders(open.map(order => numeric(order.id)));
-        const orders = nodes.map(order => summarize(order, !order.cancelledAt && ready.has(numeric(order.id))));
+        const linked = linkedCharges(nodes.map(order => numeric(order.id)));
+        const orders = nodes.map(order => summarize(order, !order.cancelledAt && ready.has(numeric(order.id)), linked));
         const products = new Map(), variants = new Map(); let bakeOrders = 0;
         for (const order of orders) {
           if (order.stage === 'entregado' || order.stage === 'cancelado' || order.celebraciones || order.charge) continue;

@@ -61,8 +61,12 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
   let moneyCalls = 0;
   const calc = new Map();
   // Pedidos borrador de los cobros del panel.
-  const drafts = new Map(), invoices = [];
-  let nextDraft = 700, nextOrder = 1100;
+  // unindexed: borradores que el índice de búsqueda todavía no ve (draftOrders con query); la lectura sin query sí los ve.
+  const drafts = new Map(), invoices = [], unindexed = new Set();
+  let nextDraft = 700, nextOrder = 1100, updateSeq = 100000, payHook = () => {};
+  const page = (list, first, after) => { const start = after ? Number(after) : 0; const more = start + first < list.length; return { nodes: list.slice(start, start + first).map(renderDraft), pageInfo: { hasNextPage: more, endCursor: more ? String(start + first) : null } }; };
+  // Más recientes primero; un borrador cambia su updatedAt al facturarlo o pagarlo.
+  const byUpdate = () => [...drafts.values()].sort((a, b) => (b.updatedSeq ?? Number(b.id)) - (a.updatedSeq ?? Number(a.id)) || Number(b.id) - Number(a.id));
   const renderDraft = d => ({ id: `gid://shopify/DraftOrder/${d.id}`, name: `#D${d.id}`, status: d.status, invoiceUrl: `https://shop.test/invoices/${d.id}`, email: d.email,
     createdAt: d.createdAt, tags: d.tags, order: d.orderId ? { id: `gid://shopify/Order/${d.orderId}`, name: `#${d.orderId}` } : null, customAttributes: d.customAttributes,
     totalPriceSet: money(d.lines.reduce((sum, line) => sum + line.cents, 0)), lineItems: { nodes: d.lines.map(line => ({ title: line.title, quantity: 1 })) } });
@@ -119,8 +123,9 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
   const userError = message => ({ field: null, message, code: 'INVALID' });
 
   const handlers = {
-    PanelCharges: v => ({ draftOrders: { nodes: [...drafts.values()].filter(d => v.query.includes('ds-cobro') && d.tags.includes('ds-cobro')).reverse().map(renderDraft) } }),
-    PanelChargeByOperation: v => { const op = /ds-operation:([a-f0-9-]+)/.exec(v.query)?.[1]; return { draftOrders: { nodes: [...drafts.values()].filter(d => d.tags.includes(`ds-operation:${op}`)).map(renderDraft) } }; },
+    PanelCharges: v => ({ draftOrders: page(byUpdate().filter(d => v.query.includes('ds-cobro') && d.tags.includes('ds-cobro') && !unindexed.has(d.id)), 50, v.after) }),
+    PanelRecentDrafts: () => ({ draftOrders: page([...drafts.values()].sort((a, b) => Number(b.id) - Number(a.id)), 50, null) }),
+    PanelChargeByOperation: v => { const op = /ds-operation:([a-f0-9-]+)/.exec(v.query)?.[1]; return { draftOrders: { nodes: [...drafts.values()].filter(d => d.tags.includes(`ds-operation:${op}`) && !unindexed.has(d.id)).map(renderDraft) } }; },
     PanelCharge: v => ({ draftOrder: draftOf(v.id) ? renderDraft(draftOf(v.id)) : null }),
     PanelChargeCreate: v => {
       const d = { id: String(nextDraft++), status: 'OPEN', email: v.input.email, createdAt: clock(), tags: v.input.tags, customAttributes: v.input.customAttributes, input: v.input,
@@ -128,8 +133,8 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
       drafts.set(d.id, d);
       return { draftOrderCreate: { draftOrder: renderDraft(d), userErrors: [] } };
     },
-    PanelChargeInvoice: v => { const d = draftOf(v.id); if (d.status === 'OPEN') d.status = 'INVOICE_SENT'; invoices.push({ id: d.id, ...v.email }); return { draftOrderInvoiceSend: { draftOrder: { id: v.id, status: d.status }, userErrors: [] } }; },
-    PanelChargeDelete: v => { const d = draftOf(v.input.id); if (!d || d.status === 'COMPLETED') return { draftOrderDelete: { deletedId: null, userErrors: [userError('No se puede borrar')] } }; drafts.delete(d.id); return { draftOrderDelete: { deletedId: v.input.id, userErrors: [] } }; },
+    PanelChargeInvoice: v => { const d = draftOf(v.id); if (d.status === 'OPEN') { d.status = 'INVOICE_SENT'; d.updatedSeq = ++updateSeq; } invoices.push({ id: d.id, ...v.email }); return { draftOrderInvoiceSend: { draftOrder: { id: v.id, status: d.status }, userErrors: [] } }; },
+    PanelChargeDelete: (v, mode) => { const d = draftOf(v.input.id); if (d && mode === 'pay-first' && d.status !== 'COMPLETED') payHook(d.id); if (!d) return { draftOrderDelete: { deletedId: null, userErrors: [userError('No se puede borrar')] } }; drafts.delete(d.id); return { draftOrderDelete: { deletedId: v.input.id, userErrors: [] } }; },
     PanelOrders: () => ({ orders: { nodes: [...state.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(order => render(order, 20)), pageInfo: { hasNextPage: false, endCursor: null } } }),
     PanelOrder: v => ({ order: find(v.id) ? render(find(v.id)) : null }),
     PanelOrderLines: v => ({ order: find(v.id) ? { id: v.id, lineItems: render(find(v.id), 100).lineItems } : null }),
@@ -247,12 +252,12 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
     if (mode === 'lost') throw new TypeError('response lost after Shopify applied it');
     return Response.json({ data });
   }
-  return {
-    fetch: fetchImpl, calls, state, drafts, invoices,
+  const api = {
+    fetch: fetchImpl, calls, state, drafts, invoices, unindexed,
     /** La clienta paga el borrador: Shopify crea un pedido con las etiquetas del borrador. */
-    payDraft(id) {
-      const d = drafts.get(String(id)); d.status = 'COMPLETED'; d.orderId = String(nextOrder++);
-      state.set(d.orderId, { id: d.orderId, name: `#${d.orderId}`, createdAt: clock(), email: d.email, phone: '', note: '', tags: [...d.tags], customer: { firstName: 'Clienta', lastName: 'Cobro' },
+    payDraft(id, { copyTags = true } = {}) {
+      const d = drafts.get(String(id)); d.status = 'COMPLETED'; d.orderId = String(nextOrder++); d.updatedSeq = ++updateSeq;
+      state.set(d.orderId, { id: d.orderId, name: `#${d.orderId}`, createdAt: clock(), email: d.email, phone: '', note: '', tags: copyTags ? [...d.tags] : [], customer: { firstName: 'Clienta', lastName: 'Cobro' },
         shipping: { title: 'Retiro en Fulshear', code: 'pickup', deliveryCategory: 'pick-up', cents: 0 }, gateway: 'shopify_payments', paid: true,
         cancelledAt: null, refunds: [], fulfillments: [], refundedCents: 0, shippingRefunded: 0,
         lines: d.lines.map((line, i) => ({ id: `${d.orderId}${i}`, title: line.title, variantTitle: null, sku: null, unitCents: line.cents, quantity: 1, current: 1, fulfilled: 0, variantId: null })) });
@@ -269,4 +274,6 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
     count: op => calls.filter(name => name === op).length,
     isMoneyOp: op => MONEY_OPS.has(op),
   };
+  payHook = id => api.payDraft(id);
+  return api;
 }

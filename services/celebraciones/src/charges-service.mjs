@@ -2,22 +2,36 @@
 // Cada cobro es un pedido borrador de Shopify con líneas personalizadas (sin stock, sin envío)
 // y su factura (draftOrderInvoiceSend), que es el correo con el botón para pagar. Al pagarlo,
 // Shopify lo convierte en un pedido normal. Nunca se usa draftOrderComplete.
-// Crear y anular son idempotentes por operationId: el borrador lleva la etiqueta
-// ds-operation:<id> y un reintento lo busca antes de crear otro. No guarda nombres ni correos.
+//
+// Idempotencia (crear): el borrador lleva la etiqueta ds-operation:<id>. En cuanto Shopify devuelve
+// su ID, queda guardado y todo reintento lo lee por ID: nunca se crea otro. Si la creación quedó sin
+// respuesta, se busca por etiqueta y en la lectura directa de los borradores más nuevos (que no
+// depende del índice de búsqueda); solo se vuelve a crear cuando, pasado CREATE_SETTLE_MS, esa
+// lectura cubre todo lo creado desde el intento y el borrador no está.
+// La factura (el correo) se envía una sola vez: la intención queda guardada antes de llamar a
+// Shopify y un reintento nunca la repite. Si no se pudo confirmar, el cobro igual existe y la
+// pantalla pide mandar el enlace por WhatsApp.
+// Privacidad: el nombre y el correo solo viajan a Shopify. El recibo guardado no los lleva; una
+// repetición los vuelve a leer de Shopify.
 import { cents, decimal, orderError } from './orders-shopify.mjs';
 
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const EMAIL = /^[^\s@<>()[\],;:"]{1,64}@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i;
 const DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 export const CHARGE_LIMITS = Object.freeze({ lines: 10, minCents: 100, maxCents: 500_000, maxDays: 60, title: 80, name: 80, message: 500 });
-// Tras un intento de creación sin respuesta, la búsqueda por etiqueta de Shopify puede tardar en
-// ver el borrador: durante este tiempo un reintento espera en vez de crear otro.
-export const CREATE_SETTLE_MS = 60_000;
+// Tras un intento de creación sin respuesta, una solicitud que llegó tarde a Shopify puede seguir en
+// curso: durante este plazo un reintento espera. Pasado el plazo ya no puede estar en curso.
+export const CREATE_SETTLE_MS = 5 * 60_000;
+// Margen para relojes distintos al comparar createdAt de Shopify con el momento del intento.
+const CLOCK_SKEW_MS = 2 * 60_000;
+// El cron recorre como mucho estas páginas de 50 cobros por hora.
+const EXPIRE_PAGES = 40;
 const KINDS = { cobro: 'Cobro', cotizacion: 'Cotización' };
 
 const bad = message => orderError(422, 'VALIDATION', message);
 const usd = value => `$${(value / 100).toFixed(2)}`;
 const numeric = gid => String(gid || '').split('/').pop();
+const draftGid = id => `gid://shopify/DraftOrder/${numeric(id)}`;
 const tagValue = (tags, prefix) => (tags || []).find(tag => tag.startsWith(prefix))?.slice(prefix.length) ?? null;
 
 /** Fecha local (YYYY-MM-DD) de la tienda, en Houston. */
@@ -40,7 +54,15 @@ const text = (value, max, label) => {
   return clean;
 };
 
-export function validateCharge(body, today) {
+/** El vencimiento de una cotización va de mañana a CHARGE_LIMITS.maxDays días, contado desde `today`. */
+export function checkExpiry(params, today) {
+  if (params.kind !== 'cotizacion') return;
+  const days = dayNumber(params.expiresOn) - dayNumber(today);
+  if (days < 1 || days > CHARGE_LIMITS.maxDays) throw bad(`La cotización vale desde mañana hasta ${CHARGE_LIMITS.maxDays} días.`);
+}
+
+/** Valida la forma del cobro. Con `today`, también el rango del vencimiento (solo para una operación nueva). */
+export function validateCharge(body, today = null) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw bad('Datos inválidos.');
   if (!Object.hasOwn(KINDS, body.kind)) throw bad('Elige si es un cobro o una cotización.');
   const name = text(body.name, CHARGE_LIMITS.name, 'el nombre de la clienta');
@@ -56,8 +78,6 @@ export function validateCharge(body, today) {
   let expiresOn = null;
   if (body.kind === 'cotizacion') {
     if (!validDay(body.expiresOn)) throw bad('Elige hasta qué día vale la cotización.');
-    const days = dayNumber(body.expiresOn) - dayNumber(today);
-    if (days < 1 || days > CHARGE_LIMITS.maxDays) throw bad(`La cotización vale desde mañana hasta ${CHARGE_LIMITS.maxDays} días.`);
     expiresOn = body.expiresOn;
   } else if (body.expiresOn != null) throw bad('Un cobro directo no vence.');
   let message = '';
@@ -66,7 +86,9 @@ export function validateCharge(body, today) {
     message = body.message.trim();
     if (message.length > CHARGE_LIMITS.message) throw bad(`El mensaje es demasiado largo (máximo ${CHARGE_LIMITS.message} caracteres).`);
   }
-  return { kind: body.kind, name, email, lines, expiresOn, message, totalCents: lines.reduce((sum, line) => sum + line.cents, 0) };
+  const params = { kind: body.kind, name, email, lines, expiresOn, message, totalCents: lines.reduce((sum, line) => sum + line.cents, 0) };
+  if (today) checkExpiry(params, today);
+  return params;
 }
 
 export function createChargesService({ client, store, now = () => Date.now(), timeZone = 'America/Chicago' }) {
@@ -74,11 +96,12 @@ export function createChargesService({ client, store, now = () => Date.now(), ti
   let tail = Promise.resolve();
   const serial = fn => { const run = tail.then(fn, fn); tail = run.catch(() => {}); return run; };
   const failure = error => {
-    if (error?.uncertain) return { status: 502, body: { code: 'REVIEW_REQUIRED', state: 'uncertain', message: 'No pudimos confirmar si Shopify lo recibió. Toca «Reintentar»: el panel revisa y no lo repite.' } };
+    if (error?.uncertain) return { status: 502, body: { code: 'REVIEW_REQUIRED', state: 'uncertain', message: error.message && error.code === 'REVIEW_REQUIRED' && error.message !== 'Shopify no confirmó el cambio.' ? error.message : 'No pudimos confirmar si Shopify lo recibió. Toca «Reintentar»: el panel revisa y no lo repite.' } };
     if (Number.isInteger(error?.status) && typeof error?.code === 'string') return { status: error.status, body: { code: error.code, message: error.message } };
     return { status: 503, body: { code: 'UNAVAILABLE', message: 'Cobros no respondió. Inténtalo en unos segundos.' } };
   };
-  const final = response => (response.status >= 400 && response.body?.state !== 'uncertain' && response.body?.state !== 'processing') ? { ...response, body: { ...response.body, final: true } } : response;
+  const isPending = response => response.status === 202 || response.body?.state === 'uncertain' || response.status === 503;
+  const final = response => (response.status >= 400 && !isPending(response)) ? { ...response, body: { ...response.body, final: true } } : response;
   const today = () => localDay(now(), timeZone);
 
   function view(draft) {
@@ -98,62 +121,121 @@ export function createChargesService({ client, store, now = () => Date.now(), ti
     };
   }
   const isCharge = draft => Array.isArray(draft?.tags) && draft.tags.includes('ds-cobro');
+  /** Pedido pagado: se guarda la relación borrador → pedido para reconocerlo en Pedidos aunque no herede etiquetas. */
+  const linkPaid = draft => {
+    if (draft?.status !== 'COMPLETED' || !draft.order?.id || !isCharge(draft)) return;
+    store.linkChargeOrder({ orderId: numeric(draft.order.id), draftId: numeric(draft.id), kind: view(draft).kind, at: now() });
+  };
 
-  async function invoice(draft, params) {
-    if (draft.status !== 'OPEN') return draft;
-    const label = params.kind === 'cotizacion' ? 'cotización' : 'cobro';
-    const lines = [params.message, params.expiresOn ? `Esta cotización vale hasta el ${longDay(params.expiresOn)}.` : ''].filter(Boolean);
-    await client.sendChargeInvoice(draft.id, { to: params.email, subject: `Tu ${label} de Dayana's Sweet`, ...(lines.length ? { customMessage: lines.join('\n\n') } : {}) });
-    const sent = await client.chargeDraft(draft.id);
-    if (!sent || sent.status === 'OPEN') throw orderError(502, 'REVIEW_REQUIRED', 'Shopify no confirmó el envío del correo.', { uncertain: true });
-    return sent;
+  // ---------- Recibos sin datos de contacto ----------
+  /** Lo que se guarda del resultado: sin nombre, correo, conceptos, enlace ni mensajes de Shopify. */
+  function redact(response) {
+    const body = { ...response.body };
+    if (body.charge) body.charge = { id: body.charge.id, kind: body.charge.kind, status: body.charge.status, totalCents: body.charge.totalCents, expiresOn: body.charge.expiresOn, orderId: body.charge.orderId };
+    if (body.code === 'SHOPIFY_REJECTED') body.message = 'Shopify no aceptó el cobro. Revisa los datos y vuelve a intentarlo.';
+    return { ...response, body };
+  }
+  /** Una repetición vuelve a leer el cobro en Shopify para mostrar el enlace; si ya no existe, queda el recibo. */
+  async function rehydrate(response) {
+    if (!response?.body?.charge?.id) return response;
+    try {
+      const draft = await client.chargeDraft(draftGid(response.body.charge.id));
+      if (draft && isCharge(draft)) return { ...response, body: { ...response.body, charge: view(draft) } };
+    } catch { /* se responde con el recibo guardado */ }
+    return response;
   }
 
-  async function attemptCreate(operationId, params, progress) {
-    let [draft] = await client.chargesByOperation(operationId);
-    if (!draft) {
-      if (progress.createdAt && now() - progress.createdAt < CREATE_SETTLE_MS)
-        return { status: 202, body: { code: 'PROCESSING', state: 'processing', message: 'Shopify todavía está creando el cobro. Espera un minuto y toca «Reintentar»: el panel revisa y no lo repite.' } };
-      store.progress(operationId, { createdAt: now() }, now());
-      draft = await client.createCharge({
-        email: params.email, presentmentCurrencyCode: 'USD', taxExempt: false, useCustomerDefaultAddress: false,
-        acceptAutomaticDiscounts: false, allowDiscountCodesInCheckout: false,
-        lineItems: params.lines.map(line => ({ title: line.title, quantity: 1, originalUnitPriceWithCurrency: { amount: decimal(line.cents), currencyCode: 'USD' }, taxable: false, requiresShipping: false })),
-        tags: ['ds-cobro', `ds-tipo:${params.kind}`, ...(params.expiresOn ? [`ds-vence:${params.expiresOn}`] : []), `ds-operation:${operationId}`],
-        customAttributes: [{ key: 'Clienta', value: params.name }],
-        note: `${KINDS[params.kind]} desde el panel`,
-      });
-    }
-    if (!isCharge(draft) || cents(draft.totalPriceSet) !== params.totalCents) throw orderError(502, 'REVIEW_REQUIRED', 'El cobro quedó distinto en Shopify. Revísalo en Shopify antes de repetir.');
-    if (draft.status === 'COMPLETED') return { status: 200, body: { charge: view(draft) } };
-    draft = await invoice(draft, params);
-    return { status: 200, body: { charge: view(draft) } };
-  }
-
-  async function run(operationId, action, params, staff, perform) {
+  async function run(operationId, action, params, staff, perform, { onNew = () => {} } = {}) {
     const fingerprint = await digest({ action, params });
     return serial(async () => {
       try {
         const previous = store.getOperation(operationId);
         if (previous && previous.fingerprint !== fingerprint) throw orderError(409, 'OPERATION_REUSED', 'Esta clave ya se usó para otro cobro. Cierra y vuelve a intentarlo.');
-        if (previous && previous.state !== 'pending') return previous.response;
-        if (!previous) store.begin({ operationId, action, orderId: 'cobro', fingerprint, plan: { kind: params.kind ?? null, totalCents: params.totalCents ?? null }, staffId: staff.staffId, staffName: staff.staffName, amountCents: params.totalCents ?? null, summary: params.summary, at: now() });
+        if (previous && previous.state !== 'pending') return rehydrate(previous.response);
+        // Las reglas que dependen del día (vencimiento) solo valen al empezar una operación nueva:
+        // un reintento de la misma clave al día siguiente concilia lo que ya se hizo.
+        if (!previous) {
+          onNew();
+          store.begin({ operationId, action, orderId: 'cobro', fingerprint, plan: { kind: params.kind ?? null, totalCents: params.totalCents ?? null }, staffId: staff.staffId, staffName: staff.staffName, amountCents: params.totalCents ?? null, summary: params.summary, at: now() });
+        }
         let response;
         try { response = await perform(previous?.progress || {}); }
         catch (error) { response = failure(error); }
-        const pending = response.status === 202 || response.body?.state === 'uncertain' || response.status === 503;
-        if (!pending) store.finish(operationId, { state: response.status < 400 ? 'succeeded' : 'failed', response: final(response), at: now() });
-        return final(response);
+        const result = final(response);
+        if (!isPending(response)) store.finish(operationId, { state: response.status < 400 ? 'succeeded' : 'failed', response: redact(result), at: now() });
+        return result;
       } catch (error) { return final(failure(error)); }
     });
   }
 
-  /** Lee el borrador y lo borra si sigue sin pagar. onRead guarda lo que hace falta para el registro antes de borrar. */
+  // ---------- Crear ----------
+  /** Busca el borrador de una operación: por etiqueta y en la lectura directa de los más nuevos. */
+  async function findByOperation(operationId, since) {
+    const tag = `ds-operation:${operationId}`;
+    const [byTag] = await client.chargesByOperation(operationId);
+    if (byTag) return { draft: byTag, covered: true };
+    const recent = await client.recentDrafts();
+    const draft = recent.nodes.find(node => Array.isArray(node.tags) && node.tags.includes(tag));
+    if (draft) return { draft, covered: true };
+    // La lectura prueba la ausencia solo si llega hasta antes del intento (o si no hay más borradores).
+    const oldest = recent.nodes.length ? Math.min(...recent.nodes.map(node => Date.parse(node.createdAt) || Infinity)) : Infinity;
+    return { draft: null, covered: !recent.hasNextPage || oldest < since - CLOCK_SKEW_MS };
+  }
+
+  async function attemptCreate(operationId, params, progress) {
+    let draft;
+    if (progress.draftId) {
+      draft = await client.chargeDraft(draftGid(progress.draftId));
+      if (!draft) throw orderError(409, 'CHARGE_GONE', 'Este cobro ya no está en Shopify: se anuló o venció. Revisa la lista de Cobros.');
+    } else {
+      if (progress.createdAt) {
+        const found = await findByOperation(operationId, progress.createdAt);
+        draft = found.draft;
+        if (!draft && now() - progress.createdAt < CREATE_SETTLE_MS)
+          return { status: 202, body: { code: 'PROCESSING', state: 'processing', message: 'Shopify todavía no confirma el cobro. Espera unos minutos y toca «Reintentar»: el panel revisa y no lo repite.' } };
+        if (!draft && !found.covered)
+          throw orderError(502, 'REVIEW_REQUIRED', 'No pudimos comprobar si el cobro se creó. Revisa los borradores en Shopify antes de repetirlo.', { uncertain: true });
+      }
+      if (!draft) {
+        store.progress(operationId, { createdAt: now() }, now());
+        draft = await client.createCharge({
+          email: params.email, presentmentCurrencyCode: 'USD', taxExempt: false, useCustomerDefaultAddress: false,
+          acceptAutomaticDiscounts: false, allowDiscountCodesInCheckout: false,
+          lineItems: params.lines.map(line => ({ title: line.title, quantity: 1, originalUnitPriceWithCurrency: { amount: decimal(line.cents), currencyCode: 'USD' }, taxable: false, requiresShipping: false })),
+          tags: ['ds-cobro', `ds-tipo:${params.kind}`, ...(params.expiresOn ? [`ds-vence:${params.expiresOn}`] : []), `ds-operation:${operationId}`],
+          customAttributes: [{ key: 'Clienta', value: params.name }],
+          note: `${KINDS[params.kind]} desde el panel`,
+        });
+      }
+      // Desde aquí el cobro existe: todo reintento lo lee por su ID.
+      store.progress(operationId, { draftId: numeric(draft.id) }, now());
+    }
+    if (!isCharge(draft) || cents(draft.totalPriceSet) !== params.totalCents) throw orderError(502, 'REVIEW_REQUIRED', 'El cobro quedó distinto en Shopify. Revísalo en Shopify antes de repetir.');
+    if (draft.status === 'COMPLETED') { linkPaid(draft); return { status: 200, body: { charge: view(draft), email: 'sent' } }; }
+    // La factura se intenta una sola vez por operación: draftOrderInvoiceSend no tiene clave de idempotencia
+    // y una solicitud sin respuesta puede seguir en curso. La intención queda guardada antes de llamar.
+    if (draft.status === 'OPEN' && !progress.invoiceAt) {
+      store.progress(operationId, { invoiceAt: now() }, now());
+      const label = params.kind === 'cotizacion' ? 'cotización' : 'cobro';
+      const lines = [params.message, params.expiresOn ? `Esta cotización vale hasta el ${longDay(params.expiresOn)}.` : ''].filter(Boolean);
+      try { await client.sendChargeInvoice(draft.id, { to: params.email, subject: `Tu ${label} de Dayana's Sweet`, ...(lines.length ? { customMessage: lines.join('\n\n') } : {}) }); }
+      catch { /* sin confirmar: el cobro existe y la pantalla pide mandar el enlace */ }
+      draft = await client.chargeDraft(draft.id) || draft;
+    }
+    return { status: 200, body: { charge: view(draft), email: draft.status === 'OPEN' ? 'unconfirmed' : 'sent' } };
+  }
+
+  // ---------- Anular y vencer ----------
+  /**
+   * Lee el borrador y lo borra si sigue sin pagar. onRead guarda lo que hace falta para el registro antes de borrar.
+   * Shopify no tiene un borrado condicional: si la clienta paga entre la lectura y el borrado (milisegundos), el
+   * pedido pagado se conserva y aparece en Pedidos; solo el registro local diría «anulado» o «vencido».
+   */
   async function removeDraft(id, onRead = () => {}) {
-    const draft = await client.chargeDraft(`gid://shopify/DraftOrder/${id}`);
+    const draft = await client.chargeDraft(draftGid(id));
     if (!draft) return null;
     if (!isCharge(draft)) throw orderError(404, 'NOT_FOUND', 'No encontramos ese cobro.');
-    if (draft.status === 'COMPLETED') throw orderError(409, 'CHARGE_PAID', 'Este cobro ya está pagado: ahora es un pedido. Si hace falta, reembólsalo desde Pedidos.');
+    if (draft.status === 'COMPLETED') { linkPaid(draft); throw orderError(409, 'CHARGE_PAID', 'Este cobro ya está pagado: ahora es un pedido. Si hace falta, reembólsalo desde Pedidos.'); }
     const shown = view(draft);
     const record = { kind: shown.kind, totalCents: shown.totalCents, concept: shown.concept };
     onRead(record);
@@ -166,8 +248,10 @@ export function createChargesService({ client, store, now = () => Date.now(), ti
   return Object.freeze({
     async list() {
       try {
-        const drafts = (await client.chargeDrafts()).filter(isCharge).map(view);
-        return { status: 200, body: { charges: drafts, closed: store.chargeRecords(50), today: today() } };
+        const page = await client.chargeDrafts();
+        const drafts = page.nodes.filter(isCharge);
+        for (const draft of drafts) linkPaid(draft);
+        return { status: 200, body: { charges: drafts.map(view), closed: store.chargeRecords(50), today: today(), complete: !page.hasNextPage } };
       } catch (error) { return failure(error); }
     },
     async create(body, staff) {
@@ -176,10 +260,10 @@ export function createChargesService({ client, store, now = () => Date.now(), ti
       try {
         if (!UUID.test(body?.operationId || '')) throw bad('Falta la clave de la operación.');
         operationId = body.operationId.toLowerCase();
-        params = validateCharge({ ...body, operationId: undefined }, today());
+        params = validateCharge({ ...body, operationId: undefined });
       } catch (error) { return final(failure(error)); }
       const summary = `${KINDS[params.kind]} ${usd(params.totalCents)} enviado`;
-      return run(operationId, 'charge-create', { ...params, summary }, staff, progress => attemptCreate(operationId, params, progress));
+      return run(operationId, 'charge-create', { ...params, summary }, staff, progress => attemptCreate(operationId, params, progress), { onNew: () => checkExpiry(params, today()) });
     },
     async void(id, body, staff) {
       if (!allowed(staff)) return stepUpRequired();
@@ -194,19 +278,25 @@ export function createChargesService({ client, store, now = () => Date.now(), ti
         return { status: 200, body: { voided: id } };
       });
     },
-    /** Cron: borra las cotizaciones vencidas sin pagar. Una pagada nunca se toca. */
+    /** Cron: recorre todos los cobros (por páginas), borra las cotizaciones vencidas sin pagar y anota los pagados. */
     async expire() {
       const day = today();
-      let expired = 0;
-      let drafts = [];
-      try { drafts = await client.chargeDrafts(); } catch { return { expired }; }
-      for (const draft of drafts) {
-        const expiresOn = tagValue(draft.tags, 'ds-vence:');
-        if (!isCharge(draft) || draft.status === 'COMPLETED' || !expiresOn || day <= expiresOn) continue;
-        try {
-          const removed = await removeDraft(numeric(draft.id));
-          if (removed) { store.recordCharge({ draftId: numeric(draft.id), ...removed, state: 'vencido', at: now() }); expired++; }
-        } catch { /* se reintenta en la próxima hora */ }
+      let expired = 0, after = null;
+      for (let page = 0; page < EXPIRE_PAGES; page++) {
+        let result;
+        try { result = await client.chargeDrafts(after); } catch { break; }
+        for (const draft of result.nodes) {
+          if (!isCharge(draft)) continue;
+          if (draft.status === 'COMPLETED') { linkPaid(draft); continue; }
+          const expiresOn = tagValue(draft.tags, 'ds-vence:');
+          if (!expiresOn || day <= expiresOn) continue;
+          try {
+            const removed = await removeDraft(numeric(draft.id));
+            if (removed) { store.recordCharge({ draftId: numeric(draft.id), ...removed, state: 'vencido', at: now() }); expired++; }
+          } catch { /* se reintenta en la próxima hora */ }
+        }
+        if (!result.hasNextPage || !result.endCursor) break;
+        after = result.endCursor;
       }
       return { expired };
     },

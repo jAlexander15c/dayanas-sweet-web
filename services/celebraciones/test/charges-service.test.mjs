@@ -55,7 +55,7 @@ test('cobro: one draft with custom lines, the invoice email and the payment link
   assert.equal(fake.count('PanelChargeComplete'), 0, 'never completes a draft by itself');
 });
 
-test('cotización: expiry date in the email; the stored receipt answers a repeat without calling Shopify', async () => {
+test('cotización: expiry date in the email; a repeat only re-reads the draft (no create, no email)', async () => {
   const { fake, call } = setup();
   const first = await call('POST', '/orders/charges/create', cotizacion(2));
   assert.equal(first.status, 200);
@@ -65,7 +65,8 @@ test('cotización: expiry date in the email; the stored receipt answers a repeat
   const calls = fake.calls.length;
   const again = await call('POST', '/orders/charges/create', cotizacion(2));
   assert.deepEqual(again.body.charge, first.body.charge);
-  assert.equal(fake.calls.length, calls, 'repeat answered from the stored receipt');
+  assert.deepEqual(fake.calls.slice(calls), ['PanelCharge'], 'the repeat re-reads the draft by ID and nothing else');
+  assert.deepEqual([creates(fake), fake.invoices.length], [1, 1]);
   const reused = await call('POST', '/orders/charges/create', cotizacion(2, '2026-11-09'));
   assert.deepEqual([reused.status, reused.body.code, reused.body.final], [409, 'OPERATION_REUSED', true]);
 });
@@ -93,14 +94,128 @@ test('create that never reached Shopify: a quick retry waits, a later one create
   assert.equal(fake.drafts.size, 1);
 });
 
-test('invoice email lost: the retry sends it once, without a second draft', async () => {
+test('invoice email unconfirmed: the charge exists, the email is never sent twice (revisión F2)', async () => {
   const { fake, call } = setup();
+  // El envío no se aplicó: el cobro igual existe y la pantalla pide mandar el enlace.
   fake.next('PanelChargeInvoice', 'down');
-  assert.equal((await call('POST', '/orders/charges/create', cobro(5))).status, 502);
-  assert.equal([...fake.drafts.values()][0].status, 'OPEN');
+  const first = await call('POST', '/orders/charges/create', cobro(5));
+  assert.deepEqual([first.status, first.body.email, first.body.charge.status, typeof first.body.charge.invoiceUrl], [200, 'unconfirmed', 'abierto', 'string']);
   const retry = await call('POST', '/orders/charges/create', cobro(5));
-  assert.deepEqual([retry.status, retry.body.charge.status], [200, 'enviado']);
-  assert.deepEqual([creates(fake), fake.invoices.length], [1, 1]);
+  assert.equal(retry.body.email, 'unconfirmed');
+  assert.deepEqual([creates(fake), fake.invoices.length, fake.count('PanelChargeInvoice')], [1, 0, 1], 'never a second invoice call');
+  // El envío se aplicó pero su respuesta se perdió (o llegó tarde): la relectura lo confirma; un reintento no lo repite.
+  fake.next('PanelChargeInvoice', 'lost');
+  const late = await call('POST', '/orders/charges/create', cobro(6));
+  assert.deepEqual([late.status, late.body.email], [200, 'sent']);
+  await call('POST', '/orders/charges/create', cobro(6));
+  assert.equal(fake.invoices.filter(item => item.to === 'mariela@ejemplo.com').length, 1);
+  // El envío sigue en curso (todavía OPEN) y la relectura falla: la operación queda pendiente.
+  // El reintento ve OPEN y aun así no vuelve a enviar: la intención ya quedó guardada.
+  fake.next('PanelChargeInvoice', 'down');
+  fake.next('PanelCharge', 'down');
+  const pending = await call('POST', '/orders/charges/create', cobro(7));
+  assert.equal(pending.body.final, undefined);
+  const invoiceCalls = fake.count('PanelChargeInvoice');
+  const again = await call('POST', '/orders/charges/create', cobro(7));
+  assert.deepEqual([again.status, again.body.email], [200, 'unconfirmed']);
+  assert.equal(fake.count('PanelChargeInvoice'), invoiceCalls, 'no second invoice while the first may still be in flight');
+});
+
+test('create applied but invisible to search for longer than the wait: the direct read finds it (revisión F1)', async () => {
+  const { fake, call, advance } = setup();
+  fake.next('PanelChargeCreate', 'lost');
+  assert.equal((await call('POST', '/orders/charges/create', cobro(40))).status, 502);
+  for (const id of fake.drafts.keys()) fake.unindexed.add(id);
+  advance(CREATE_SETTLE_MS + 61_000);
+  const retry = await call('POST', '/orders/charges/create', cobro(40));
+  assert.deepEqual([retry.status, retry.body.email], [200, 'sent']);
+  assert.deepEqual([creates(fake), fake.drafts.size, fake.invoices.length], [1, 1, 1]);
+});
+
+test('draft ID known: retries read it by ID and never create, even after the wait (revisión F1)', async () => {
+  const { fake, call, advance } = setup();
+  // Se crea el borrador; el correo no se confirma y la relectura falla: queda pendiente con el ID guardado.
+  fake.next('PanelChargeInvoice', 'lost');
+  fake.next('PanelCharge', 'down');
+  const first = await call('POST', '/orders/charges/create', cobro(41));
+  assert.equal(first.body.final, undefined);
+  for (const id of fake.drafts.keys()) fake.unindexed.add(id);
+  advance(CREATE_SETTLE_MS * 3);
+  const retry = await call('POST', '/orders/charges/create', cobro(41));
+  assert.deepEqual([retry.status, retry.body.email], [200, 'sent']);
+  assert.deepEqual([creates(fake), fake.count('PanelChargeInvoice'), fake.count('PanelChargeByOperation')], [1, 1, 0]);
+});
+
+test('create without answer and a direct read that cannot prove absence: never creates again', async () => {
+  const { fake, call, advance } = setup();
+  // 50 borradores ajenos más nuevos que el intento: la lectura directa no llega hasta él.
+  fake.next('PanelChargeCreate', 'down');
+  assert.equal((await call('POST', '/orders/charges/create', cobro(42))).status, 502);
+  advance(CREATE_SETTLE_MS + 1000);
+  for (let i = 0; i < 51; i++) fake.drafts.set(String(900 + i), { id: String(900 + i), status: 'OPEN', email: 'x@y.z', createdAt: new Date(Date.parse('2026-11-06T15:30:00Z') + i).toISOString(), tags: ['otro'], customAttributes: [], lines: [{ title: 'Anticipo', cents: 100 }] });
+  const retry = await call('POST', '/orders/charges/create', cobro(42));
+  assert.deepEqual([retry.status, retry.body.state, retry.body.final], [502, 'uncertain', undefined]);
+  assert.equal(creates(fake), 1, 'only the original attempt');
+});
+
+test('stored receipts carry no name, email, concept or link (revisión F3)', async () => {
+  const { store, call } = setup();
+  const created = await call('POST', '/orders/charges/create', cobro(43, { name: 'Clienta Secreta', email: 'secreta@ejemplo.com', lines: [{ title: 'Torta de Secreta', cents: 2000 }] }));
+  assert.equal(created.body.charge.name, 'Clienta Secreta');
+  const saved = JSON.stringify(store.getOperation(op(43)));
+  for (const value of ['Secreta', 'secreta@ejemplo.com', 'invoices/']) assert.doesNotMatch(saved, new RegExp(value, 'i'));
+  // Una repetición sigue mostrando el enlace: lo vuelve a leer de Shopify.
+  const again = await call('POST', '/orders/charges/create', cobro(43, { name: 'Clienta Secreta', email: 'secreta@ejemplo.com', lines: [{ title: 'Torta de Secreta', cents: 2000 }] }));
+  assert.equal(again.body.charge.invoiceUrl, created.body.charge.invoiceUrl);
+});
+
+test('a retry of a quote that crosses midnight into its last day still reconciles (revisión F7)', async () => {
+  const { fake, call, advance } = setup();
+  // 6 nov 15:20 UTC: válida hasta el 7. Se pierde la respuesta; el reintento llega el 7.
+  fake.next('PanelCharge', 'down');
+  const first = await call('POST', '/orders/charges/create', cotizacion(44, '2026-11-07'));
+  assert.equal(first.body.final, undefined);
+  advance(DAY);
+  const retry = await call('POST', '/orders/charges/create', cotizacion(44, '2026-11-07'));
+  assert.deepEqual([retry.status, retry.body.charge.expiresOn], [200, '2026-11-07']);
+  assert.equal(creates(fake), 1);
+  // Una operación nueva con la misma fecha ya no vale (vence hoy).
+  assert.equal((await call('POST', '/orders/charges/create', cotizacion(45, '2026-11-07'))).status, 422);
+});
+
+test('the cron reaches every expired quote beyond the first page (revisión F4)', async () => {
+  const { fake, call, charges, advance } = setup();
+  assert.equal((await call('POST', '/orders/charges/create', cotizacion(46, '2026-11-08'))).status, 200);
+  for (let i = 0; i < 55; i++) assert.equal((await call('POST', '/orders/charges/create', cobro(100 + i))).status, 200);
+  const listed = await call('GET', '/orders/charges');
+  assert.deepEqual([listed.body.charges.length, listed.body.complete], [50, false]);
+  advance(3 * DAY);
+  assert.deepEqual(await charges.expire(), { expired: 1 });
+  assert.equal([...fake.drafts.values()].filter(d => d.tags.includes('ds-tipo:cotizacion')).length, 0);
+});
+
+test('a paid charge whose order lost the tags is still recognized through the draft link (revisión F8)', async () => {
+  const { fake, call, charges } = setup();
+  const created = await call('POST', '/orders/charges/create', cobro(47));
+  const orderId = fake.payDraft(created.body.charge.id, { copyTags: false });
+  const before = await call('GET', '/orders');
+  assert.equal(before.body.orders.find(order => order.id === orderId).charge, null, 'without tags and before the link: unknown');
+  await charges.expire();
+  const after = await call('GET', '/orders');
+  assert.equal(after.body.orders.find(order => order.id === orderId).charge, 'cobro');
+  assert.equal((await call('GET', `/orders/${orderId}`)).body.charge, 'cobro');
+  assert.ok(!JSON.stringify(after.body.bake).includes('Torta 30 personas'));
+});
+
+test('void racing a payment: Shopify may delete the completed draft; the paid order stays (riesgo residual F5)', async () => {
+  const { fake, call } = setup();
+  const created = await call('POST', '/orders/charges/create', cobro(48));
+  // Simula el pago justo después de la lectura y antes del borrado.
+  fake.next('PanelChargeDelete', 'pay-first');
+  const voided = await call('POST', `/orders/charges/${created.body.charge.id}/void`, { operationId: op(49) });
+  const paidOrder = [...fake.state.values()].find(order => order.tags.includes(`ds-operation:${op(48)}`));
+  assert.equal(voided.status, 200);
+  assert.ok(paidOrder, 'the paid order is kept in Shopify and shows in Pedidos');
 });
 
 test('validation rejects before any Shopify call', async () => {

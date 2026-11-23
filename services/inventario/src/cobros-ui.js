@@ -55,7 +55,8 @@ function cards() {
     return `<article class="order-card cobro-card"><div class="order-card-head"><strong>${esc(charge.name || KIND[charge.kind])}</strong>${statusBadge(charge)}</div>
       <div class="cobro-amount">${usd(charge.totalCents)}</div><p class="muted">${esc(charge.concept)} · ${note}</p>${actions}</article>`;
   }).join('')}</div>` : `<p class="muted">${empty}</p>`;
-  return tabs + body;
+  const more = data?.complete === false ? '<p class="notice">Se muestran los 50 cobros más recientes. Los anteriores siguen en Shopify, en Pedidos › Borradores.</p>' : '';
+  return tabs + more + body;
 }
 function renderList(notice = '') {
   view().innerHTML = `<div class="cobros-head"><div class="orders-head"><p class="eyebrow">Pastelería</p><h2 class="orders-title">Cobros</h2></div><button type="button" class="primary" id="cobro-new">Nuevo cobro</button></div>
@@ -73,10 +74,10 @@ async function loadList(notice = '') {
   renderList(notice);
   try {
     const result = await portal.request('pedidos/charges');
-    if (run !== generation) return;
+    if (run !== generation || !$('#cobros-list')) return;
     data = result; $('#cobros-list').innerHTML = cards(); bindList();
   } catch (error) {
-    if (run !== generation) return;
+    if (run !== generation || !$('#cobros-list')) return;
     $('#cobros-list').innerHTML = `<p class="error" role="alert">${esc(error.message)}</p><button type="button" id="cobros-retry">Volver a cargar</button>`;
     $('#cobros-retry').onclick = () => loadList();
   }
@@ -152,14 +153,15 @@ function review() {
       <p class="order-row order-total"><span>Total</span><span>${usd(total)}</span></p></div>
       <p>Shopify le envía a <strong>${esc(payload.email)}</strong> el correo con el botón para pagar.${isQuote ? ` Vence el ${esc(day(payload.expiresOn))}: después el enlace ya no sirve.` : ' El enlace no vence.'}</p>`,
     action: 'charges/create', payload,
-    after: result => showDone(result.charge, payload),
+    after: result => showDone(result.charge, payload, result.email),
   });
 }
-function showDone(charge, payload) {
+function showDone(charge, payload, email = 'sent') {
   draft = null; data = null;
   const label = charge.kind === 'cotizacion' ? 'Cotización enviada' : 'Cobro enviado';
   view().innerHTML = `<div class="card cobro-done"><p class="eyebrow">${esc(KIND[charge.kind])} · ${usd(charge.totalCents)}</p><h2 tabindex="-1" id="cobro-done-title">${label}</h2>
-    <p>Le llegó a <strong>${esc(payload.email)}</strong>. También puedes mandarle el enlace por WhatsApp:</p>
+    ${email === 'sent' ? `<p>Le llegó a <strong>${esc(payload.email)}</strong>. También puedes mandarle el enlace por WhatsApp:</p>`
+      : `<p class="notice notice-due">No pudimos confirmar que el correo salió hacia <strong>${esc(payload.email)}</strong>. El cobro sí quedó creado: mándale este enlace por WhatsApp.</p>`}
     ${charge.invoiceUrl ? `<input class="cobro-url" readonly value="${esc(charge.invoiceUrl)}" aria-label="Enlace de pago"><button type="button" class="primary" id="cobro-copy">Copiar enlace</button>` : ''}
     <p class="notice">Cuando pague, aparece en Pedidos con la etiqueta «${esc(KIND[charge.kind])}» y aquí pasa a «Pagados».</p>
     <a class="action-link" href="#cobros">Volver a Cobros</a></div>`;
@@ -213,10 +215,11 @@ async function send() {
       // Rechazada antes de llegar a Shopify: misma clave, solo se corrige la contraseña.
       error.textContent = failure.message; confirmButton.disabled = false; backButton.disabled = false;
       $('#cobros-password').readOnly = false; $('#cobros-password').value = ''; $('#cobros-password').focus();
-    } else if (failure.status && failure.status < 500 && (NOT_APPLIED.has(failure.code) || result.final === true)) {
-      // No se aplicó nada: se cierra y se corrige; el próximo intento usa una clave nueva.
-      current.final = true; error.textContent = failure.message;
-      backButton.disabled = false; backButton.textContent = 'Cerrar'; confirmButton.hidden = true;
+    } else if (failure.status && (result.final === true || (failure.status < 500 && NOT_APPLIED.has(failure.code)))) {
+      // Resultado definitivo (también un 5xx marcado final, o tras un «Reintentar»): ya no hay nada pendiente.
+      // Se libera la navegación y queda «Cerrar»; un próximo intento usa una clave nueva.
+      current.final = true; current.unconfirmed = false; error.textContent = failure.message;
+      backButton.hidden = false; backButton.disabled = false; backButton.textContent = 'Cerrar'; confirmButton.hidden = true;
     } else {
       pending(result.state === 'uncertain' ? failure.message : UNCONFIRMED);
     }
@@ -239,6 +242,7 @@ function show() {
   portal.hideViews(); view().hidden = false; portal.current?.('cobros');
   $('#feedback').textContent = '';
   if (location.hash === '#cobros/nuevo') {
+    generation++; // una lista que siga cargando ya no pinta sobre el formulario
     if (!draft) draft = newDraft();
     if (!data) portal.request('pedidos/charges').then(result => { data = result; if (draft && draft.today !== result.today) { draft.today = result.today; draft.expiresOn = addDays(result.today, 7); if (location.hash === '#cobros/nuevo' && !view().hidden) renderForm(); } }).catch(() => {});
     return renderForm();
