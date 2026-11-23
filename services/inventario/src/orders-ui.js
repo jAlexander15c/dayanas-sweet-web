@@ -490,7 +490,7 @@ async function showEdit(id) {
   const stock = new Map(variants.map(v => [v.id, v]));
   draft = {
     lines: detail.lines.filter(line => line.quantity > 0).map(line => ({ ...line, target: line.quantity, min: line.quantity - line.unfulfilled, max: line.unfulfilled > 0 ? line.quantity + (line.variantId && stock.get(line.variantId)?.available || 0) : line.quantity })),
-    additions: [],
+    additions: [], notify: true,
   };
   renderEdit();
 }
@@ -506,7 +506,7 @@ function renderEdit() {
     <div id="add-row" hidden><label>Producto con stock<select id="add-variant">${choices.map(v => `<option value="${esc(v.id)}">${esc(v.productTitle)}${v.title ? ` · ${esc(v.title)}` : ''} — ${usd(v.priceCents)} (quedan ${v.available})</option>`).join('')}</select></label><button type="button" id="add-confirm">Agregar</button></div>
     <button type="button" id="add-product" ${choices.length ? '' : 'disabled'}>${choices.length ? 'Agregar producto' : 'No hay otros productos con stock'}</button></section>
   <section class="card" id="edit-summary"></section>
-  <label class="check"><input type="checkbox" id="edit-notify" checked><span>Avisar a la clienta del cambio por correo</span></label>
+  <label class="check"><input type="checkbox" id="edit-notify" ${draft.notify ? 'checked' : ''}><span>Avisar a la clienta del cambio por correo</span></label>
   <p id="edit-status" role="status" class="${editError ? 'error' : ''}">${esc(editError)}</p>
   <button type="button" class="primary wide" id="edit-review">Guardar cambios del pedido</button>
   <p class="muted">El stock se ajusta solo: la caja que sale vuelve al inventario y la que entra se descuenta.</p>`;
@@ -518,6 +518,7 @@ function renderEdit() {
   };
   $('#add-product').onclick = () => { $('#add-row').hidden = false; $('#add-product').hidden = true; $('#add-variant').focus(); };
   if ($('#add-confirm')) $('#add-confirm').onclick = () => { draft.additions.push({ variantId: $('#add-variant').value, quantity: 1 }); renderEdit(); };
+  $('#edit-notify').onchange = event => { draft.notify = event.currentTarget.checked; renderEditSummary(); };
   $('#edit-review').onclick = reviewEdit;
   renderEditSummary();
 }
@@ -529,23 +530,31 @@ function editChanges() {
     ...draft.additions.map(add => { const v = stock.get(add.variantId); return `+ ${add.quantity} ${v.productTitle}${v.title ? ` · ${v.title}` : ''}`; })];
   return { changes, delta, rows };
 }
+/** Consecuencia de dinero del cambio. Shopify solo manda el enlace de pago si se avisa a la clienta. */
+function editMoneyNote(delta, notify) {
+  if (delta > 0) return notify ? `Sube ${usd(delta)}: Shopify le envía a la clienta el enlace para pagar la diferencia.`
+    : `Sube ${usd(delta)}: la clienta no recibirá enlace de pago. Quedan ${usd(delta)} por cobrar (en efectivo desde el panel o con una factura desde Shopify).`;
+  if (delta < 0) return `Baja ${usd(-delta)}: después puedes reembolsar la diferencia desde «Reembolsar».`;
+  return 'El total no cambia.';
+}
 function renderEditSummary() {
   const { delta, rows } = editChanges(), total = detail.totalCents + delta;
   $('#edit-summary').innerHTML = `<h3>Resumen del cambio</h3>${rows.length ? rows.map(row => `<div class="summary-line">${esc(row)}</div>`).join('') : '<p class="muted">Todavía no hay cambios.</p>'}
     <div class="order-row order-total"><span>Nuevo total</span><strong>${usd(total)}${delta === 0 ? ' (sin cambio)' : ''}</strong></div>
-    <p class="muted">Si el total sube, Shopify le envía a la clienta un enlace para pagar la diferencia. Si baja, el panel ofrece el reembolso de la diferencia.</p>`;
+    ${rows.length ? `<p class="${delta > 0 && !draft.notify ? 'notice notice-due' : 'muted'}" id="edit-money">${esc(editMoneyNote(delta, draft.notify))}</p>` : ''}`;
   $('#edit-review').disabled = !rows.length;
 }
 function reviewEdit() {
   if (busy()) return;
   const { changes, delta, rows } = editChanges();
   if (!rows.length) return;
-  const body = { changes: changes.map(line => ({ lineItemId: line.id, variantId: line.variantId, fromQuantity: line.quantity, quantity: line.target })), additions: draft.additions.map(add => ({ variantId: add.variantId, quantity: add.quantity })), notify: $('#edit-notify').checked };
+  const body = { changes: changes.map(line => ({ lineItemId: line.id, variantId: line.variantId, fromQuantity: line.quantity, quantity: line.target })), additions: draft.additions.map(add => ({ variantId: add.variantId, quantity: add.quantity })), notify: draft.notify };
   const order = detail;
   openSheet({ action: 'edit', eyebrow: `Pedido ${order.name} · ${order.customer.name}`, title: 'Revisa el cambio del pedido', confirm: 'Guardar cambios del pedido',
-    fields: `<ul class="summary-list">${rows.map(row => `<li>${esc(row)}</li>`).join('')}</ul><div class="amount-box"><div>Nuevo total</div><div class="amount">${usd(order.totalCents + delta)}</div><div class="muted">${delta === 0 ? 'Sin cambio' : delta > 0 ? `Sube ${usd(delta)}: Shopify le envía el enlace de pago.` : `Baja ${usd(-delta)}: después puedes reembolsar la diferencia.`}${body.notify ? ' · se avisa a la clienta' : ''}</div></div>${password()}`,
+    fields: `<ul class="summary-list">${rows.map(row => `<li>${esc(row)}</li>`).join('')}</ul><div class="amount-box"><div>Nuevo total</div><div class="amount">${usd(order.totalCents + delta)}</div><div class="muted">${esc(editMoneyNote(delta, body.notify))}${body.notify ? ' Se avisa a la clienta.' : ' No se avisa a la clienta.'}</div></div>${password()}`,
     build: () => body, needsPassword: true,
-    after: async () => goDetail(order.id, delta < 0 ? `Pedido editado. Si corresponde, reembolsa ${usd(-delta)} desde «Reembolsar».` : 'Pedido editado.') });
+    after: async () => goDetail(order.id, delta < 0 ? `Pedido editado. Si corresponde, reembolsa ${usd(-delta)} desde «Reembolsar».`
+      : delta > 0 && !body.notify ? `Pedido editado. Quedan ${usd(delta)} por cobrar: la clienta no recibió enlace de pago.` : 'Pedido editado.') });
 }
 
 // ---------- Navegación ----------

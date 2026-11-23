@@ -120,6 +120,25 @@ try {
   await page.getByText('Reembolso de $24.00 registrado.').waitFor();
   state = await shop();
   check('reembolsar: un solo reembolso en Shopify, misma clave, sin aviso a la clienta', state.calls.filter(c => c === 'PanelRefund').length === 1 && refundPosts.length === 2 && !!refundPosts[0].operationId && refundPosts[0].operationId === refundPosts[1].operationId && refundPosts[1].notify === false, JSON.stringify(refundPosts));
+  // P04 · Editar: el aviso desmarcado sobrevive a los cambios y no se promete enlace de pago.
+  const edit1043 = bodies('/api/pedidos/orders/1043/edit');
+  await page.evaluate(() => { location.hash = 'pedidos/1043/editar'; });
+  await page.getByRole('heading', { name: 'Editar #1043' }).waitFor();
+  await page.getByLabel('Avisar a la clienta del cambio por correo').uncheck();
+  await page.getByRole('button', { name: 'Agregar producto' }).click();
+  await page.getByRole('button', { name: 'Agregar', exact: true }).click();
+  await page.locator('.edit-line', { hasText: 'Agregada' }).getByRole('button', { name: 'Agregar una' }).click();
+  check('editar: el aviso sigue desmarcado tras cambiar cantidades', !(await page.getByLabel('Avisar a la clienta del cambio por correo').isChecked()));
+  const note = await page.locator('#edit-money').textContent();
+  check('editar: sin aviso no promete enlace y dice cuánto queda por cobrar', /no recibirá enlace de pago/.test(note) && /Quedan \$\d+\.\d\d por cobrar/.test(note), note);
+  await screenshots(page, 'editar-sin-aviso');
+  await page.getByRole('button', { name: 'Guardar cambios del pedido' }).click();
+  await page.getByRole('heading', { name: 'Revisa el cambio del pedido' }).waitFor();
+  check('editar: la revisión dice que no se avisa', (await sheet(page).textContent()).includes('No se avisa a la clienta.'));
+  await sheet(page).getByLabel('Tu contraseña').fill(password);
+  await sheet(page).getByRole('button', { name: 'Guardar cambios del pedido' }).click();
+  await page.getByText(/Pedido editado\. Quedan \$\d+\.\d\d por cobrar/).waitFor();
+  check('editar: se envió sin aviso a la clienta', edit1043.length === 1 && edit1043[0].notify === false, JSON.stringify(edit1043));
   check('sin errores de JavaScript', !errors.length, errors.join(' | '));
 } finally { await browser?.close(); await worker.stop(); }
 for (const r of results) console.log(`${r.ok ? 'PASS' : 'FAIL'} ${r.name}${r.ok || !r.detail ? '' : ` — ${r.detail}`}`);

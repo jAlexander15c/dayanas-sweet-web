@@ -155,7 +155,7 @@ try {
   await page.getByText('Agregada · quedan 5 en stock').waitFor();
   await page.getByRole('heading', { name: 'Resumen del cambio' }).waitFor();
   await page.getByText('+ 1 Galletas de avena · Caja de 6').waitFor();
-  await page.getByText('Si el total sube, Shopify le envía a la clienta un enlace para pagar la diferencia. Si baja, el panel ofrece el reembolso de la diferencia.').waitFor();
+  await page.getByText(/Shopify le envía a la clienta el enlace para pagar la diferencia\./).waitFor();
   await screenshots(page, 'editar');
   await page.getByRole('button', { name: 'Guardar cambios del pedido' }).click();
   await page.getByRole('heading', { name: 'Revisa el cambio del pedido' }).waitFor();
