@@ -60,7 +60,7 @@ function showAccess(screen, notice = '') {
   // R02: cierra confirmaciones y editores abiertos para que la pantalla de entrada quede usable con teclado.
   for (const dialog of document.querySelectorAll('dialog[open]')) dialog.close();
   // Al salir no queda en la página nada del panel (lista de personas, aparatos, mensajes).
-  $('#celebraciones-frame')?.remove(); $('#passkey-offer')?.remove(); $('#users-view')?.replaceChildren();
+  window.dsCelebraciones?.destroy(); $('#passkey-offer')?.remove(); $('#users-view')?.replaceChildren();
   $('#panel-view').hidden = true; $('#access-view').hidden = false; $('#staff-who').replaceChildren();
   let title, description = '', fields, submit, links;
   if (screen === 'login') {
@@ -227,13 +227,9 @@ async function showUsers() {
 }
 function showCelebraciones() {
   if (!portal || !currentUser?.roles.includes('celebraciones')) return;
-  hideViews(); $('#celebraciones-view').hidden = false;
-  const requestId = location.hash.match(/^#celebraciones\/([a-f0-9-]{36})$/)?.[1];
-  const source = `${base}celebraciones${requestId ? '?solicitud=' + encodeURIComponent(requestId) : ''}`;
-  let frame = $('#celebraciones-frame');
-  if (!frame) { frame = document.createElement('iframe'); frame.id = 'celebraciones-frame'; frame.title = 'Solicitudes y pagos de Celebraciones'; $('#celebraciones-view').replaceChildren(frame); }
-  if (frame.getAttribute('src') !== source) frame.src = source;
-  $('#feedback').textContent = '';
+  hideViews(); $('#celebraciones-view').hidden = false; $('#feedback').textContent = '';
+  // Celebraciones se dibuja en esta misma página (celebraciones.js): lista, detalle y ajustes por #hash.
+  window.dsCelebraciones?.show(location.hash);
 }
 window.inventarioPortal = { mode: portal, request, hideViews, user: () => currentUser };
 window.inventarioAccess = {

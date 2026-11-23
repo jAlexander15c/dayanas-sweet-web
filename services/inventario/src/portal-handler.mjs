@@ -3,7 +3,7 @@ import { verifyAppProxy } from './proxy-auth.mjs';
 import { createHandler, readJson, securityHeaders } from './http.mjs';
 import { errorResult, fail, requireValue } from './errors.mjs';
 import { requireRole } from './staff-identity.mjs';
-export const portalCsp = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: https://cdn.shopify.com https://*.shopifycdn.com; connect-src 'self'; frame-src 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'; form-action 'self'";
+export const portalCsp = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: https://cdn.shopify.com https://*.shopifycdn.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'; form-action 'self'";
 export const portalHeaders = () => ({ 'Content-Security-Policy': portalCsp, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff', 'X-Robots-Tag': 'noindex, nofollow', 'Permissions-Policy': 'camera=(self), microphone=(), geolocation=()' });
 // Extension seam: never accepts actor identity or Shopify credentials from the browser.
 export async function forwardToCelebraciones(env, actor, method, path, body, aud = 'celebraciones') {

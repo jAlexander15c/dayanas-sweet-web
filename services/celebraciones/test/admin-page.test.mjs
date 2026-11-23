@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderAdminPage } from '../src/admin-page.mjs';
-import { createAdminApi, createOperationBook, paymentSummary, parseDollars, calendarInput, canMarkReady, paymentConnectionSummary, canRecordDeliveryPayment, paymentTerms, proposalPaymentMode } from '../src/admin-ui.js';
+import { createAdminApi, createOperationBook, paymentSummary, parseDollars, calendarInput, canMarkReady, paymentConnectionSummary, canRecordDeliveryPayment, paymentTerms, proposalPaymentMode, nextStep, pickupParts } from '../src/admin-ui.js';
 
 test('staff UI permits unpaid ready only for delivery and distinguishes recorded receipts',()=>{
  const s={status:'reserved',acceptedProposal:{version:1,totalCents:15000,paymentMode:'delivery'},pendingProposal:null,payments:[],payment:{stage:'delivery',reviewRequired:false,url:null},billing:{proposalVersion:1,totalCents:15000,taxCents:0,netPaidCents:0,balanceDueCents:15000,currency:'USD',source:'staff'}};
@@ -154,4 +154,25 @@ test('failed payment diagnostic exposes only allowlisted stage, HTTP status and 
     const invalidStatus = paymentConnectionSummary({ ...base, diagnostic: { stage: null, httpStatus, code: 'unknown' } });
     assert.ok(invalidStatus.details.includes('HTTP: no disponible'));
   }
+});
+
+test('next step names one action per stage and never offers a status change the money rules forbid', () => {
+  const paid = { status: 'reserved', permissions: { canPrepare: true }, pendingProposal: null, payments: [], acceptedProposal: { version: 1, totalCents: 15000, paymentMode: 'full' }, payment: { stage: 'paid', reviewRequired: false }, billing: { proposalVersion: 1, currency: 'USD', totalCents: 15000, taxCents: 0, netPaidCents: 15000, balanceDueCents: 0 } };
+  assert.equal(nextStep({ status: 'requested', permissions: {}, payments: [] }).tab, 'propuesta');
+  assert.equal(nextStep({ status: 'quoted', pendingProposal: { version: 1 }, permissions: {}, payments: [] }).label, 'Ver propuesta enviada');
+  assert.equal(nextStep(paid).status, 'preparing');
+  assert.equal(nextStep({ ...paid, permissions: { canPrepare: false } }).tab, 'pagos');
+  assert.equal(nextStep({ ...paid, status: 'preparing' }).status, 'ready');
+  const unpaid = { ...paid, status: 'preparing', payment: { stage: 'deposit', reviewRequired: false }, billing: { ...paid.billing, netPaidCents: 9000, balanceDueCents: 6000 } };
+  assert.equal(canMarkReady(unpaid), false); assert.equal(nextStep(unpaid).status, undefined); assert.equal(nextStep(unpaid).tab, 'pagos');
+  const delivery = { ...paid, status: 'ready', acceptedProposal: { ...paid.acceptedProposal, paymentMode: 'delivery' }, payment: { stage: 'delivery', reviewRequired: false }, billing: { ...paid.billing, netPaidCents: 0, balanceDueCents: 15000 } };
+  assert.equal(nextStep(delivery).label, 'Registrar pago recibido');
+  assert.equal(nextStep({ ...paid, status: 'ready' }).tab, undefined);
+  assert.deepEqual(nextStep(null), { text: '', short: '' });
+});
+
+test('pickup date is read in Houston time and missing dates fall back to the label', () => {
+  const parts = pickupParts({ details: { pickupAt: '2026-11-29T20:00:00.000Z' } });
+  assert.equal(parts.day, '29'); assert.match(parts.time, /2:00/);
+  assert.equal(pickupParts({ details: {} }), null); assert.equal(pickupParts({ details: { pickupAt: 'no' } }), null);
 });

@@ -5,7 +5,7 @@ import {createStore} from '../src/store.mjs';
 import {createHandler} from '../src/http.mjs';
 import {handleStaffGateway,portalStaffActor} from '../src/staff-gateway.mjs';
 import {createPortalApi} from '../src/admin-ui.js';
-import {renderAdminPage} from '../src/admin-page.mjs';
+import {celebrationsMarkup} from '../src/admin-page.mjs';
 import {buildStaffMessage} from '../src/staff-alerts.mjs';
 import {renderEmailHtml} from '../src/resend-email.mjs';
 const shop='sweet.myshopify.com',actor={shop,userId:randomUUID(),name:'Dayana',roles:['celebraciones'],aud:'celebraciones',sessionVersion:1};
@@ -47,10 +47,10 @@ test('portal transport uses parent session API and preserves methods, errors and
  await assert.rejects(()=>api('https://other.test/admin/requests'),{code:'VALIDATION'});
 });
 test('portal shell has no App Bridge or private data and links stay under the store',async()=>{
- const response=renderAdminPage({shop,clientId:'app',portal:true});const html=await response.text();
- assert.ok(!html.includes('app-bridge.js'));assert.ok(!html.includes('shopify-api-key'));
- assert.match(html,/data-ds-portal="true"/);assert.match(html,/\/apps\/inventario\/assets\/celebraciones.js/);
- assert.equal(response.headers.get('X-Robots-Tag'),'noindex, nofollow');
+ // The portal embeds this static markup in its own page (no iframe): no App Bridge, scripts or private data.
+ const html=celebrationsMarkup();
+ assert.ok(!html.includes('app-bridge.js'));assert.ok(!html.includes('shopify-api-key'));assert.ok(!/<script|<iframe|<html/i.test(html));
+ assert.match(html,/id="ds-app"/);assert.match(html,/href="#celebraciones\/ajustes"/);
  const job={id:randomUUID(),requestId:randomUUID(),kind:'comment',reference:'DS-000123'};
  const mime=buildStaffMessage(job,{shop,clientId:'app',portalEnabled:true});const text=Buffer.from(mime.split('\r\n\r\n')[1],'base64').toString();
  assert.match(text,/https:\/\/dayanassweet.com\/apps\/inventario#celebraciones\//);assert.ok(!text.includes('admin.shopify.com'));
