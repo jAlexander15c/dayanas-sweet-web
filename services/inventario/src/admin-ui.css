@@ -27,7 +27,8 @@
 .chip[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
 .order-search{margin:0}.order-search input{margin-top:6px}
 .order-cards{display:grid;gap:12px}
-.order-card{display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid var(--border);border-radius:18px;padding:16px;min-height:44px;overflow-wrap:anywhere}
+.order-card{display:grid;gap:10px;background:#fff;border:1px solid var(--border);border-radius:18px;padding:16px;min-height:44px;overflow-wrap:anywhere}
+.order-card-link{display:block;text-decoration:none;color:inherit;border-radius:12px}
 .order-card:hover{border-color:#b9a593}
 .order-card-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .order-card-head strong{font-size:18px;min-width:0}
@@ -125,3 +126,17 @@ body[data-portal=true] nav button[aria-current=page]{background:var(--accent);bo
 .today-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px}
 .today-foot:empty{display:none}
 @media(min-width:900px){.today-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Pedidos (fase 2b): Activos/Historial, acción rápida en la tarjeta y marcado en lote. */
+.order-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;margin-bottom:10px;background:#f4ede4;border-radius:14px}
+.order-tab{min-height:44px;border:0;border-radius:10px;background:transparent;font-weight:600;color:#6c5b4d}
+.order-tab[aria-pressed=true]{background:#fff;color:var(--accent);box-shadow:0 1px 3px rgba(52,41,32,.12)}
+.order-quick{display:flex;justify-content:flex-end;border-top:1px solid var(--border);padding-top:10px}
+.order-quick button{min-height:44px}
+#orders-bulk:empty{display:none}
+#orders-bulk{margin:4px 0 12px}
+#orders-bulk button{width:100%;min-height:48px}
+.notice-due{background:#fbeee6;color:#7a3a10;border-color:#efd3c2}
+.bulk-list{list-style:none;padding:0;margin:12px 0;display:grid;gap:6px}
+.bulk-list li{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;padding:8px 12px;border:1px solid var(--border);border-radius:12px}
+.bulk-list small{color:#7a3a10}
+@media(min-width:601px){.order-tabs{max-width:360px}#orders-bulk button{width:auto}}

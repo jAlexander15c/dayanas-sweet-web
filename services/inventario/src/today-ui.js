@@ -17,7 +17,7 @@ const blocks = {
     visible: r => r.includes('inventario') || r.includes('admin'),
     async load() { return portal.request('pedidos/orders'); },
     render(list) {
-      const active = list.orders.filter(order => order.stage !== 'entregado');
+      const active = list.orders.filter(order => order.stage === 'preparar' || order.stage === 'listo');
       const pickupReady = active.filter(order => order.stage === 'listo' && order.delivery === 'pickup').length;
       const due = active.filter(order => order.outstandingCents > 0);
       const bake = list.bake.products.slice(0, 3);

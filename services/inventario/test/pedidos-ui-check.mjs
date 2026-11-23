@@ -77,7 +77,8 @@ try {
   await page.getByText('pedidos en total').waitFor();
   await page.getByRole('button', { name: 'Por preparar · 6' }).waitFor();
   await page.getByRole('button', { name: 'Listos · 1' }).waitFor();
-  await page.getByRole('button', { name: 'Entregados · 0' }).waitFor();
+  await page.getByRole('button', { name: 'Activos · 7' }).waitFor();
+  await page.getByRole('button', { name: 'Historial · 0' }).waitFor();
   assert.equal(await page.getByLabel('Buscar pedido').getAttribute('placeholder'), 'Número, nombre o correo');
   const first = page.locator('.order-card', { hasText: '#1042 · Ana R.' });
   await first.getByText('Envío USPS', { exact: true }).waitFor(); await first.getByText('Pagado', { exact: true }).waitFor();

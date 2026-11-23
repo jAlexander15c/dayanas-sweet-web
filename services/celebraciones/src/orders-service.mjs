@@ -390,7 +390,7 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
       id: numeric(order.id), name: order.name, customer: customerLabel(order), email: order.email || '', createdAt: order.createdAt,
       totalCents: cents(order.currentTotalPriceSet), outstandingCents: cents(order.totalOutstandingSet), refundedCents: optionalCents(order.totalRefundedSet),
       shippingCents: optionalCents(order.totalShippingPriceSet), financial: order.displayFinancialStatus, fulfillment: order.displayFulfillmentStatus,
-      delivery: pickup ? 'pickup' : 'shipping', shippingTitle: order.shippingLine?.title || null, stage: stageOf(order, ready), celebraciones: isCelebraciones(order),
+      delivery: pickup ? 'pickup' : 'shipping', shippingTitle: order.shippingLine?.title || null, stage: order.cancelledAt ? 'cancelado' : stageOf(order, ready), celebraciones: isCelebraciones(order),
       cash: (order.paymentGatewayNames || []).some(name => gatewayLabel(name) === 'Efectivo'),
       items: lines.filter(line => line.currentQuantity > 0).map(line => ({ title: line.title, variantTitle: line.variantTitle || null, quantity: line.currentQuantity, unfulfilled: line.unfulfilledQuantity })),
       itemsTruncated: !!order.lineItems?.pageInfo?.hasNextPage,
@@ -422,12 +422,13 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
       try {
         const since = new Date(now() - days * 86_400_000).toISOString().slice(0, 10);
         const { nodes, complete } = await client.listOrders({ since });
+        // Cancelled orders come back as stage 'cancelado' (panel history only): never baked, packed or counted as active.
         const open = nodes.filter(order => !order.cancelledAt);
         const ready = store.readyOrders(open.map(order => numeric(order.id)));
-        const orders = open.map(order => summarize(order, ready.has(numeric(order.id))));
+        const orders = nodes.map(order => summarize(order, !order.cancelledAt && ready.has(numeric(order.id))));
         const products = new Map(), variants = new Map(); let bakeOrders = 0;
         for (const order of orders) {
-          if (order.stage === 'entregado' || order.celebraciones) continue;
+          if (order.stage === 'entregado' || order.stage === 'cancelado' || order.celebraciones) continue;
           const pending = order.items.filter(item => item.unfulfilled > 0);
           if (!pending.length) continue;
           bakeOrders++;
@@ -437,7 +438,7 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
             variants.set(key, { title: item.title, variantTitle: item.variantTitle, quantity: (variants.get(key)?.quantity || 0) + item.unfulfilled });
           }
         }
-        const counts = { preparar: 0, listo: 0, entregado: 0 };
+        const counts = { preparar: 0, listo: 0, entregado: 0, cancelado: 0 };
         for (const order of orders) counts[order.stage]++;
         return { status: 200, body: { orders, counts, complete, days,
           bake: { orders: bakeOrders, products: [...products].map(([title, quantity]) => ({ title, quantity })).sort((a, b) => b.quantity - a.quantity || a.title.localeCompare(b.title)),

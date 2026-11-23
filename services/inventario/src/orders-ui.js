@@ -11,8 +11,11 @@ const UNCONFIRMED = 'No pudimos confirmar si se guardó. Toca «Reintentar»: co
 const NOT_APPLIED = new Set(['VALIDATION', 'ROLE_REQUIRED', 'STEP_UP_REQUIRED', 'NOT_FOUND', 'ORDER_NOT_FOUND', 'NO_STOCK', 'AMOUNT_CHANGED', 'NOTHING_DUE',
   'REFUND_LIMIT', 'ORDER_CHANGED', 'ORDER_SHIPPED', 'ORDER_CANCELLED', 'ORDER_TOO_LARGE', 'CELEBRACIONES_ORDER', 'PICKUP_ORDER', 'SHIPPING_ORDER',
   'NOTHING_TO_FULFILL', 'FULFILLMENT_SCOPE', 'SHOPIFY_REJECTED', 'OPERATION_REUSED', 'CASH_NOT_ALLOWED', 'UNPAID_SHIPMENT']);
-const STAGES = { preparar: 'Por preparar', listo: 'Listos', entregado: 'Entregados' };
-const STAGE_ONE = { preparar: 'Por preparar', listo: 'Listo', entregado: 'Entregado' };
+const STAGES = { preparar: 'Por preparar', listo: 'Listos', entregado: 'Entregados', cancelado: 'Cancelados' };
+const STAGE_ONE = { preparar: 'Por preparar', listo: 'Listo', entregado: 'Entregado', cancelado: 'Cancelado' };
+// Activos: lo que falta preparar o entregar. Historial: entregados y cancelados (no se borra nada en Shopify).
+const TABS = { activos: { label: 'Activos', stages: ['preparar', 'listo'] }, historial: { label: 'Historial', stages: ['entregado', 'cancelado'] } };
+const ACTIVE = new Set(TABS.activos.stages);
 const REFUND_REASONS = [['damaged', 'Llegó dañado'], ['missing', 'Faltó un producto'], ['customer', 'Pedido de la clienta'], ['other', 'Otro']];
 const CANCEL_REASONS = [['CUSTOMER', 'La clienta lo pidió'], ['INVENTORY', 'Sin stock para la tanda'], ['DECLINED', 'Pago rechazado o fraude'], ['OTHER', 'Otro']];
 const back = label => `<a class="order-back" href="#pedidos${label.href || ''}" aria-label="${esc(label.aria)}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></a>`;
@@ -20,7 +23,9 @@ const dateTime = value => { try { return new Intl.DateTimeFormat('es-MX', { day:
 const clock = () => { try { return new Intl.DateTimeFormat('es-MX', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' }).format(new Date()); } catch { return ''; } };
 const lineName = line => `${line.title}${line.variantTitle ? ` · ${line.variantTitle}` : ''}`;
 
-let list = null, filter = 'preparar', query = '', detail = null, variants = null, bakeOpen = false, nextNotice = '';
+let list = null, filter = 'preparar', tab = 'activos', query = '', detail = null, variants = null, bakeOpen = false, nextNotice = '', listNotice = '';
+// bulk: «Todos los retiros están listos» en curso (bloquea navegar y cerrar la hoja); bulkDone recarga la lista al cerrar.
+let bulk = null, bulkDone = false;
 // Vuelve al detalle mostrando un aviso; la navegación pasa por #hash para que «atrás» funcione.
 function goDetail(id, notice) { list = null; nextNotice = notice; if (location.hash === `#pedidos/${id}`) show(); else location.hash = `pedidos/${id}`; }
 // Operación en curso: misma clave y mismo contenido hasta que se confirme.
@@ -32,7 +37,7 @@ const isAdmin = () => roles().includes('admin');
 const canSee = () => roles().includes('admin') || roles().includes('inventario');
 const view = () => $('#pedidos-view');
 const sheet = () => $('#order-sheet');
-const busy = () => !!op && (op.sending || op.unconfirmed);
+const busy = () => !!bulk?.sending || (!!op && (op.sending || op.unconfirmed));
 
 function deliveryBadge(order) {
   if (order.delivery === 'pickup') return '<span class="badge badge-pickup">Retiro en Fulshear</span>';
@@ -77,18 +82,22 @@ function renderList() {
       <h4>Hoja de empaque</h4>${packing()}
     </div>
   </section>
-  <div class="order-chips" role="group" aria-label="Filtrar pedidos">${Object.entries(STAGES).map(([key, label]) => `<button type="button" class="chip" data-stage="${key}" aria-pressed="${filter === key}">${label} · ${list.counts[key]}</button>`).join('')}</div>
+  <div class="order-tabs" role="group" aria-label="Pedidos activos o historial">${Object.entries(TABS).map(([key, { label, stages }]) => `<button type="button" class="order-tab" data-tab="${key}" aria-pressed="${tab === key}">${label} · ${stages.reduce((sum, stage) => sum + (list.counts[stage] || 0), 0)}</button>`).join('')}</div>
+  <div class="order-chips" role="group" aria-label="Filtrar pedidos">${TABS[tab].stages.map(key => `<button type="button" class="chip" data-stage="${key}" aria-pressed="${filter === key}">${STAGES[key]} · ${list.counts[key] || 0}</button>`).join('')}</div>
   <label class="order-search">Buscar pedido<input id="order-query" type="search" maxlength="80" placeholder="Número, nombre o correo" value="${esc(query)}" autocomplete="off"></label>
   ${list.complete ? '' : '<p class="notice">Hay más pedidos de los que el panel muestra. Los más antiguos están en Shopify.</p>'}
   <p class="muted" id="orders-status" role="status"></p>
+  <div id="orders-bulk"></div>
   <div id="order-cards" class="order-cards"></div>`;
   $('#bake-toggle').onclick = () => { bakeOpen = !bakeOpen; $('#bake-toggle').setAttribute('aria-expanded', String(bakeOpen)); $('#bake-detail').hidden = !bakeOpen; };
   for (const chip of view().querySelectorAll('.chip')) chip.onclick = () => { filter = chip.dataset.stage; for (const other of view().querySelectorAll('.chip')) other.setAttribute('aria-pressed', String(other === chip)); renderCards(); };
+  for (const button of view().querySelectorAll('.order-tab')) button.onclick = () => { if (tab === button.dataset.tab) return; tab = button.dataset.tab; filter = TABS[tab].stages[0]; renderList(); };
   $('#order-query').oninput = event => { query = event.target.value; renderCards(); };
   renderCards();
+  if (listNotice) { $('#orders-status').textContent = listNotice; listNotice = ''; }
 }
 function packing() {
-  const pending = list.orders.filter(order => order.stage !== 'entregado' && !order.celebraciones && order.items.some(item => item.unfulfilled > 0));
+  const pending = list.orders.filter(order => ACTIVE.has(order.stage) && !order.celebraciones && order.items.some(item => item.unfulfilled > 0));
   if (!pending.length) return '<p class="muted">No hay pedidos por empacar.</p>';
   return `<ul class="packing">${pending.map(order => `<li><strong>${esc(order.name)} · ${esc(order.customer)}</strong> <span class="muted">${order.delivery === 'pickup' ? 'Retiro' : 'Envío'}</span><br>${order.items.filter(item => item.unfulfilled > 0).map(item => `${item.unfulfilled} × ${esc(item.title)}${item.variantTitle ? ` · ${esc(item.variantTitle)}` : ''}`).join(', ')}</li>`).join('')}</ul>`;
 }
@@ -98,11 +107,29 @@ function renderCards() {
     ? [order.name.replace(/^#/, ''), order.customer, order.email].some(value => String(value || '').toLowerCase().includes(term))
     : order.stage === filter);
   $('#orders-status').textContent = term ? `${shown.length} ${shown.length === 1 ? 'resultado' : 'resultados'} en todos los pedidos.` : '';
-  $('#order-cards').innerHTML = shown.length ? shown.map(order => `<a class="order-card" href="#pedidos/${esc(order.id)}">
+  $('#order-cards').innerHTML = shown.length ? shown.map(order => `<article class="order-card"><a class="order-card-link" href="#pedidos/${esc(order.id)}">
     <div class="order-card-head"><strong>${esc(order.name)} · ${esc(order.customer)}</strong><span>${usd(order.totalCents)}</span></div>
     <div class="muted">${esc(itemSummary(order.items))}${order.itemsTruncated ? ' · y más' : ''}</div>
-    <div class="badges">${deliveryBadge(order)}${paymentBadges(order)}${term ? `<span class="badge">${STAGE_ONE[order.stage]}</span>` : ''}</div></a>`).join('')
+    <div class="badges">${deliveryBadge(order)}${paymentBadges(order)}${term ? `<span class="badge">${STAGE_ONE[order.stage]}</span>` : ''}</div></a>${quickButton(order)}</article>`).join('')
     : `<p class="empty muted">${term ? 'No encontramos pedidos con esa búsqueda.' : 'No hay pedidos aquí.'}</p>`;
+  for (const button of view().querySelectorAll('[data-quick]')) button.onclick = () => quickAction(button.dataset.quick, button.dataset.id);
+  // Marcar en lote: solo en «Por preparar», con 2 o más retiros.
+  const pickups = list.orders.filter(order => order.delivery === 'pickup' && order.stage === 'preparar');
+  $('#orders-bulk').innerHTML = !term && filter === 'preparar' && pickups.length >= 2 ? `<button type="button" id="bulk-ready">Todos los retiros están listos (${pickups.length})</button>` : '';
+  if ($('#bulk-ready')) $('#bulk-ready').onclick = openBulk;
+}
+/** Retiros activos: «Listo para retirar» o «Entregado» sin abrir el pedido. Confirma en la misma hoja que el detalle. */
+function quickButton(order) {
+  if (order.delivery !== 'pickup' || !ACTIVE.has(order.stage)) return '';
+  const [action, label] = order.stage === 'preparar' ? ['ready', 'Listo para retirar'] : ['delivered', 'Entregado'];
+  return `<div class="order-quick"><button type="button" data-quick="${action}" data-id="${esc(order.id)}" aria-label="${esc(`${label}: pedido ${order.name}`)}">${label}</button></div>`;
+}
+function quickAction(action, id) {
+  if (busy()) return;
+  const order = list?.orders.find(item => String(item.id) === String(id));
+  if (!order) return;
+  op = null;
+  pickupSheet(action, order, async result => { list = null; listNotice = result?.warning || (action === 'ready' ? `${order.name}: listo para retirar.` : `${order.name}: entregado.`); await showList(true); }, true);
 }
 
 // ---------- Detalle ----------
@@ -168,7 +195,7 @@ async function saveNote(event) {
 
 // ---------- Hojas (despachar, retiro, efectivo, cancelar, confirmaciones) ----------
 const password = () => `<label>Tu contraseña<input type="password" id="sheet-password" autocomplete="current-password" maxlength="256" required><small>Se pide en cada cobro, reembolso, edición o cancelación.</small></label>`;
-function openSheet({ eyebrow, title, danger = false, fields, confirm, backLabel = 'Volver', foot = '', action, build, needsPassword = false, passwordFrom = null, after }) {
+function openSheet({ eyebrow, title, danger = false, fields, confirm, backLabel = 'Volver', foot = '', action, build, needsPassword = false, passwordFrom = null, after, id = null, fromList = false }) {
   const dialog = sheet();
   dialog.innerHTML = `<form id="sheet-form" novalidate><div class="sheet-head"><p class="eyebrow">${esc(eyebrow)}</p><h2 id="order-sheet-title" class="${danger ? 'danger-title' : ''}">${esc(title)}</h2></div>
     ${fields}<p id="sheet-error" role="alert"></p>
@@ -180,7 +207,7 @@ function openSheet({ eyebrow, title, danger = false, fields, confirm, backLabel 
     if (!op) {
       let body;
       try { body = build(); } catch (error) { $('#sheet-error').textContent = error.message; return; }
-      op = { action, id: detail.id, body, operationId: crypto.randomUUID(), sending: false, unconfirmed: false };
+      op = { action, id: id ?? detail.id, fromList, body, operationId: crypto.randomUUID(), sending: false, unconfirmed: false };
       if (passwordFrom) op.password = passwordFrom();
     }
     if (needsPassword) {
@@ -270,10 +297,8 @@ function openAction(action) {
       if (order.outstandingCents > 0 && !confirmUnpaid) throw new Error('Confirma «Enviar igual sin cobrar» para despachar este pedido.');
       return { trackingNumber, carrier, ...(carrier === 'OTHER' ? { carrierName: $('#carrier-name').value.trim() } : {}), notify: $('#notify').checked, confirmUnpaid };
     }, after: done('Pedido despachado.') }), $('#carrier').onchange = () => { $('#carrier-name-field').hidden = $('#carrier').value !== 'OTHER'; };
-  if (action === 'ready') return openSheet({ action, eyebrow: `Pedido ${order.name} · Retiro en Fulshear`, title: 'Listo para retirar', confirm: 'Marcar listo para retirar',
-    fields: `<p>Shopify le avisa a la clienta que su pedido ya está listo en Fulshear. Al entregarlo, se marca «Entregado».</p><div class="notice">${esc(pending)}</div>`, build: () => ({}), after: done('Pedido listo para retirar.') });
-  if (action === 'delivered') return openSheet({ action, eyebrow: `Pedido ${order.name} · Retiro en Fulshear`, title: 'Entregado', confirm: 'Marcar entregado',
-    fields: `<p>La clienta ya retiró su pedido en Fulshear. No se envía ningún correo.</p><div class="notice">${esc(pending)}</div>`, build: () => ({}), after: done('Pedido entregado.') });
+  if (action === 'ready') return pickupSheet(action, order, done('Pedido listo para retirar.'));
+  if (action === 'delivered') return pickupSheet(action, order, done('Pedido entregado.'));
   if (action === 'cash') return openSheet({ action, needsPassword: true, eyebrow: `Pedido ${order.name} · ${order.customer.name}`, title: 'Cobré en efectivo', confirm: `Registrar ${usd(order.outstandingCents)}`,
     fields: `<div class="amount-box"><div>Monto a registrar</div><div class="amount">${usd(order.outstandingCents)}</div><div class="muted">Saldo exacto que calcula Shopify. No se puede cambiar.</div></div>
       <p>El pedido pasa a «Pagado» en Shopify. Queda registrado que lo cobró ${esc(user()?.name || '')} hoy a las ${esc(clock().replace(/\.$/, ''))}.</p>${password()}`,
@@ -292,6 +317,69 @@ function openAction(action) {
   }
   if (action === 'refund') { location.hash = `pedidos/${order.id}/reembolsar`; return; }
   if (action === 'edit') { location.hash = `pedidos/${order.id}/editar`; return; }
+}
+
+/** Listo para retirar / Entregado, desde el detalle o desde la tarjeta. Con saldo por cobrar avisa, pero no bloquea. */
+function pickupSheet(action, order, after, fromList = false) {
+  const pending = (order.lines || order.items || []).filter(line => line.unfulfilled > 0).map(line => `${line.unfulfilled} ${line.title}`).join(', ');
+  const due = !(order.outstandingCents > 0) ? ''
+    : order.celebraciones ? `<p class="notice notice-due">Saldo por cobrar: ${usd(order.outstandingCents)}. Este pedido se cobra desde Celebraciones.</p>`
+      : `<p class="notice notice-due">Saldo por cobrar: ${usd(order.outstandingCents)}. ${action === 'delivered' ? 'Marcarlo entregado no registra el pago: cóbralo al entregarlo.' : 'Cóbralo cuando la clienta lo retire.'}</p>`;
+  const text = action === 'ready'
+    ? { title: 'Listo para retirar', confirm: 'Marcar listo para retirar', intro: 'Shopify le avisa a la clienta que su pedido ya está listo en Fulshear. Al entregarlo, se marca «Entregado».' }
+    : { title: 'Entregado', confirm: 'Marcar entregado', intro: 'La clienta ya retiró su pedido en Fulshear. No se envía ningún correo.' };
+  return openSheet({ action, id: order.id, fromList, eyebrow: `Pedido ${order.name} · Retiro en Fulshear`, title: text.title, confirm: text.confirm,
+    fields: `<p>${text.intro}</p>${due}${pending ? `<div class="notice">${esc(pending)}</div>` : ''}`, build: () => ({}), after });
+}
+
+// ---------- Todos los retiros listos ----------
+function openBulk() {
+  if (busy() || !list) return;
+  op = null;
+  const targets = list.orders.filter(order => order.delivery === 'pickup' && order.stage === 'preparar');
+  if (targets.length < 2) return;
+  const due = targets.filter(order => order.outstandingCents > 0);
+  const dialog = sheet();
+  dialog.innerHTML = `<form id="sheet-form" novalidate><div class="sheet-head"><p class="eyebrow">Retiro en Fulshear · ${targets.length} pedidos</p><h2 id="order-sheet-title">Todos los retiros están listos</h2></div>
+    <p>Shopify le avisa a cada clienta que su pedido ya está listo en Fulshear: un correo por pedido.</p>
+    <ul class="bulk-list">${targets.map(order => `<li data-bulk="${esc(order.id)}"><span>${esc(order.name)} · ${esc(order.customer)}${order.outstandingCents > 0 ? ` <small>saldo ${usd(order.outstandingCents)}</small>` : ''}</span><span class="muted" data-bulk-state></span></li>`).join('')}</ul>
+    ${due.length ? `<p class="notice notice-due">${due.length === 1 ? '1 pedido tiene' : `${due.length} pedidos tienen`} saldo por cobrar. Cóbralo cuando lo retiren.</p>` : ''}
+    <p id="sheet-error" role="alert"></p>
+    <div class="actions"><button type="button" id="sheet-back">Volver</button><button type="submit" id="sheet-confirm" class="primary">Marcar ${targets.length} listos</button></div></form>`;
+  $('#sheet-back').onclick = () => { if (!busy()) dialog.close(); };
+  $('#sheet-form').onsubmit = event => { event.preventDefault(); if (!bulk && !bulkDone) runBulk(targets); };
+  dialog.showModal();
+  $('#sheet-confirm').focus();
+}
+/** Uno por uno, cada uno con su operationId. Antes vuelve a leer la lista para no avisar dos veces a una clienta. */
+async function runBulk(targets) {
+  const confirmButton = $('#sheet-confirm'), backButton = $('#sheet-back'), error = $('#sheet-error');
+  bulk = { sending: true }; confirmButton.disabled = true; backButton.disabled = true; error.textContent = '';
+  let still;
+  try { still = new Set((await portal.request('pedidos/orders')).orders.filter(order => order.delivery === 'pickup' && order.stage === 'preparar').map(order => String(order.id))); }
+  catch (failure) { bulk = null; confirmButton.disabled = false; backButton.disabled = false; error.textContent = `${errorText(failure)} No se marcó ningún pedido.`; return; }
+  const tally = { ok: 0, skipped: 0, failed: 0, unknown: 0 };
+  for (const order of targets) {
+    const state = sheet().querySelector(`[data-bulk="${CSS.escape(String(order.id))}"] [data-bulk-state]`);
+    if (!still.has(String(order.id))) { state.textContent = 'Ya no está por preparar'; tally.skipped++; continue; }
+    state.textContent = 'Enviando…';
+    try {
+      const result = await portal.request(`pedidos/orders/${order.id}/ready`, { body: { operationId: crypto.randomUUID() } });
+      state.textContent = result?.warning || 'Listo'; tally.ok++;
+    } catch (failure) {
+      const sure = failure.status && (NOT_APPLIED.has(failure.code) || (failure.code === 'SHOPIFY_UNAVAILABLE' && failure.result?.final === true));
+      state.textContent = sure ? `No se marcó: ${errorText(failure)}` : 'Sin confirmar: revisa el pedido antes de repetirlo';
+      tally[sure ? 'failed' : 'unknown']++;
+    }
+  }
+  bulk = null; bulkDone = true;
+  const parts = [`${tally.ok} ${tally.ok === 1 ? 'listo' : 'listos'}`];
+  if (tally.failed) parts.push(`${tally.failed} sin marcar`);
+  if (tally.unknown) parts.push(`${tally.unknown} sin confirmar`);
+  if (tally.skipped) parts.push(`${tally.skipped} ya no estaban por preparar`);
+  error.textContent = tally.failed || tally.unknown ? `${parts.join(', ')}. Abre los que quedaron sin marcar para revisarlos.` : '';
+  listNotice = `${parts.join(', ')}.`;
+  confirmButton.hidden = true; backButton.textContent = 'Cerrar'; backButton.disabled = false; backButton.focus();
 }
 
 // ---------- Reembolso ----------
@@ -467,7 +555,12 @@ if (portal?.mode && view()) {
   sheet().addEventListener('cancel', event => { if (busy()) event.preventDefault(); });
   // Escape está bloqueado mientras no hay confirmación; solo un cierre forzado (sesión vencida) llega aquí.
   // Al cerrar un resultado definitivo se vuelve a leer el pedido (solo lectura) para mostrar su estado real.
-  sheet().addEventListener('close', () => { const reread = op?.final && detail; if (op && !op.sending) op = null; if (reread) showDetail(detail.id); });
+  sheet().addEventListener('close', () => {
+    const reread = op?.final ? (op.fromList ? 'list' : detail) : null;
+    if (op && !op.sending) op = null;
+    if (bulkDone || reread === 'list') { bulkDone = false; list = null; showList(true); }
+    else if (reread) showDetail(detail.id);
+  });
   // La lista se esconde si se abre otra sección; la sesión vencida la maneja staff-ui.
   for (const id of ['home', 'categories', 'history', 'users', 'celebraciones']) $(`#${id}`)?.addEventListener('click', () => { if (!busy()) view().hidden = true; });
   if (location.hash.startsWith('#pedidos') && canSee()) show();

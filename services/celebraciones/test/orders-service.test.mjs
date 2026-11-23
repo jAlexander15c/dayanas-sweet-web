@@ -159,7 +159,7 @@ test('list groups open orders, sums the bake list and excludes Celebraciones and
   const { call } = setup();
   const { status, body } = await call('GET', '/orders', undefined, INVENTARIO);
   assert.equal(status, 200);
-  assert.deepEqual(body.counts, { preparar: 3, listo: 1, entregado: 0 });
+  assert.deepEqual(body.counts, { preparar: 3, listo: 1, entregado: 0, cancelado: 0 });
   const byName = Object.fromEntries(body.orders.map(order => [order.name, order]));
   assert.equal(byName['#1042'].delivery, 'shipping');
   assert.equal(byName['#1043'].delivery, 'pickup');
@@ -348,7 +348,11 @@ test('cancel: a shipped order is rejected with the refund advice; an open order 
   assert.equal(raw.cancelInput.restock, true);
   assert.equal(raw.cancelInput.notifyCustomer, true);
   const list = await call('GET', '/orders');
-  assert.ok(!list.body.orders.some(order => order.name === '#1042'));
+  // Cancelled: listed for the panel history, never baked or counted as active.
+  const cancelled = list.body.orders.find(order => order.name === '#1042');
+  assert.equal(cancelled?.stage, 'cancelado');
+  assert.equal(list.body.counts.cancelado, 1);
+  assert.equal(list.body.counts.preparar + list.body.counts.listo + list.body.counts.entregado + list.body.counts.cancelado, list.body.orders.length);
 });
 
 test('cancel is asynchronous: a pending job keeps the operation pending, is polled by id and never resent', async () => {
