@@ -126,9 +126,10 @@ export function createShopifyOrdersClient({ transport }) {
     },
     // Cobros del panel (pedidos borrador). draftOrderInvoiceSend no tiene clave de idempotencia: el servicio
     // la intenta una sola vez por operación (charges-service.mjs) y nunca la repite.
-    /** Una página de cobros (los más recientes primero). `after` sigue con la página siguiente. */
-    async chargeDrafts(after = null) {
-      const value = await graphql(`query PanelCharges($query: String!, $after: String) { draftOrders(first: 50, after: $after, sortKey: UPDATED_AT, reverse: true, query: $query) { nodes { ${chargeFields} } pageInfo { hasNextPage endCursor } } }`, { query: 'tag:"ds-cobro"', after }, 'draftOrders');
+    /** Una página de cobros: los más recientes primero, o por ID ascendente (orden estable) para el barrido del cron. */
+    async chargeDrafts(after = null, { sweep = false } = {}) {
+      const value = await graphql(`query PanelCharges($query: String!, $after: String, $sortKey: DraftOrderSortKeys!, $reverse: Boolean!) { draftOrders(first: 50, after: $after, sortKey: $sortKey, reverse: $reverse, query: $query) { nodes { ${chargeFields} } pageInfo { hasNextPage endCursor } } }`,
+        { query: 'tag:"ds-cobro"', after, sortKey: sweep ? 'ID' : 'UPDATED_AT', reverse: !sweep }, 'draftOrders');
       return { nodes: value?.nodes || [], hasNextPage: !!value?.pageInfo?.hasNextPage, endCursor: value?.pageInfo?.endCursor || null };
     },
     /** Los borradores más nuevos por ID, sin filtro de búsqueda: no depende del índice de búsqueda de Shopify. */

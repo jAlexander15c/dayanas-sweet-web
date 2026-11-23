@@ -82,16 +82,43 @@ test('lost answer of the create: the retry finds the draft by its tag and only s
   assert.equal(fake.invoices.length, 1);
 });
 
-test('create that never reached Shopify: a quick retry waits, a later one creates exactly one draft', async () => {
+test('create without answer and never found: a quick retry waits, a later one closes as unconfirmed and never creates (revisión R1)', async () => {
   const { fake, call, advance } = setup();
   fake.next('PanelChargeCreate', 'down');
   assert.equal((await call('POST', '/orders/charges/create', cobro(4))).status, 502);
   const early = await call('POST', '/orders/charges/create', cobro(4));
   assert.deepEqual([early.status, early.body.state], [202, 'processing']);
-  assert.equal(fake.drafts.size, 0);
   advance(CREATE_SETTLE_MS + 1000);
-  assert.equal((await call('POST', '/orders/charges/create', cobro(4))).status, 200);
-  assert.equal(fake.drafts.size, 1);
+  const late = await call('POST', '/orders/charges/create', cobro(4));
+  assert.deepEqual([late.status, late.body.code, late.body.final], [409, 'CREATE_UNCONFIRMED', true]);
+  assert.deepEqual([creates(fake), fake.drafts.size], [1, 0], 'only the original attempt; the admin decides with a new key');
+  assert.equal((await call('POST', '/orders/charges/create', cobro(4))).body.code, 'CREATE_UNCONFIRMED', 'the closed receipt answers repeats');
+  assert.equal((await call('POST', '/orders/charges/create', cobro(5))).status, 200, 'a new key creates normally');
+});
+
+test('lost create whose draft was voided in another tab: the retry never re-creates it (revisión R1)', async () => {
+  const { fake, call, advance } = setup();
+  fake.next('PanelChargeCreate', 'lost');
+  assert.equal((await call('POST', '/orders/charges/create', cobro(50))).status, 502);
+  const [draft] = (await call('GET', '/orders/charges')).body.charges;
+  assert.equal((await call('POST', `/orders/charges/${draft.id}/void`, { operationId: op(51) })).status, 200);
+  advance(CREATE_SETTLE_MS + 60_000);
+  const retry = await call('POST', '/orders/charges/create', cobro(50));
+  assert.deepEqual([retry.status, retry.body.code], [409, 'CREATE_UNCONFIRMED']);
+  assert.deepEqual([creates(fake), fake.drafts.size, fake.invoices.length], [1, 0, 0]);
+});
+
+test('Shopify rejecting the create before applying it is final, not pending', async () => {
+  const { fake, call } = setup();
+  fake.next('PanelChargeCreate', 'reject');
+  const rejected = await call('POST', '/orders/charges/create', cobro(52));
+  assert.deepEqual([rejected.body.code, rejected.body.final], ['SHOPIFY_REJECTED', true]);
+  assert.equal(fake.drafts.size, 0);
+  // Errores de GraphQL sin datos (p. ej. THROTTLED): Shopify no aplicó nada; también es definitivo.
+  fake.next('PanelChargeCreate', 'throttled');
+  const throttled = await call('POST', '/orders/charges/create', cobro(53));
+  assert.deepEqual([throttled.status, throttled.body.code, throttled.body.final], [503, 'SHOPIFY_REJECTED', true]);
+  assert.equal(fake.drafts.size, 0);
 });
 
 test('invoice email unconfirmed: the charge exists, the email is never sent twice (revisión F2)', async () => {
@@ -146,16 +173,26 @@ test('draft ID known: retries read it by ID and never create, even after the wai
   assert.deepEqual([creates(fake), fake.count('PanelChargeInvoice'), fake.count('PanelChargeByOperation')], [1, 1, 0]);
 });
 
-test('create without answer and a direct read that cannot prove absence: never creates again', async () => {
+test('a pending quote retried after its expiry day never creates or invoices an expired quote (revisión R2)', async () => {
   const { fake, call, advance } = setup();
-  // 50 borradores ajenos más nuevos que el intento: la lectura directa no llega hasta él.
   fake.next('PanelChargeCreate', 'down');
-  assert.equal((await call('POST', '/orders/charges/create', cobro(42))).status, 502);
-  advance(CREATE_SETTLE_MS + 1000);
-  for (let i = 0; i < 51; i++) fake.drafts.set(String(900 + i), { id: String(900 + i), status: 'OPEN', email: 'x@y.z', createdAt: new Date(Date.parse('2026-11-06T15:30:00Z') + i).toISOString(), tags: ['otro'], customAttributes: [], lines: [{ title: 'Anticipo', cents: 100 }] });
-  const retry = await call('POST', '/orders/charges/create', cobro(42));
-  assert.deepEqual([retry.status, retry.body.state, retry.body.final], [502, 'uncertain', undefined]);
-  assert.equal(creates(fake), 1, 'only the original attempt');
+  assert.equal((await call('POST', '/orders/charges/create', cotizacion(42, '2026-11-07'))).status, 502);
+  advance(2 * DAY);
+  const retry = await call('POST', '/orders/charges/create', cotizacion(42, '2026-11-07'));
+  assert.deepEqual([retry.status, retry.body.code], [409, 'CREATE_UNCONFIRMED']);
+  assert.deepEqual([creates(fake), fake.drafts.size, fake.invoices.length], [1, 0, 0]);
+});
+
+test('the cron keeps its place: an expired quote after 2,000 charges is reached on the next run (revisión R3)', async () => {
+  const { fake, charges, advance } = setup();
+  const filler = id => ({ id: String(id), status: 'COMPLETED', email: 'x@y.z', createdAt: '2026-11-01T12:00:00Z', tags: ['ds-cobro', 'ds-tipo:cobro'], customAttributes: [], lines: [{ title: 'Galletas', cents: 1000 }] });
+  for (let i = 0; i < 2000; i++) fake.drafts.set(String(10_000 + i), filler(10_000 + i));
+  fake.drafts.set('20000', { ...filler(20000), status: 'OPEN', tags: ['ds-cobro', 'ds-tipo:cotizacion', 'ds-vence:2026-11-07'] });
+  advance(3 * DAY);
+  assert.deepEqual(await charges.expire(), { expired: 0 }, 'the first run stops after 40 pages');
+  assert.deepEqual(await charges.expire(), { expired: 1 }, 'the next run continues where it stopped');
+  assert.equal(fake.drafts.has('20000'), false);
+  assert.deepEqual(await charges.expire(), { expired: 0 }, 'a finished sweep starts again from the beginning');
 });
 
 test('stored receipts carry no name, email, concept or link (revisión F3)', async () => {

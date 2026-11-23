@@ -123,7 +123,7 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
   const userError = message => ({ field: null, message, code: 'INVALID' });
 
   const handlers = {
-    PanelCharges: v => ({ draftOrders: page(byUpdate().filter(d => v.query.includes('ds-cobro') && d.tags.includes('ds-cobro') && !unindexed.has(d.id)), 50, v.after) }),
+    PanelCharges: v => ({ draftOrders: page((v.sortKey === 'ID' ? [...drafts.values()].sort((a, b) => Number(a.id) - Number(b.id)) : byUpdate()).filter(d => v.query.includes('ds-cobro') && d.tags.includes('ds-cobro') && !unindexed.has(d.id)), 50, v.after) }),
     PanelRecentDrafts: () => ({ draftOrders: page([...drafts.values()].sort((a, b) => Number(b.id) - Number(a.id)), 50, null) }),
     PanelChargeByOperation: v => { const op = /ds-operation:([a-f0-9-]+)/.exec(v.query)?.[1]; return { draftOrders: { nodes: [...drafts.values()].filter(d => d.tags.includes(`ds-operation:${op}`) && !unindexed.has(d.id)).map(renderDraft) } }; },
     PanelCharge: v => ({ draftOrder: draftOf(v.id) ? renderDraft(draftOf(v.id)) : null }),
@@ -241,6 +241,7 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
     const index = queue.findIndex(item => item.op === op);
     const mode = index >= 0 ? queue.splice(index, 1)[0].mode : null;
     if (mode === 'down') throw new TypeError('network down');
+    if (mode === 'throttled') return Response.json({ errors: [{ message: 'Throttled', extensions: { code: 'THROTTLED' } }] });
     if (mode === 'denied') return Response.json({ errors: [{ message: 'Access denied', extensions: { code: 'ACCESS_DENIED' } }] });
     if (!handlers[op]) return Response.json({ errors: [{ message: 'unknown', extensions: { code: 'UNKNOWN' } }] });
     if (mode === 'reject') return Response.json({ data: { [ROOTS[op]]: { userErrors: [userError('Rejected by test')], orderCancelUserErrors: [userError('Rejected by test')] } } });

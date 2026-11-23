@@ -5,9 +5,10 @@
 //
 // Idempotencia (crear): el borrador lleva la etiqueta ds-operation:<id>. En cuanto Shopify devuelve
 // su ID, queda guardado y todo reintento lo lee por ID: nunca se crea otro. Si la creación quedó sin
-// respuesta, se busca por etiqueta y en la lectura directa de los borradores más nuevos (que no
-// depende del índice de búsqueda); solo se vuelve a crear cuando, pasado CREATE_SETTLE_MS, esa
-// lectura cubre todo lo creado desde el intento y el borrador no está.
+// respuesta, el reintento la busca (por etiqueta y en la lectura de los borradores más nuevos) pero
+// NUNCA vuelve a crear: que el borrador no aparezca ahora no prueba que no se haya creado (pudo
+// anularse o vencer). Pasado CREATE_SETTLE_MS sin encontrarlo, la operación se cierra como «sin
+// confirmar» y la administradora decide, mirando la lista, si crea uno nuevo (con otra clave).
 // La factura (el correo) se envía una sola vez: la intención queda guardada antes de llamar a
 // Shopify y un reintento nunca la repite. Si no se pudo confirmar, el cobro igual existe y la
 // pantalla pide mandar el enlace por WhatsApp.
@@ -19,12 +20,10 @@ const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const EMAIL = /^[^\s@<>()[\],;:"]{1,64}@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i;
 const DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 export const CHARGE_LIMITS = Object.freeze({ lines: 10, minCents: 100, maxCents: 500_000, maxDays: 60, title: 80, name: 80, message: 500 });
-// Tras un intento de creación sin respuesta, una solicitud que llegó tarde a Shopify puede seguir en
-// curso: durante este plazo un reintento espera. Pasado el plazo ya no puede estar en curso.
+// Tras un intento de creación sin respuesta, el borrador puede tardar en verse: durante este plazo
+// un reintento espera (202). Después, si sigue sin aparecer, la operación se cierra sin confirmar.
 export const CREATE_SETTLE_MS = 5 * 60_000;
-// Margen para relojes distintos al comparar createdAt de Shopify con el momento del intento.
-const CLOCK_SKEW_MS = 2 * 60_000;
-// El cron recorre como mucho estas páginas de 50 cobros por hora.
+// El cron recorre como mucho estas páginas de 50 cobros por hora y sigue donde quedó en la próxima.
 const EXPIRE_PAGES = 40;
 const KINDS = { cobro: 'Cobro', cotizacion: 'Cotización' };
 
@@ -100,7 +99,8 @@ export function createChargesService({ client, store, now = () => Date.now(), ti
     if (Number.isInteger(error?.status) && typeof error?.code === 'string') return { status: error.status, body: { code: error.code, message: error.message } };
     return { status: 503, body: { code: 'UNAVAILABLE', message: 'Cobros no respondió. Inténtalo en unos segundos.' } };
   };
-  const isPending = response => response.status === 202 || response.body?.state === 'uncertain' || response.status === 503;
+  // 503 sin respuesta de Cobros queda pendiente; SHOPIFY_REJECTED (Shopify no aceptó la solicitud, sin cambios) es definitivo.
+  const isPending = response => response.status === 202 || response.body?.state === 'uncertain' || (response.status === 503 && response.body?.code !== 'SHOPIFY_REJECTED');
   const final = response => (response.status >= 400 && !isPending(response)) ? { ...response, body: { ...response.body, final: true } } : response;
   const today = () => localDay(now(), timeZone);
 
@@ -170,16 +170,12 @@ export function createChargesService({ client, store, now = () => Date.now(), ti
 
   // ---------- Crear ----------
   /** Busca el borrador de una operación: por etiqueta y en la lectura directa de los más nuevos. */
-  async function findByOperation(operationId, since) {
+  async function findByOperation(operationId) {
     const tag = `ds-operation:${operationId}`;
     const [byTag] = await client.chargesByOperation(operationId);
-    if (byTag) return { draft: byTag, covered: true };
+    if (byTag) return byTag;
     const recent = await client.recentDrafts();
-    const draft = recent.nodes.find(node => Array.isArray(node.tags) && node.tags.includes(tag));
-    if (draft) return { draft, covered: true };
-    // La lectura prueba la ausencia solo si llega hasta antes del intento (o si no hay más borradores).
-    const oldest = recent.nodes.length ? Math.min(...recent.nodes.map(node => Date.parse(node.createdAt) || Infinity)) : Infinity;
-    return { draft: null, covered: !recent.hasNextPage || oldest < since - CLOCK_SKEW_MS };
+    return recent.nodes.find(node => Array.isArray(node.tags) && node.tags.includes(tag)) || null;
   }
 
   async function attemptCreate(operationId, params, progress) {
@@ -189,14 +185,12 @@ export function createChargesService({ client, store, now = () => Date.now(), ti
       if (!draft) throw orderError(409, 'CHARGE_GONE', 'Este cobro ya no está en Shopify: se anuló o venció. Revisa la lista de Cobros.');
     } else {
       if (progress.createdAt) {
-        const found = await findByOperation(operationId, progress.createdAt);
-        draft = found.draft;
+        // Ya hubo un intento sin respuesta: se concilia, nunca se vuelve a crear.
+        draft = await findByOperation(operationId);
         if (!draft && now() - progress.createdAt < CREATE_SETTLE_MS)
           return { status: 202, body: { code: 'PROCESSING', state: 'processing', message: 'Shopify todavía no confirma el cobro. Espera unos minutos y toca «Reintentar»: el panel revisa y no lo repite.' } };
-        if (!draft && !found.covered)
-          throw orderError(502, 'REVIEW_REQUIRED', 'No pudimos comprobar si el cobro se creó. Revisa los borradores en Shopify antes de repetirlo.', { uncertain: true });
-      }
-      if (!draft) {
+        if (!draft) throw orderError(409, 'CREATE_UNCONFIRMED', 'No pudimos confirmar que el cobro se creó. Revisa la lista de Cobros: si no aparece, crea uno nuevo.');
+      } else {
         store.progress(operationId, { createdAt: now() }, now());
         draft = await client.createCharge({
           email: params.email, presentmentCurrencyCode: 'USD', taxExempt: false, useCustomerDefaultAddress: false,
@@ -278,13 +272,17 @@ export function createChargesService({ client, store, now = () => Date.now(), ti
         return { status: 200, body: { voided: id } };
       });
     },
-    /** Cron: recorre todos los cobros (por páginas), borra las cotizaciones vencidas sin pagar y anota los pagados. */
+    /**
+     * Cron: recorre los cobros por ID (orden estable), borra las cotizaciones vencidas sin pagar y anota los
+     * pagados. Hace como mucho EXPIRE_PAGES páginas por hora y guarda dónde quedó: la próxima hora sigue de ahí
+     * y, al terminar el recorrido, vuelve a empezar.
+     */
     async expire() {
       const day = today();
-      let expired = 0, after = null;
+      let expired = 0, after = store.chargeSweepCursor();
       for (let page = 0; page < EXPIRE_PAGES; page++) {
         let result;
-        try { result = await client.chargeDrafts(after); } catch { break; }
+        try { result = await client.chargeDrafts(after, { sweep: true }); } catch { break; }
         for (const draft of result.nodes) {
           if (!isCharge(draft)) continue;
           if (draft.status === 'COMPLETED') { linkPaid(draft); continue; }
@@ -295,8 +293,9 @@ export function createChargesService({ client, store, now = () => Date.now(), ti
             if (removed) { store.recordCharge({ draftId: numeric(draft.id), ...removed, state: 'vencido', at: now() }); expired++; }
           } catch { /* se reintenta en la próxima hora */ }
         }
-        if (!result.hasNextPage || !result.endCursor) break;
-        after = result.endCursor;
+        after = result.hasNextPage && result.endCursor ? result.endCursor : null;
+        store.saveChargeSweepCursor(after);
+        if (!after) break;
       }
       return { expired };
     },

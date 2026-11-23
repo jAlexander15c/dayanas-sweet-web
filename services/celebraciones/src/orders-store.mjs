@@ -26,6 +26,8 @@ export function createOrdersStore(sql) {
   // Pedido que salió de un cobro pagado (draftOrder.order): así se reconoce aunque no lleve las etiquetas.
   sql.run(`CREATE TABLE IF NOT EXISTS charge_orders (
     order_id TEXT PRIMARY KEY, draft_id TEXT NOT NULL, kind TEXT NOT NULL CHECK (kind IN ('cobro','cotizacion')), at INTEGER NOT NULL)`);
+  // Dónde quedó el barrido horario de cobros (cursor de Shopify); vacío = empezar desde el principio.
+  sql.run('CREATE TABLE IF NOT EXISTS charge_sweep (id INTEGER PRIMARY KEY CHECK (id = 1), cursor TEXT)');
   sql.run(`CREATE TABLE IF NOT EXISTS order_notes (
     order_id TEXT PRIMARY KEY, text TEXT NOT NULL, version INTEGER NOT NULL,
     staff_id TEXT NOT NULL, staff_name TEXT NOT NULL, updated_at INTEGER NOT NULL)`);
@@ -63,6 +65,10 @@ export function createOrdersStore(sql) {
     recordCharge({ draftId, kind, totalCents, concept, state, at }) {
       sql.run(`INSERT INTO charge_records (draft_id, kind, total_cents, concept, state, at) VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(draft_id) DO NOTHING`, draftId, kind, totalCents, String(concept).slice(0, 900), state, at);
+    },
+    chargeSweepCursor: () => sql.all('SELECT cursor FROM charge_sweep WHERE id = 1')[0]?.cursor || null,
+    saveChargeSweepCursor(cursor) {
+      sql.run('INSERT INTO charge_sweep (id, cursor) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET cursor = excluded.cursor', cursor ?? null);
     },
     linkChargeOrder({ orderId, draftId, kind, at }) {
       sql.run('INSERT INTO charge_orders (order_id, draft_id, kind, at) VALUES (?, ?, ?, ?) ON CONFLICT(order_id) DO NOTHING', orderId, draftId, kind, at);
