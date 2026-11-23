@@ -119,7 +119,7 @@ function showAccess(screen, notice = '') {
 }
 // starting/moved: si Dayana navega mientras el panel termina de cargar, no se le cambia la pantalla al terminar.
 let starting = false, moved = false;
-function hideViews() { if (starting) moved = true; for (const id of ['workspace', 'categories-view', 'history-view', 'users-view', 'celebraciones-view', 'pedidos-view', 'today-view']) { const view = $(`#${id}`); if (view) view.hidden = true; } }
+function hideViews() { if (starting) moved = true; for (const id of ['workspace', 'categories-view', 'history-view', 'users-view', 'celebraciones-view', 'pedidos-view', 'today-view', 'cobros-view']) { const view = $(`#${id}`); if (view) view.hidden = true; } }
 // Portal: marca la sección abierta en la navegación y cierra los menús «Más» y «Cuenta».
 // Solo usa APIs que existen también en los nodos simulados de las pruebas (setAttribute es opcional).
 const setAttr = (element, name, value) => { if (typeof element?.setAttribute === 'function') element.setAttribute(name, value); };
@@ -130,7 +130,7 @@ function markNav(id) {
   if (starting) moved = true;
   closeMenus();
   for (const button of document.querySelectorAll('nav[aria-label="Pantallas"] button')) { if (button.id === id) setAttr(button, 'aria-current', 'page'); else button.removeAttribute?.('aria-current'); }
-  setAttr($('#more-nav'), 'data-current', String(['categories', 'history', 'users'].includes(id)));
+  setAttr($('#more-nav'), 'data-current', String(['categories', 'history', 'users', 'cobros'].includes(id)));
 }
 function toggleMenu(menu, button) {
   const open = !$(menu)?.classList.contains('open'); closeMenus();
@@ -150,7 +150,7 @@ async function showPanel() {
   if ($('#account-button')) $('#account-button').onclick = () => toggleMenu('#account-menu', '#account-button');
   if ($('#passkeys-button')) $('#passkeys-button').onclick = () => showPasskeys().catch(e => { $('#feedback').textContent = e.message; });
   void offerPasskey();
-  $('#users').hidden = !roles.includes('admin'); $('#celebraciones').hidden = !roles.includes('celebraciones');
+  $('#users').hidden = !roles.includes('admin'); if ($('#cobros')) $('#cobros').hidden = !roles.includes('admin'); $('#celebraciones').hidden = !roles.includes('celebraciones');
   if ($('#pedidos')) $('#pedidos').hidden = !(roles.includes('inventario') || roles.includes('admin'));
   for (const id of ['home', 'categories', 'history']) $(`#${id}`).hidden = !roles.includes('inventario');
   if ($('#hoy')) $('#hoy').hidden = !(roles.includes('inventario') || roles.includes('celebraciones'));
@@ -174,6 +174,7 @@ async function showPanel() {
   // Portal: se abre en «Hoy», salvo que el enlace pida una sección (por ejemplo, desde un correo).
   if (location.hash.startsWith('#celebraciones') && roles.includes('celebraciones')) showCelebraciones();
   else if (location.hash.startsWith('#pedidos') && $('#pedidos') && !$('#pedidos').hidden) window.inventarioOrders?.show();
+  else if (location.hash.startsWith('#cobros') && roles.includes('admin')) window.inventarioCobros?.show();
   else if (portal && $('#hoy') && !$('#hoy').hidden) showToday();
 }
 async function offerPasskey() {

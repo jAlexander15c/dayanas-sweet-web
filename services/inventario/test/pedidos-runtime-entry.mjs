@@ -7,6 +7,7 @@ import { createShopifyAdminTransport } from '../../celebraciones/src/shopify-pay
 import { createShopifyOrdersClient } from '../../celebraciones/src/orders-shopify.mjs';
 import { createOrdersStore, sqlFromStorage } from '../../celebraciones/src/orders-store.mjs';
 import { createOrdersService } from '../../celebraciones/src/orders-service.mjs';
+import { createChargesService } from '../../celebraciones/src/charges-service.mjs';
 import { cancellableOrder, createFakeShopify, sampleOrders } from '../../celebraciones/test/fake-shopify-orders.mjs';
 
 const cardOrder = { ...cancellableOrder(), id: '1047', name: '#1047', paid: false,
@@ -36,12 +37,13 @@ globalThis.fetch = async (url, init) => {
 export class InventoryStore extends ProductionInventoryStore {
   constructor(ctx, env) {
     const transport = createShopifyAdminTransport({ shop: env.SHOPIFY_SHOP, clientId: 'synthetic-celebraciones', secret: 'synthetic-secret', fetchImpl: orders.fetch });
-    const ordersService = createOrdersService({ client: createShopifyOrdersClient({ transport }), store: createOrdersStore(sqlFromStorage(ctx.storage)), shop: env.SHOPIFY_SHOP });
+    const client = createShopifyOrdersClient({ transport }), store = createOrdersStore(sqlFromStorage(ctx.storage));
+    const ordersService = createOrdersService({ client, store, shop: env.SHOPIFY_SHOP }), chargesService = createChargesService({ client, store });
     // Same contract as the RPC service binding: a structured clone of the input, nothing else.
     // rpcLost: Celebraciones handles the call (and may apply it), then the RPC answer is lost.
     const binding = { handle: async input => {
       const copy = JSON.parse(JSON.stringify(input)); forwarded.push(copy);
-      const result = await handleStaffGateway(copy, { config: { shop: env.SHOPIFY_SHOP }, ordersService });
+      const result = await handleStaffGateway(copy, { config: { shop: env.SHOPIFY_SHOP }, ordersService, chargesService });
       if (rpcLost && copy.method === 'POST') { rpcLost = false; throw new Error('RPC answer lost'); }
       return result;
     } };
@@ -53,6 +55,8 @@ export default { async fetch(request, env, ctx) {
   const url = new URL(request.url), path = url.pathname;
   if (path === '/__test/emails') return Response.json(emails);
   if (path === '/__test/pedidos') return Response.json({ calls: orders.calls, moneyCalls: orders.moneyCalls, forwarded: forwarded.map(input => ({ actor: input.actor, path: input.path, body: input.body })) });
+  if (path === '/__test/cobros') return Response.json({ drafts: [...orders.drafts.values()].map(d => ({ id: d.id, status: d.status, tags: d.tags, email: d.email, lines: d.lines })), invoices: orders.invoices, creates: orders.count('PanelChargeCreate') });
+  if (path === '/__test/cobros-pay') return Response.json({ orderId: orders.payDraft(url.searchParams.get('id')) });
   if (path === '/__test/pedidos-next') {
     if (url.searchParams.get('op') === 'RPC') rpcLost = true; else orders.next(url.searchParams.get('op'), url.searchParams.get('mode'));
     return Response.json({ ok: true });

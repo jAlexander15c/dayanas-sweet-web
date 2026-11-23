@@ -48,6 +48,7 @@ function deliveryBadge(order) {
 function paymentBadges(order) {
   const badges = [];
   if (order.celebraciones) badges.push('<span class="badge badge-pickup">Celebraciones</span>');
+  if (order.charge) badges.push(`<span class="badge badge-pickup">${order.charge === 'cotizacion' ? 'Cotización' : 'Cobro'}</span>`);
   if (order.outstandingCents > 0) badges.push(`<span class="badge badge-due">${order.cash ? 'Efectivo pendiente' : 'Pago pendiente'}</span>`);
   else if (order.financial !== 'REFUNDED') badges.push('<span class="badge badge-paid">Pagado</span>');
   if (order.financial === 'PARTIALLY_REFUNDED') badges.push('<span class="badge badge-refund">Reembolso parcial</span>');
@@ -99,7 +100,8 @@ function renderList() {
   if (listNotice) { $('#orders-status').textContent = listNotice; listNotice = ''; }
 }
 function packing() {
-  const pending = list.orders.filter(order => ACTIVE.has(order.stage) && !order.celebraciones && order.items.some(item => item.unfulfilled > 0));
+  // Celebraciones y Cobros no se hornean desde aquí: no entran en la hoja de empaque (como en «Para hornear»).
+  const pending = list.orders.filter(order => ACTIVE.has(order.stage) && !order.celebraciones && !order.charge && order.items.some(item => item.unfulfilled > 0));
   if (!pending.length) return '<p class="muted">No hay pedidos por empacar.</p>';
   return `<ul class="packing">${pending.map(order => `<li><strong>${esc(order.name)} · ${esc(order.customer)}</strong> <span class="muted">${order.delivery === 'pickup' ? 'Retiro' : 'Envío'}</span><br>${order.items.filter(item => item.unfulfilled > 0).map(item => `${item.unfulfilled} × ${esc(item.title)}${item.variantTitle ? ` · ${esc(item.variantTitle)}` : ''}`).join(', ')}</li>`).join('')}</ul>`;
 }

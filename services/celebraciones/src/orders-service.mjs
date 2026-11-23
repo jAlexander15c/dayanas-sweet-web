@@ -501,7 +501,7 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
           unitCents: cents(line.discountedUnitPriceAfterAllDiscountsSet || line.originalUnitPriceSet), variantId: variants?.get(line.id) || null }));
         const shipped = activeFulfillments(order).length > 0;
         return { status: 200, body: {
-          id: numeric(order.id), name: order.name, createdAt: order.createdAt, cancelled: !!order.cancelledAt, celebraciones: isCelebraciones(order),
+          id: numeric(order.id), name: order.name, createdAt: order.createdAt, cancelled: !!order.cancelledAt, celebraciones: isCelebraciones(order), charge: chargeKind(order),
           customer: { name: customerLabel(order, true), email: order.email || '', phone: order.phone || '' }, customerNote: String(order.note || '').slice(0, 2000),
           delivery: pickup ? 'pickup' : 'shipping', shippingTitle: order.shippingLine?.title || null, stage: stageOf(order, ready),
           financial: order.displayFinancialStatus, fulfillment: order.displayFulfillmentStatus, lines, linesTruncated: !!order.lineItems.pageInfo?.hasNextPage,

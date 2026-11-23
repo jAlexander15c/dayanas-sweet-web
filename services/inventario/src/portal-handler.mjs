@@ -14,6 +14,8 @@ const ORDER_ROUTE = /^orders(?:\/(\d{1,20})(?:\/(note|fulfill|ready|delivered|re
 const ORDER_ADMIN = new Set(['refund-preview', 'cash', 'refund', 'edit', 'cancel']);
 const ORDER_MONEY = new Set(['cash', 'refund', 'edit', 'cancel']);
 const VARIANT_GID = /^gid:\/\/shopify\/ProductVariant\/\d{1,20}$/;
+// Cobros: solo administradora; crear y anular piden la contraseña (como el dinero de Pedidos).
+const CHARGE_ROUTE = /^charges(?:\/(create)|\/\d{1,20}\/(void))?$/;
 // Pedidos: Inventario authenticates, checks roles, verifies the admin password for
 // money actions and forwards only {actor, stepUp}. The password never leaves this Worker.
 async function handlePedidos({ env, identity, offline, clientFactory }, action, data) {
@@ -25,6 +27,20 @@ async function handlePedidos({ env, identity, offline, clientFactory }, action, 
     requireRole(actor, 'admin');
     await offline.get();
     return { status: 200, body: { variants: await clientFactory().variantsWithStock() } };
+  }
+  const charge = CHARGE_ROUTE.exec(route);
+  if (charge) {
+    requireRole(actor, 'admin');
+    const write = charge[1] || charge[2];
+    const body = write ? data.body : undefined;
+    let forwarded = actor;
+    if (write) {
+      requireValue(body && typeof body === 'object' && !Array.isArray(body) && !Object.hasOwn(body, 'password') && !Object.hasOwn(body, 'actor'));
+      if (typeof data.password !== 'string' || !data.password) throw fail(401, 'PASSWORD_REQUIRED', 'Escribe tu contraseña para confirmar.');
+      forwarded = await identity.stepUp(data.session, data.password);
+    }
+    const { stepUp, ...plain } = forwarded;
+    return forwardToCelebraciones(env, { ...plain, ...(stepUp === true ? { stepUp: true } : {}) }, write ? 'POST' : 'GET', `/orders/${route}`, body, 'pedidos');
   }
   const match = ORDER_ROUTE.exec(route);
   if (!match || (match[2] && !match[1])) throw fail(404, 'NOT_FOUND', 'Esta acción no existe.');

@@ -28,7 +28,7 @@ store.comment(customer, reserved.id, '¿Se puede poner una figura dorada con el 
 const handler = createHandler({ store, config: { shop, clientId: 'audit', storefrontOrigin: 'https://audit.local' }, trustedStaff: staff });
 let html = await renderAdminPage({ PORTAL_PUBLIC_URL: 'https://audit.local/apps/inventario' }, { portal: true }).text();
 // Portal sin staff-ui.js: el panel ya está abierto, Celebraciones visible y el hash se reenvía como lo hace staff-ui.
-html = html.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, '').replace(/<script type="module" src="[^"]*(staff-ui|admin-ui|orders-ui|today-ui)\.js"><\/script>/g, '')
+html = html.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, '').replace(/<script type="module" src="[^"]*(staff-ui|admin-ui|orders-ui|today-ui|cobros-ui)\.js"><\/script>/g, '')
   .replace('id="panel-view" hidden', 'id="panel-view"').replace('id="access-view" ', 'id="access-view" hidden ').replace('<section id="celebraciones-view" hidden>', '<section id="celebraciones-view">').replace('Conectando con Shopify…', '');
 html = html.replace('</head>', `<script>window.inventarioPortal={request:async(path,args)=>{const r=await fetch('/audit-api',{method:'POST',body:JSON.stringify({path,args})});const j=await r.json();if(!r.ok)throw Object.assign(new Error(j.code),{code:j.code});return j;}};addEventListener('hashchange',()=>window.dsCelebraciones?.show(location.hash));addEventListener('load',()=>window.dsCelebraciones?.show(location.hash||'#celebraciones'));</script></head>`);
 
