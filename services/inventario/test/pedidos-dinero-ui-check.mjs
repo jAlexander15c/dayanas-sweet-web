@@ -178,6 +178,31 @@ try {
   await page.getByRole('button', { name: /^Cancelados/ }).click();
   check('Historial: el cancelado lleva «Sin devolver»', /Sin devolver \$\d+\.\d\d/.test(await card(page, '#1046').textContent()));
 
+  // Verificación P04: en un pedido pagado con tarjeta no se ofrece cobrar en efectivo (el panel lo bloquea).
+  await page.evaluate(() => { location.hash = 'pedidos/1042/editar'; });
+  await page.getByRole('heading', { name: 'Editar #1042' }).waitFor();
+  await page.getByLabel('Avisar a la clienta del cambio por correo').uncheck();
+  await page.getByRole('button', { name: 'Agregar producto' }).click();
+  await page.getByRole('button', { name: 'Agregar', exact: true }).click();
+  const cardNote = await page.locator('#edit-money').textContent();
+  check('editar con tarjeta: sin aviso remite a la factura de Shopify, sin ofrecer efectivo', /factura desde Shopify/.test(cardNote) && !/efectivo/.test(cardNote), cardNote);
+
+  // Verificación P02: «Hoy» avisa cuando «Para hornear» es un conteo parcial.
+  await page.route('**/apps/inventario/api/pedidos/orders', async route => {
+    const response = await worker.fetch(signedProxy('/proxy/api/pedidos/orders'), { method: route.request().method(), headers: { 'Content-Type': 'application/json' }, ...(route.request().postData() ? { body: route.request().postData() } : {}) });
+    const data = await response.json();
+    await route.fulfill({ status: response.status, contentType: 'application/json', body: JSON.stringify({ ...data, complete: true, bakeComplete: false }) });
+  });
+  await page.evaluate(() => { location.hash = ''; });
+  await page.getByRole('button', { name: 'Hoy', exact: true }).click();
+  await page.getByRole('heading', { name: 'Hoy' }).waitFor();
+  await page.getByText(/Conteo parcial: hay pedidos o productos que el panel no alcanzó a leer/).waitFor();
+  check('Hoy: «Para hornear» parcial lleva aviso', true);
+  await page.getByRole('button', { name: 'Pedidos', exact: true }).click();
+  await page.locator('#pedidos-view').getByText(/Conteo parcial: hay pedidos o productos/).waitFor();
+  check('Pedidos: el mismo conteo parcial lleva aviso', true);
+  await page.unroute('**/apps/inventario/api/pedidos/orders');
+
   check('sin errores de JavaScript', !errors.length, errors.join(' | '));
 } finally { await browser?.close(); await worker.stop(); }
 for (const r of results) console.log(`${r.ok ? 'PASS' : 'FAIL'} ${r.name}${r.ok || !r.detail ? '' : ` — ${r.detail}`}`);

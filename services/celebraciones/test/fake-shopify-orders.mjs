@@ -113,6 +113,7 @@ export function createFakeShopify({ orders = sampleOrders(), clock = () => '2026
   const handlers = {
     PanelOrders: () => ({ orders: { nodes: [...state.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(order => render(order, 20)), pageInfo: { hasNextPage: false, endCursor: null } } }),
     PanelOrder: v => ({ order: find(v.id) ? render(find(v.id)) : null }),
+    PanelOrderLines: v => ({ order: find(v.id) ? { id: v.id, lineItems: render(find(v.id), 100).lineItems } : null }),
     PanelLineVariants: v => ({ order: find(v.id) ? { id: v.id, lineItems: { nodes: find(v.id).lines.map(line => ({ id: `gid://shopify/LineItem/${line.id}`, variant: { id: line.variantId } })) } } : null }),
     PanelFulfillmentOrders: v => {
       const order = find(v.id);

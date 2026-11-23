@@ -679,3 +679,21 @@ test('cancelled order shows the unrefunded amount and a Shopify admin link; refu
   const preview = await call('POST', '/orders/1042/refund-preview', { lines: [{ lineItemId: 'gid://shopify/LineItem/11', quantity: 1 }], refundShipping: false, extraCents: 0 });
   assert.deepEqual([preview.status, preview.body.code], [409, 'ORDER_CANCELLED']);
 });
+
+// Revisión Codex (verificación P02): lecturas lentas de productos no dejan a la usuaria sin lista; se marca parcial.
+test('list answers within the expansion budget when the extra line reads are slow, marked as a partial count', async () => {
+  const many = (id, n) => { const base = sampleOrders()[1]; return { ...base, id, name: `#${id}`, lines: Array.from({ length: n }, (_, i) => ({ id: `${id}${i}`, title: `Sabor ${i + 1}`, variantTitle: null, sku: `S-${i}`, unitCents: 100, quantity: 1, current: 1, fulfilled: 0, variantId: `gid://shopify/ProductVariant/${700 + i}` })) }; };
+  const fake = createFakeShopify({ orders: [many('2001', 21), many('2002', 21)] });
+  const transport = createShopifyAdminTransport({ shop: SHOP, clientId: 'client', secret: 'secret', fetchImpl: fake.fetch, timeoutMs: 2000 });
+  const real = createShopifyOrdersClient({ transport });
+  let reads = 0;
+  const client = { ...real, orderLines: () => { reads++; return new Promise(() => {}); } };
+  const service = createOrdersService({ client, store: createOrdersStore(memorySql()), now: () => Date.parse('2026-11-06T15:20:00Z'), expandBudgetMs: 50 });
+  const started = Date.now();
+  const list = await service.list();
+  assert.ok(Date.now() - started < 2000, 'answers within the budget');
+  assert.deepEqual([list.status, list.body.complete, list.body.bakeComplete], [200, true, false]);
+  assert.equal(list.body.bake.products.length, 20);
+  assert.equal(reads, 2);
+  assert.equal(fake.count('PanelOrder'), 0, 'never reads the full financial detail for the bake list');
+});

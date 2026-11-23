@@ -542,8 +542,9 @@ function editChanges() {
 }
 /** Consecuencia de dinero del cambio. Shopify solo manda el enlace de pago si se avisa a la clienta. */
 function editMoneyNote(delta, notify) {
+  const how = detail?.cashAllowed === true ? 'en efectivo desde el panel o con una factura desde Shopify' : 'con una factura desde Shopify';
   if (delta > 0) return notify ? `Sube ${usd(delta)}: Shopify le envía a la clienta el enlace para pagar la diferencia.`
-    : `Sube ${usd(delta)}: la clienta no recibirá enlace de pago. Quedan ${usd(delta)} por cobrar (en efectivo desde el panel o con una factura desde Shopify).`;
+    : `Sube ${usd(delta)}: la clienta no recibirá enlace de pago. Quedan ${usd(delta)} por cobrar (${how}).`;
   if (delta < 0) return `Baja ${usd(-delta)}: después puedes reembolsar la diferencia desde «Reembolsar».`;
   return 'El total no cambia.';
 }

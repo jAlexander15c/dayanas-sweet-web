@@ -28,6 +28,7 @@ const blocks = {
       ${due.length ? `<p class="today-alert">${due.length} ${due.length === 1 ? 'pedido activo con' : 'pedidos activos con'} cobro pendiente (${usd(due.reduce((sum, order) => sum + order.outstandingCents, 0))}).</p>` : ''}
       <h4>Para hornear</h4>
       ${bake.length ? `<ul class="today-bake">${bake.map(item => `<li><strong>${esc(item.quantity)}</strong> ${esc(item.title)}</li>`).join('')}</ul>` : '<p class="muted">No hay nada pendiente por hornear.</p>'}
+      ${list.bakeComplete === false ? '<p class="today-alert">Conteo parcial: hay pedidos o productos que el panel no alcanzó a leer. Completa la cuenta en Shopify.</p>' : ''}
       ${list.complete ? '' : '<p class="muted">Hay más pedidos de los que el panel muestra; los más antiguos están en Shopify.</p>'}`;
     },
   },

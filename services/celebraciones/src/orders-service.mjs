@@ -93,12 +93,29 @@ function failure(error) {
   return { status, body };
 }
 
-export function createOrdersService({ client, store, now = () => Date.now(), days = 60, shop = null }) {
+export function createOrdersService({ client, store, now = () => Date.now(), days = 60, shop = null, expandBudgetMs = 8000 }) {
   // Enlace al pedido en el admin de Shopify (lo que el panel no hace, p. ej. reembolsar un pedido cancelado).
   const adminUrl = order => shop ? `https://admin.shopify.com/store/${shop.replace('.myshopify.com', '')}/orders/${numeric(order.id)}` : null;
   let tail = Promise.resolve();
   const serial = fn => { const run = tail.then(fn, fn); tail = run.catch(() => {}); return run; };
   const readOrder = id => client.order(orderGid(id));
+  // Completa los productos de los pedidos activos que la lista trajo truncados (más de 20 líneas). Tres lecturas a la vez
+  // y un tope de tiempo muy por debajo del plazo del portal (30 s): al agotarse se devuelve lo que haya y la suma queda
+  // marcada como parcial (bakeComplete=false). Nunca rompe la lista.
+  async function expandLines(nodes) {
+    const queue = nodes.flatMap((order, index) => !order.cancelledAt && order.lineItems?.pageInfo?.hasNextPage ? [index] : []);
+    if (!queue.length) return;
+    let open = true, timer;
+    const worker = async () => {
+      while (open && queue.length) {
+        const index = queue.shift();
+        try { const lineItems = await client.orderLines(nodes[index].id); if (open && lineItems) nodes[index] = { ...nodes[index], lineItems }; }
+        catch { /* queda truncado: la suma se marca como parcial */ }
+      }
+    };
+    await Promise.race([Promise.all(Array.from({ length: Math.min(3, queue.length) }, worker)), new Promise(resolve => { timer = setTimeout(resolve, expandBudgetMs); })]);
+    clearTimeout(timer); open = false;
+  }
   const scoped = async fn => {
     try { return await fn(); } catch (error) {
       if (error?.code === 'ACCESS_DENIED') throw orderError(403, 'FULFILLMENT_SCOPE', MESSAGES.fulfillmentScope);
@@ -432,11 +449,7 @@ export function createOrdersService({ client, store, now = () => Date.now(), day
       try {
         const since = new Date(now() - days * 86_400_000).toISOString().slice(0, 10);
         const { nodes, complete } = await client.listOrders({ since });
-        for (const [index, order] of nodes.entries()) {
-          if (order.cancelledAt || !order.lineItems?.pageInfo?.hasNextPage) continue;
-          try { const full = await client.order(order.id); if (full?.lineItems) nodes[index] = { ...order, lineItems: full.lineItems }; }
-          catch { /* queda truncado: la suma se marca como parcial */ }
-        }
+        await expandLines(nodes);
         const bakeComplete = complete && !nodes.some(order => !order.cancelledAt && order.lineItems?.pageInfo?.hasNextPage);
         // Cancelled orders come back as stage 'cancelado' (panel history only): never baked, packed or counted as active.
         const open = nodes.filter(order => !order.cancelledAt);

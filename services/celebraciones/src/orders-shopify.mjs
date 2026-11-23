@@ -90,6 +90,11 @@ export function createShopifyOrdersClient({ transport }) {
       }
       return { nodes, complete: false };
     },
+    /** Solo los productos de un pedido (para completar «Para hornear»), sin el detalle financiero. */
+    async orderLines(id) {
+      const value = await graphql(`query PanelOrderLines($id: ID!) { order(id: $id) { id lineItems(first: 100) { nodes { id title variantTitle currentQuantity unfulfilledQuantity } pageInfo { hasNextPage } } } }`, { id }, 'order');
+      return value?.lineItems || null;
+    },
     async order(id) {
       const value = await graphql(`query PanelOrder($id: ID!) { order(id: $id) { ${detailFields} } }`, { id }, 'order');
       if (!value) throw orderError(404, 'ORDER_NOT_FOUND', 'No encontramos este pedido en Shopify.');
