@@ -355,26 +355,35 @@ function openBulk() {
 /** Uno por uno, cada uno con su operationId. Antes vuelve a leer la lista para no avisar dos veces a una clienta. */
 async function runBulk(targets) {
   const confirmButton = $('#sheet-confirm'), backButton = $('#sheet-back'), error = $('#sheet-error');
-  const run = ++bulkRun, who = user();
-  // Tras cada espera: si cambió la sesión (salir, caducar, otra persona) o se cerró la hoja, no se envía nada más.
-  const live = () => run === bulkRun && !!who && user() === who && sheet().open;
+  const run = ++bulkRun, who = user()?.id;
+  // Tras cada espera: si cambió la persona (salir, caducar, otra cuenta) o se cerró la hoja, no se envía nada más.
+  // Se compara el id: renovar los datos de la misma persona (p. ej. al editar sus propios permisos) no detiene el lote.
+  const live = () => run === bulkRun && !!who && user()?.id === who && sheet().open;
+  // Si el lote se detiene con la hoja aún abierta, se libera: «Cerrar» vuelve a funcionar y nada se reanuda solo.
+  const stop = () => {
+    if (run !== bulkRun) return;
+    bulkRun++; bulk = null;
+    if (!sheet().open) return;
+    bulkDone = true; confirmButton.hidden = true; backButton.textContent = 'Cerrar'; backButton.disabled = false;
+    error.textContent = 'El lote se detuvo porque cambió la sesión. Los pedidos sin marcar siguen por preparar; revisa la lista.';
+  };
   bulk = { sending: true }; confirmButton.disabled = true; backButton.disabled = true; error.textContent = '';
   let still;
   try { still = new Set((await portal.request('pedidos/orders')).orders.filter(order => order.delivery === 'pickup' && order.stage === 'preparar').map(order => String(order.id))); }
-  catch (failure) { if (!live()) return; bulk = null; confirmButton.disabled = false; backButton.disabled = false; error.textContent = `${errorText(failure)} No se marcó ningún pedido.`; return; }
-  if (!live()) return;
+  catch (failure) { if (!live()) return stop(); bulk = null; confirmButton.disabled = false; backButton.disabled = false; error.textContent = `${errorText(failure)} No se marcó ningún pedido.`; return; }
+  if (!live()) return stop();
   const tally = { ok: 0, skipped: 0, failed: 0, unknown: 0 };
   for (const order of targets) {
     const state = sheet().querySelector(`[data-bulk="${CSS.escape(String(order.id))}"] [data-bulk-state]`);
-    if (!live()) return;
+    if (!live()) return stop();
     if (!still.has(String(order.id))) { state.textContent = 'Ya no está por preparar'; tally.skipped++; continue; }
     state.textContent = 'Enviando…';
     try {
       const result = await portal.request(`pedidos/orders/${order.id}/ready`, { body: { operationId: crypto.randomUUID() } });
-      if (!live()) return;
+      if (!live()) return stop();
       state.textContent = result?.warning || 'Listo'; tally.ok++;
     } catch (failure) {
-      if (!live()) return;
+      if (!live()) return stop();
       const sure = failure.status && (NOT_APPLIED.has(failure.code) || (failure.code === 'SHOPIFY_UNAVAILABLE' && failure.result?.final === true));
       state.textContent = sure ? `No se marcó: ${errorText(failure)}` : 'Sin confirmar: revisa el pedido antes de repetirlo';
       tally[sure ? 'failed' : 'unknown']++;
