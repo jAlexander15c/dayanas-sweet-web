@@ -25,7 +25,8 @@ const lineName = line => `${line.title}${line.variantTitle ? ` · ${line.variant
 
 let list = null, filter = 'preparar', tab = 'activos', query = '', detail = null, variants = null, bakeOpen = false, nextNotice = '', listNotice = '';
 // bulk: «Todos los retiros están listos» en curso (bloquea navegar y cerrar la hoja); bulkDone recarga la lista al cerrar.
-let bulk = null, bulkDone = false;
+// bulkRun: cada lote vale solo mientras siga la misma sesión y su hoja abierta (salir o caducar lo invalida).
+let bulk = null, bulkDone = false, bulkRun = 0;
 // Vuelve al detalle mostrando un aviso; la navegación pasa por #hash para que «atrás» funcione.
 function goDetail(id, notice) { list = null; nextNotice = notice; if (location.hash === `#pedidos/${id}`) show(); else location.hash = `pedidos/${id}`; }
 // Operación en curso: misma clave y mismo contenido hasta que se confirme.
@@ -354,19 +355,26 @@ function openBulk() {
 /** Uno por uno, cada uno con su operationId. Antes vuelve a leer la lista para no avisar dos veces a una clienta. */
 async function runBulk(targets) {
   const confirmButton = $('#sheet-confirm'), backButton = $('#sheet-back'), error = $('#sheet-error');
+  const run = ++bulkRun, who = user();
+  // Tras cada espera: si cambió la sesión (salir, caducar, otra persona) o se cerró la hoja, no se envía nada más.
+  const live = () => run === bulkRun && !!who && user() === who && sheet().open;
   bulk = { sending: true }; confirmButton.disabled = true; backButton.disabled = true; error.textContent = '';
   let still;
   try { still = new Set((await portal.request('pedidos/orders')).orders.filter(order => order.delivery === 'pickup' && order.stage === 'preparar').map(order => String(order.id))); }
-  catch (failure) { bulk = null; confirmButton.disabled = false; backButton.disabled = false; error.textContent = `${errorText(failure)} No se marcó ningún pedido.`; return; }
+  catch (failure) { if (!live()) return; bulk = null; confirmButton.disabled = false; backButton.disabled = false; error.textContent = `${errorText(failure)} No se marcó ningún pedido.`; return; }
+  if (!live()) return;
   const tally = { ok: 0, skipped: 0, failed: 0, unknown: 0 };
   for (const order of targets) {
     const state = sheet().querySelector(`[data-bulk="${CSS.escape(String(order.id))}"] [data-bulk-state]`);
+    if (!live()) return;
     if (!still.has(String(order.id))) { state.textContent = 'Ya no está por preparar'; tally.skipped++; continue; }
     state.textContent = 'Enviando…';
     try {
       const result = await portal.request(`pedidos/orders/${order.id}/ready`, { body: { operationId: crypto.randomUUID() } });
+      if (!live()) return;
       state.textContent = result?.warning || 'Listo'; tally.ok++;
     } catch (failure) {
+      if (!live()) return;
       const sure = failure.status && (NOT_APPLIED.has(failure.code) || (failure.code === 'SHOPIFY_UNAVAILABLE' && failure.result?.final === true));
       state.textContent = sure ? `No se marcó: ${errorText(failure)}` : 'Sin confirmar: revisa el pedido antes de repetirlo';
       tally[sure ? 'failed' : 'unknown']++;
@@ -556,6 +564,8 @@ if (portal?.mode && view()) {
   // Escape está bloqueado mientras no hay confirmación; solo un cierre forzado (sesión vencida) llega aquí.
   // Al cerrar un resultado definitivo se vuelve a leer el pedido (solo lectura) para mostrar su estado real.
   sheet().addEventListener('close', () => {
+    // Un lote en curso que se cierra a la fuerza (salir o sesión vencida) queda anulado: no envía los pedidos restantes.
+    if (bulk?.sending) { bulkRun++; bulk = null; bulkDone = false; return; }
     const reread = op?.final ? (op.fromList ? 'list' : detail) : null;
     if (op && !op.sending) op = null;
     if (bulkDone || reread === 'list') { bulkDone = false; list = null; showList(true); }

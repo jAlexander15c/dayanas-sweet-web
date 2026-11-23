@@ -267,6 +267,7 @@ function startPanel(root, { api, portal, visible = () => true }) {
     q('#ds-workspace').setAttribute('aria-busy', String(busy));
   }
   async function accessDenied() {
+    if (destroyed) return;
     denied = true; selected = null; snapshots.clear(); drafts.clear(); calendarDays.clear(); calendarLoaded = false; unreadRequests = new Set(); revokePhotos();
     q('#ds-staff-alerts-card').hidden = true; q('#ds-alert-toggle').hidden = true; q('#ds-staff-alerts').replaceChildren();
     q('#ds-workspace').hidden = true; setView('list'); q('#ds-access').hidden = false;
@@ -573,7 +574,7 @@ function startPanel(root, { api, portal, visible = () => true }) {
       if (denied || destroyed) return;
       const details = node('ul'); for (const text of result.details) details.append(node('li', text));
       container.replaceChildren(node('p', result.message, 'ds-note'), details); feedback('Comprobación de conexión terminada.');
-    } catch (error) { container.replaceChildren(node('p', 'No se pudo comprobar la conexión. Puedes volver a intentar.', 'ds-muted')); throw error; }
+    } catch (error) { if (destroyed) return; container.replaceChildren(node('p', 'No se pudo comprobar la conexión. Puedes volver a intentar.', 'ds-muted')); throw error; }
   }));
 
   let alertsLoading = false, alertsSignature = '', alertList = [];
@@ -623,6 +624,7 @@ function startPanel(root, { api, portal, visible = () => true }) {
       }
       updateControls();
     } catch (error) {
+      if (destroyed) return;
       if (error.code === 'AUTH_REQUIRED') { await accessDenied(); return; }
       q('#ds-alert-status').textContent = 'No pudimos actualizar los avisos. Pulsa «Actualizar avisos» para reintentar.';
       q('#ds-alert-toggle').hidden = false;

@@ -76,6 +76,12 @@ try {
   await page.getByRole('button', { name: /^Todas · 3$/ }).click();
   let l = await layout(); check('lista móvil: sin iframe, sin desborde, un solo desplazamiento, táctiles ≥44', l.iframes === 0 && l.overflowX <= 0 && !l.scrollers.length && !l.small.length, JSON.stringify(l));
   await page.screenshot({ path: shot('lista-mobile'), fullPage: true });
+  // Revisión Codex P1: la barra inferior del portal no debe alcanzar la lista de solicitudes (también es un <nav>).
+  const rows = await page.evaluate(() => {
+    const list = document.querySelector('#ds-requests'), items = [...list.querySelectorAll('a')].map(a => a.getBoundingClientRect());
+    return { position: getComputedStyle(list).position, width: list.getBoundingClientRect().width, widths: items.map(r => Math.round(r.width)), tops: items.map(r => Math.round(r.top)) };
+  });
+  check('lista móvil: filas verticales a todo el ancho, en el flujo', rows.position !== 'fixed' && rows.widths.every(w => w >= rows.width * 0.9) && new Set(rows.tops).size === rows.tops.length, JSON.stringify(rows));
 
   // 2. Detalle por enlace directo (como desde el correo)
   await page.goto(`https://audit.local/apps/inventario#celebraciones/${fresh.id}`);
@@ -126,6 +132,29 @@ try {
   l = await layout(); check('escritorio: sin desborde ni zonas con desplazamiento propio', l.overflowX <= 0 && !l.scrollers.length && !l.small.length, JSON.stringify(l));
   await page.screenshot({ path: shot('escritorio'), fullPage: true });
 
+  // Revisión Codex P2: un AUTH_REQUIRED tardío del panel destruido no toca el panel nuevo.
+  {
+    let enteredAlert, releaseAlert, delayed = false;
+    const held = new Promise(resolve => { enteredAlert = resolve; }), release = new Promise(resolve => { releaseAlert = resolve; });
+    await page.route('**/audit-api', async route => {
+      const { path, args } = JSON.parse(route.request().postData());
+      if (path === 'celebraciones/staff-alerts' && args.method === 'GET' && !delayed) {
+        delayed = true; enteredAlert(); await release;
+        return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ code: 'AUTH_REQUIRED' }) });
+      }
+      return route.fallback();
+    });
+    await page.locator('#ds-alert-toggle').click(); await page.locator('#ds-alert-refresh').click();
+    await held;
+    await page.evaluate(id => { window.dsCelebraciones.destroy(); window.dsCelebraciones.show(`#celebraciones/${id}`); }, fresh.id);
+    await page.locator('#ds-detail:not([hidden])').waitFor();
+    releaseAlert();
+    await page.waitForTimeout(800);
+    check('respuesta tardía tras destroy no oculta ni vacía el panel nuevo', await page.locator('#ds-access').isHidden() && await page.locator('#ds-workspace').isVisible() && (await page.locator('#ds-request-title').textContent()).trim() !== '');
+    await page.unroute('**/audit-api');
+    // El 401 de este paso es inyectado a propósito: el navegador lo anota en la consola y no es un error del panel.
+    for (let i = errors.length - 1; i >= 0; i--) if (/status of 401/.test(errors[i])) errors.splice(i, 1);
+  }
   // 5. Al salir no queda nada de las clientas en la página
   await page.evaluate(() => window.dsCelebraciones.destroy());
   const leftover = await page.locator('#ds-app').textContent();
