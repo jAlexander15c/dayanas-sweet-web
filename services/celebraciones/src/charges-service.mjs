@@ -206,6 +206,8 @@ export function createChargesService({ client, store, now = () => Date.now(), ti
     }
     if (!isCharge(draft) || cents(draft.totalPriceSet) !== params.totalCents) throw orderError(502, 'REVIEW_REQUIRED', 'El cobro quedó distinto en Shopify. Revísalo en Shopify antes de repetir.');
     if (draft.status === 'COMPLETED') { linkPaid(draft); return { status: 200, body: { charge: view(draft), email: 'sent' } }; }
+    // Una cotización que venció mientras se conciliaba no se factura ni se muestra como enviada; el cron la borra.
+    if (view(draft).status === 'vencido') throw orderError(409, 'CHARGE_EXPIRED', 'Esta cotización venció antes de confirmarse el envío. No se mandó nada: crea una nueva si la clienta todavía la quiere.');
     // La factura se intenta una sola vez por operación: draftOrderInvoiceSend no tiene clave de idempotencia
     // y una solicitud sin respuesta puede seguir en curso. La intención queda guardada antes de llamar.
     if (draft.status === 'OPEN' && !progress.invoiceAt) {

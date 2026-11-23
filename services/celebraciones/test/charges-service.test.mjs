@@ -183,6 +183,19 @@ test('a pending quote retried after its expiry day never creates or invoices an 
   assert.deepEqual([creates(fake), fake.drafts.size, fake.invoices.length], [1, 0, 0]);
 });
 
+test('a lost create reconciled after the expiry day never sends the invoice (revisión N1)', async () => {
+  const { fake, call, advance, charges } = setup();
+  fake.next('PanelChargeCreate', 'lost');
+  assert.equal((await call('POST', '/orders/charges/create', cotizacion(60, '2026-11-07'))).status, 502);
+  assert.equal(fake.drafts.size, 1, 'Shopify did create it');
+  advance(2 * DAY);
+  const retry = await call('POST', '/orders/charges/create', cotizacion(60, '2026-11-07'));
+  assert.deepEqual([retry.status, retry.body.code, retry.body.final], [409, 'CHARGE_EXPIRED', true]);
+  assert.equal(fake.invoices.length, 0, 'no email for an expired quote');
+  assert.equal((await call('POST', '/orders/charges/create', cotizacion(60, '2026-11-07'))).body.code, 'CHARGE_EXPIRED', 'repeats keep the answer');
+  assert.deepEqual(await charges.expire(), { expired: 1 }, 'the cron removes it');
+});
+
 test('the cron keeps its place: an expired quote after 2,000 charges is reached on the next run (revisión R3)', async () => {
   const { fake, charges, advance } = setup();
   const filler = id => ({ id: String(id), status: 'COMPLETED', email: 'x@y.z', createdAt: '2026-11-01T12:00:00Z', tags: ['ds-cobro', 'ds-tipo:cobro'], customAttributes: [], lines: [{ title: 'Galletas', cents: 1000 }] });
