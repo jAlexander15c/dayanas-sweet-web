@@ -435,7 +435,6 @@ async function showRefund(id) {
     <div class="order-row"><span>A la forma de pago original</span><span id="refund-max" class="muted"></span></div>
     <p id="refund-status" role="status" class="muted"></p>
     <label class="check"><input type="checkbox" id="refund-notify" checked><span>Avisar a la clienta por correo</span></label></section>
-  <label>Tu contraseña<input type="password" id="page-password" autocomplete="current-password" maxlength="256"></label>
   <button type="button" class="primary wide" id="refund-review" disabled>Revisar y reembolsar $0.00</button>
   <p class="muted">Un reembolso no se puede deshacer. Si la conexión falla, el panel consulta el mismo reembolso y no lo repite.</p>`;
   for (const input of view().querySelectorAll('select,input:not([type=password])')) input.addEventListener(input.id === 'refund-extra' ? 'input' : 'change', schedulePreview);
@@ -444,12 +443,12 @@ async function showRefund(id) {
 }
 function schedulePreview() {
   clearTimeout(previewTimer); preview = null;
+  const seq = ++previewSeq;
   $('#refund-review').disabled = true;
   const body = refundBody();
   if (body.extraCents === null) { $('#refund-status').textContent = 'Escribe el monto adicional como 12.50.'; return; }
   $('#refund-status').textContent = 'Shopify está calculando…';
   previewTimer = setTimeout(async () => {
-    const seq = ++previewSeq;
     try {
       const result = await portal.request(`pedidos/orders/${detail.id}/refund-preview`, { body: { lines: body.lines, refundShipping: body.refundShipping, extraCents: body.extraCents } });
       if (seq !== previewSeq) return;
@@ -465,16 +464,17 @@ function schedulePreview() {
 }
 function reviewRefund() {
   if (!preview || busy()) return;
-  if (!$('#page-password').value) { $('#refund-status').textContent = 'Escribe tu contraseña para confirmar.'; $('#refund-status').classList.add('error'); $('#page-password').focus(); return; }
+  // P05: la revisión solo abre si el cálculo corresponde a lo que el formulario muestra ahora.
+  if (JSON.stringify(refundBody()) !== JSON.stringify(preview.body)) { schedulePreview(); return; }
   const { body, totalCents } = preview, order = detail;
   const lines = body.lines.map(line => { const source = order.lines.find(item => item.id === line.lineItemId); return `<li>${line.quantity} × ${esc(lineName(source))}</li>`; }).join('');
   const reason = REFUND_REASONS.find(([value]) => value === body.reason)[1];
   op = null;
   openSheet({ action: 'refund', eyebrow: `Pedido ${order.name} · ${order.customer.name}`, title: 'Revisa el reembolso', confirm: `Reembolsar ${usd(totalCents)}`,
     fields: `<ul class="summary-list">${lines}${body.refundShipping ? '<li>Envío</li>' : ''}${body.extraCents ? `<li>Monto adicional ${usd(body.extraCents)}</li>` : ''}</ul>
-      <div class="amount-box"><div>Se devuelve</div><div class="amount">${usd(totalCents)}</div><div class="muted">Motivo: ${esc(reason)}${body.restock ? ' · regresa al stock' : ''}${body.notify ? ' · se avisa a la clienta' : ''}</div></div>`,
+      <div class="amount-box"><div>Se devuelve</div><div class="amount">${usd(totalCents)}</div><div class="muted">Motivo: ${esc(reason)}${body.restock ? ' · regresa al stock' : ''}${body.notify ? ' · se avisa a la clienta' : ''}</div></div>${password()}`,
     foot: 'Un reembolso no se puede deshacer. Si la conexión falla, el panel consulta el mismo reembolso y no lo repite.',
-    build: () => ({ ...body, expectedTotalCents: totalCents }), passwordFrom: () => $('#page-password').value,
+    build: () => ({ ...body, expectedTotalCents: totalCents }), needsPassword: true,
     after: async () => goDetail(order.id, `Reembolso de ${usd(totalCents)} registrado.`) });
 }
 
@@ -507,7 +507,6 @@ function renderEdit() {
     <button type="button" id="add-product" ${choices.length ? '' : 'disabled'}>${choices.length ? 'Agregar producto' : 'No hay otros productos con stock'}</button></section>
   <section class="card" id="edit-summary"></section>
   <label class="check"><input type="checkbox" id="edit-notify" checked><span>Avisar a la clienta del cambio por correo</span></label>
-  <label>Tu contraseña<input type="password" id="page-password" autocomplete="current-password" maxlength="256"></label>
   <p id="edit-status" role="status" class="${editError ? 'error' : ''}">${esc(editError)}</p>
   <button type="button" class="primary wide" id="edit-review">Guardar cambios del pedido</button>
   <p class="muted">El stock se ajusta solo: la caja que sale vuelve al inventario y la que entra se descuenta.</p>`;
@@ -515,10 +514,10 @@ function renderEdit() {
     const [kind, index] = button.dataset.step.split(':'), delta = Number(button.dataset.delta);
     if (kind === 'line') { const line = draft.lines[index]; line.target = Math.min(line.max, Math.max(line.min, line.target + delta)); }
     else { const add = draft.additions[index]; add.quantity += delta; if (add.quantity <= 0) draft.additions.splice(index, 1); }
-    const pass = $('#page-password').value; renderEdit(); $('#page-password').value = pass;
+    renderEdit();
   };
   $('#add-product').onclick = () => { $('#add-row').hidden = false; $('#add-product').hidden = true; $('#add-variant').focus(); };
-  if ($('#add-confirm')) $('#add-confirm').onclick = () => { draft.additions.push({ variantId: $('#add-variant').value, quantity: 1 }); const pass = $('#page-password').value; renderEdit(); $('#page-password').value = pass; };
+  if ($('#add-confirm')) $('#add-confirm').onclick = () => { draft.additions.push({ variantId: $('#add-variant').value, quantity: 1 }); renderEdit(); };
   $('#edit-review').onclick = reviewEdit;
   renderEditSummary();
 }
@@ -541,12 +540,11 @@ function reviewEdit() {
   if (busy()) return;
   const { changes, delta, rows } = editChanges();
   if (!rows.length) return;
-  if (!$('#page-password').value) { $('#edit-status').textContent = 'Escribe tu contraseña para confirmar.'; $('#edit-status').classList.add('error'); $('#page-password').focus(); return; }
   const body = { changes: changes.map(line => ({ lineItemId: line.id, variantId: line.variantId, fromQuantity: line.quantity, quantity: line.target })), additions: draft.additions.map(add => ({ variantId: add.variantId, quantity: add.quantity })), notify: $('#edit-notify').checked };
   const order = detail;
   openSheet({ action: 'edit', eyebrow: `Pedido ${order.name} · ${order.customer.name}`, title: 'Revisa el cambio del pedido', confirm: 'Guardar cambios del pedido',
-    fields: `<ul class="summary-list">${rows.map(row => `<li>${esc(row)}</li>`).join('')}</ul><div class="amount-box"><div>Nuevo total</div><div class="amount">${usd(order.totalCents + delta)}</div><div class="muted">${delta === 0 ? 'Sin cambio' : delta > 0 ? `Sube ${usd(delta)}: Shopify le envía el enlace de pago.` : `Baja ${usd(-delta)}: después puedes reembolsar la diferencia.`}${body.notify ? ' · se avisa a la clienta' : ''}</div></div>`,
-    build: () => body, passwordFrom: () => $('#page-password').value,
+    fields: `<ul class="summary-list">${rows.map(row => `<li>${esc(row)}</li>`).join('')}</ul><div class="amount-box"><div>Nuevo total</div><div class="amount">${usd(order.totalCents + delta)}</div><div class="muted">${delta === 0 ? 'Sin cambio' : delta > 0 ? `Sube ${usd(delta)}: Shopify le envía el enlace de pago.` : `Baja ${usd(-delta)}: después puedes reembolsar la diferencia.`}${body.notify ? ' · se avisa a la clienta' : ''}</div></div>${password()}`,
+    build: () => body, needsPassword: true,
     after: async () => goDetail(order.id, delta < 0 ? `Pedido editado. Si corresponde, reembolsa ${usd(-delta)} desde «Reembolsar».` : 'Pedido editado.') });
 }
 
@@ -554,6 +552,7 @@ function reviewEdit() {
 async function show() {
   if (!canSee() || !view()) return;
   if (busy()) return;
+  clearTimeout(previewTimer); previewSeq++; preview = null;
   if (sheet()?.open) sheet().close();
   portal.hideViews(); view().hidden = false; portal.current?.('pedidos');
   $('#feedback').textContent = '';

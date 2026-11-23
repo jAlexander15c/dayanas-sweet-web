@@ -156,10 +156,10 @@ try {
   await page.getByRole('heading', { name: 'Resumen del cambio' }).waitFor();
   await page.getByText('+ 1 Galletas de avena · Caja de 6').waitFor();
   await page.getByText('Si el total sube, Shopify le envía a la clienta un enlace para pagar la diferencia. Si baja, el panel ofrece el reembolso de la diferencia.').waitFor();
-  await page.getByLabel('Tu contraseña').fill(password);
   await screenshots(page, 'editar');
   await page.getByRole('button', { name: 'Guardar cambios del pedido' }).click();
   await page.getByRole('heading', { name: 'Revisa el cambio del pedido' }).waitFor();
+  await page.locator('#order-sheet').getByLabel('Tu contraseña').fill(password);
   await page.locator('#order-sheet').getByRole('button', { name: 'Guardar cambios del pedido' }).click();
   await page.getByText('Pedido editado.', { exact: false }).waitFor();
   await page.getByRole('button', { name: 'Entregado', exact: true }).click();
@@ -206,10 +206,10 @@ try {
   await page.getByLabel('Monto adicional').fill('5');
   await page.getByRole('button', { name: 'Revisar y reembolsar $29.00' }).waitFor();
   await page.getByLabel('Motivo').selectOption('damaged');
-  await page.getByLabel('Tu contraseña').fill(password);
   await screenshots(page, 'reembolso');
   await page.getByRole('button', { name: 'Revisar y reembolsar $29.00' }).click();
   await page.getByRole('heading', { name: 'Revisa el reembolso' }).waitFor();
+  await page.locator('#order-sheet').getByLabel('Tu contraseña').fill(password);
   // Celebraciones aplica el reembolso pero se pierde la respuesta RPC: error ambiguo, se conserva la clave; solo «Reintentar».
   await worker.fetch('/__test/pedidos-next?op=RPC&mode=lost');
   await page.locator('#order-sheet').getByRole('button', { name: 'Reembolsar $29.00', exact: true }).click();
