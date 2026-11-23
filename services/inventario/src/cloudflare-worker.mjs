@@ -17,6 +17,7 @@ import adminJavaScript from './admin-ui.js';
 import adminCss from './admin-ui.css';
 import staffJavaScript from './staff-ui.js';
 import ordersJavaScript from './orders-ui.js';
+import todayJavaScript from './today-ui.js';
 const identityStub = env => env.IDENTITY.get(env.IDENTITY.idFromName('identity:' + env.SHOPIFY_SHOP));
 export class StaffIdentityStore extends DurableObject {
   constructor(ctx, env) {
@@ -67,7 +68,7 @@ export default {
       if (request.method === 'GET') { const response = celebrationsView(path, env); if (response) return response; }
       if (request.method === 'GET' && (path === '/proxy' || path === '/proxy/')) return renderAdminPage(env, { portal: true });
       const asset = path.slice('/proxy/assets/'.length);
-      if (request.method === 'GET' && path.startsWith('/proxy/assets/') && ['admin-ui.js', 'admin-ui.css', 'staff-ui.js', 'orders-ui.js'].includes(asset)) return new Response(asset === 'admin-ui.css' ? adminCss : asset === 'staff-ui.js' ? staffJavaScript : asset === 'orders-ui.js' ? ordersJavaScript : adminJavaScript, { headers: { ...headers, 'Content-Type': asset.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8' } });
+      if (request.method === 'GET' && path.startsWith('/proxy/assets/') && ['admin-ui.js', 'admin-ui.css', 'staff-ui.js', 'orders-ui.js', 'today-ui.js'].includes(asset)) return new Response(asset === 'admin-ui.css' ? adminCss : asset === 'staff-ui.js' ? staffJavaScript : asset === 'orders-ui.js' ? ordersJavaScript : asset === 'today-ui.js' ? todayJavaScript : adminJavaScript, { headers: { ...headers, 'Content-Type': asset.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8' } });
       if (path.startsWith('/proxy/api/')) {
         const inventory = path.startsWith('/proxy/api/inventory/') || path.startsWith('/proxy/api/celebraciones/') || path.startsWith('/proxy/api/pedidos/');
         return (inventory ? env.INVENTARIO.get(env.INVENTARIO.idFromName(env.SHOPIFY_SHOP)) : identityStub(env)).fetch(request);

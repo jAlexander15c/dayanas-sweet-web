@@ -53,7 +53,7 @@ test('Pedidos se ve con inventario o admin; celebraciones solo no lo ve ni lo pu
   assert.equal((await call('pedidos/orders/1042/archive', { session: admin.session, body: {} })).status, 404);
   assert.equal((await call('pedidos/orders', { session: admin.session, actor: { roles: ['admin'], stepUp: true } })).status, 400);
   const html = await renderAdminPage(staffEnv, { portal: true }).text();
-  assert.match(html, /<button id="pedidos" hidden>Pedidos<\/button>/);
+  assert.match(html, /<button id="pedidos" hidden><svg aria-hidden="true"[^>]*>.*?<\/svg>Pedidos<\/button>/);
   assert.match(html, /\/apps\/inventario\/assets\/orders-ui\.js/);
   assert.doesNotMatch(html, /<script>(?!<)/);
   assert.doesNotMatch(await renderAdminPage(staffEnv).text(), /orders-ui\.js|id="pedidos"/);

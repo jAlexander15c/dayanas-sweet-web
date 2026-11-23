@@ -10,6 +10,7 @@ import { unstable_dev } from 'wrangler';
 import { testConfig } from './test-config.mjs';
 import { staffEnv, signedProxy, password } from './staff-helpers.mjs';
 import { jwt } from './helpers.mjs';
+import { tocar } from './portal-nav.mjs';
 const { chromium } = createRequire(import.meta.url)(process.argv[2] || 'playwright');
 const worker = await unstable_dev('test/portal-runtime-entry.mjs', { config: testConfig(), local: true, persist: false, ip: '127.0.0.1', port: 38781, inspectorPort: 0, vars: staffEnv, logLevel: 'error', experimental: { disableExperimentalWarning: true, disableDevRegistry: true, watch: false } });
 const site = 'https://dayanassweet.com';
@@ -58,7 +59,7 @@ try {
     await page.setViewportSize({ width: 390, height: 844 });
   }
   const passkeyButton = page => page.getByRole('button', { name: 'Entrar con Face ID o huella', exact: true });
-  const signOut = async page => { await page.getByRole('button', { name: 'Salir', exact: true }).click(); await passkeyButton(page).waitFor(); };
+  const signOut = async page => { await tocar(page, 'Salir'); await passkeyButton(page).waitFor(); };
 
   // 1. Entrada con contraseña: el panel ofrece activar Face ID o huella; se activa en dos toques.
   const { page, cdp, authenticatorId } = await newPage();
@@ -87,7 +88,7 @@ try {
   // 2. Salir y volver a entrar solo con Face ID o huella; ya no se ofrece activar.
   await signOut(page);
   await passkeyButton(page).click();
-  await page.getByRole('button', { name: 'Salir', exact: true }).waitFor();
+  await page.locator('#sign-out').waitFor({ state: 'attached' });
   assert.equal(await page.locator('#staff-who').textContent().then(text => text.includes('Dayana')), true);
   assert.equal(await offer.count(), 0, 'después de entrar con Face ID no se vuelve a ofrecer');
 
@@ -102,7 +103,7 @@ try {
 
   // 4. Quitar el aparato desde el panel: esa llave deja de servir.
   await passkeyButton(page).click();
-  await page.getByRole('button', { name: 'Face ID / huella', exact: true }).click();
+  await tocar(page, 'Face ID / huella');
   await page.getByRole('button', { name: 'Quitar', exact: true }).click();
   await page.getByText('Todavía no activaste ningún aparato.', { exact: true }).waitFor();
   await signOut(page);
@@ -114,8 +115,8 @@ try {
   await plain.page.goto(`${site}/apps/inventario`);
   await plain.page.getByLabel('Usuario', { exact: true }).fill('dayana'); await plain.page.getByLabel('Contraseña', { exact: true }).fill(password);
   await plain.page.getByRole('button', { name: 'Entrar', exact: true }).click();
-  await plain.page.getByRole('button', { name: 'Salir', exact: true }).waitFor();
-  await plain.page.getByRole('button', { name: 'Face ID / huella', exact: true }).click();
+  await plain.page.locator('#sign-out').waitFor({ state: 'attached' });
+  await tocar(plain.page, 'Face ID / huella');
   await plain.page.getByText('Este aparato no tiene Face ID, huella ni bloqueo de pantalla disponible', { exact: false }).waitFor();
   assert.equal(await plain.page.getByRole('region', { name: 'Entrar con Face ID o huella' }).count(), 0);
 

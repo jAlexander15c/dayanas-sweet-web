@@ -117,16 +117,44 @@ function showAccess(screen, notice = '') {
   });
   if (screen === 'invitation') request('invitation-info', { token: invitationToken }).then(result => { if (!$('#invitation-name')) return; $('#invitation-name').textContent = `Hola, ${result.name}.`; $('#access-form [name=username]').value = result.username; }).catch(e => { message(e.message, true); if ($('#access-submit')) $('#access-submit').disabled = true; });
 }
-function hideViews() { for (const id of ['workspace', 'categories-view', 'history-view', 'users-view', 'celebraciones-view', 'pedidos-view']) { const view = $(`#${id}`); if (view) view.hidden = true; } }
+// starting/moved: si Dayana navega mientras el panel termina de cargar, no se le cambia la pantalla al terminar.
+let starting = false, moved = false;
+function hideViews() { if (starting) moved = true; for (const id of ['workspace', 'categories-view', 'history-view', 'users-view', 'celebraciones-view', 'pedidos-view', 'today-view']) { const view = $(`#${id}`); if (view) view.hidden = true; } }
+// Portal: marca la sección abierta en la navegación y cierra los menús «Más» y «Cuenta».
+// Solo usa APIs que existen también en los nodos simulados de las pruebas (setAttribute es opcional).
+const setAttr = (element, name, value) => { if (typeof element?.setAttribute === 'function') element.setAttribute(name, value); };
+function closeMenus() {
+  for (const [menu, button] of [['#more-menu', '#more-nav'], ['#account-menu', '#account-button']]) { $(menu)?.classList.toggle('open', false); setAttr($(button), 'aria-expanded', 'false'); }
+}
+function markNav(id) {
+  if (starting) moved = true;
+  closeMenus();
+  for (const button of document.querySelectorAll('nav[aria-label="Pantallas"] button')) { if (button.id === id) setAttr(button, 'aria-current', 'page'); else button.removeAttribute?.('aria-current'); }
+  setAttr($('#more-nav'), 'data-current', String(['categories', 'history', 'users'].includes(id)));
+}
+function toggleMenu(menu, button) {
+  const open = !$(menu)?.classList.contains('open'); closeMenus();
+  $(menu)?.classList.toggle('open', open); setAttr($(button), 'aria-expanded', String(open));
+  if (open) $(menu)?.querySelector?.('button')?.focus();
+}
+function showToday() { if (window.inventarioToday) window.inventarioToday.show({ keepFeedback: true }); }
 async function showPanel() {
   $('#access-view').hidden = true; $('#access-view').replaceChildren(); $('#panel-view').hidden = false;
   const roles = currentUser.roles;
-  $('#staff-who').innerHTML = `<span>${esc(currentUser.name)}${roles.includes('admin') ? ' · Administradora' : ''}</span>${passkeysSupported() ? '<button id="passkeys-button">Face ID / huella</button>' : ''}<button id="change-password">Cambiar contraseña</button><button id="sign-out">Salir</button>`;
+  const who = `${esc(currentUser.name)}${roles.includes('admin') ? ' · Administradora' : ''}`;
+  const accountItems = `${passkeysSupported() ? '<button id="passkeys-button">Face ID / huella</button>' : ''}<button id="change-password">Cambiar contraseña</button><button id="sign-out">Salir</button>`;
+  // Portal: en el iPhone la cuenta es un botón que abre un menú; en escritorio se ve en la cabecera.
+  $('#staff-who').innerHTML = portal
+    ? `<button id="account-button" type="button" aria-label="Cuenta" aria-expanded="false" aria-controls="account-menu"><span class="avatar" aria-hidden="true">${esc(currentUser.name.trim().charAt(0).toUpperCase() || '·')}</span></button><div id="account-menu" class="account-menu" role="group" aria-label="Tu cuenta"><p class="account-name">${who}</p>${accountItems}</div>`
+    : `<span>${who}</span>${accountItems}`;
+  if ($('#account-button')) $('#account-button').onclick = () => toggleMenu('#account-menu', '#account-button');
   if ($('#passkeys-button')) $('#passkeys-button').onclick = () => showPasskeys().catch(e => { $('#feedback').textContent = e.message; });
   void offerPasskey();
   $('#users').hidden = !roles.includes('admin'); $('#celebraciones').hidden = !roles.includes('celebraciones');
   if ($('#pedidos')) $('#pedidos').hidden = !(roles.includes('inventario') || roles.includes('admin'));
   for (const id of ['home', 'categories', 'history']) $(`#${id}`).hidden = !roles.includes('inventario');
+  if ($('#hoy')) $('#hoy').hidden = !(roles.includes('inventario') || roles.includes('celebraciones'));
+  if ($('#more-nav')) $('#more-nav').hidden = !roles.includes('inventario') && !roles.includes('admin');
   $('#sign-out').onclick = async () => {
     // Start server revocation with the current token, then always clear this device immediately.
     const pending = request('logout'); clearSession(); hideViews(); showAccess('login', 'Cerraste la sesión en este aparato.');
@@ -138,10 +166,15 @@ async function showPanel() {
     $('#users-view').innerHTML = `<div class="access-card"><h2>Cambiar contraseña</h2><form id="password-form">${field('Contraseña actual', 'currentPassword', 'password', 'autocomplete="current-password" maxlength="256"')}${field('Nueva contraseña', 'password', 'password', 'autocomplete="new-password" minlength="10" maxlength="256"')}${rules}<button class="primary">Guardar contraseña</button></form><p id="staff-message" role="status"></p></div>`;
     $('#password-form').onsubmit = async event => { event.preventDefault(); const b = event.currentTarget.querySelector('button'); b.disabled = true; try { await request('change-password', Object.fromEntries(new FormData(event.currentTarget))); clearSession(); showAccess('login', 'Contraseña cambiada. Entra con tu nueva contraseña.'); } catch (e) { message(e.message, true); b.disabled = false; } };
   };
-  if (roles.includes('inventario')) await initializeInventory();
-  else { hideViews(); $('#feedback').textContent = 'Elige una sección para continuar.'; if (roles.includes('admin')) await showUsers(); }
+  starting = true; moved = false;
+  try { if (roles.includes('inventario')) await initializeInventory(); } finally { starting = false; }
+  if (moved) return;
+  if (roles.includes('inventario')) markNav('home');
+  if (!roles.includes('inventario')) { hideViews(); $('#feedback').textContent = portal && $('#hoy') && !$('#hoy').hidden ? '' : 'Elige una sección para continuar.'; if (roles.includes('admin')) { await showUsers(); markNav('users'); } }
+  // Portal: se abre en «Hoy», salvo que el enlace pida una sección (por ejemplo, desde un correo).
   if (location.hash.startsWith('#celebraciones') && roles.includes('celebraciones')) showCelebraciones();
-  if (location.hash.startsWith('#pedidos') && $('#pedidos') && !$('#pedidos').hidden) window.inventarioOrders?.show();
+  else if (location.hash.startsWith('#pedidos') && $('#pedidos') && !$('#pedidos').hidden) window.inventarioOrders?.show();
+  else if (portal && $('#hoy') && !$('#hoy').hidden) showToday();
 }
 async function offerPasskey() {
   $('#passkey-offer')?.remove();
@@ -227,19 +260,31 @@ async function showUsers() {
 }
 function showCelebraciones() {
   if (!portal || !currentUser?.roles.includes('celebraciones')) return;
-  hideViews(); $('#celebraciones-view').hidden = false; $('#feedback').textContent = '';
+  hideViews(); $('#celebraciones-view').hidden = false; $('#feedback').textContent = ''; markNav('celebraciones');
   // Celebraciones se dibuja en esta misma página (celebraciones.js): lista, detalle y ajustes por #hash.
   window.dsCelebraciones?.show(location.hash);
 }
-window.inventarioPortal = { mode: portal, request, hideViews, user: () => currentUser };
+window.inventarioPortal = { mode: portal, request, hideViews, user: () => currentUser, current: markNav };
 window.inventarioAccess = {
   async inventory(path, body) { const url = new URL(path, location.origin); return request(`inventory/${url.pathname.slice('/api/'.length)}`, { params: Object.fromEntries(url.searchParams), ...(body ? { body } : {}) }); },
   async boot(start) {
     initializeInventory = start;
     $('#users').onclick = () => showUsers().catch(e => { $('#feedback').textContent = e.message; });
-    for (const id of ['home', 'categories', 'history']) $(`#${id}`).addEventListener('click', () => { $('#users-view').hidden = true; $('#celebraciones-view').hidden = true; if ($('#pedidos-view')) $('#pedidos-view').hidden = true; });
+    for (const id of ['home', 'categories', 'history']) $(`#${id}`).addEventListener('click', () => { $('#users-view').hidden = true; $('#celebraciones-view').hidden = true; if ($('#pedidos-view')) $('#pedidos-view').hidden = true; if ($('#today-view')) $('#today-view').hidden = true; });
     if (!portal) return start();
     $('#celebraciones').onclick = () => { location.hash = 'celebraciones'; showCelebraciones(); };
+    // Navegación: botón activo, «Más» (Categorías, Historial, Usuarios) y menú de Cuenta.
+    for (const id of ['home', 'categories', 'history', 'users']) $(`#${id}`).addEventListener('click', () => markNav(id));
+    $('#more-nav').onclick = () => toggleMenu('#more-menu', '#more-nav');
+    addEventListener('keydown', event => {
+      if (event.key !== 'Escape') return;
+      const opener = $('#account-menu.open') ? '#account-button' : $('#more-menu.open') ? '#more-nav' : null;
+      if (opener) { closeMenus(); $(opener)?.focus(); }
+    });
+    document.addEventListener('click', event => {
+      if (event.target.closest?.('#passkeys-button, #change-password')) markNav(null);
+      else if (!event.target.closest?.('#more-menu, #more-nav, #account-menu, #account-button')) closeMenus();
+    });
     addEventListener('hashchange', () => { if (currentUser?.roles.includes('celebraciones') && location.hash.startsWith('#celebraciones')) showCelebraciones(); });
     addEventListener('storage', event => { if (event.key === storageKey && !event.newValue) { credential = null; currentUser = null; hideViews(); showAccess('login'); } });
     const fragment = new URLSearchParams(location.hash.slice(1)); invitationToken = fragment.get('invitacion');

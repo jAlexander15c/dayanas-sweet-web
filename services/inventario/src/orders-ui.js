@@ -450,7 +450,7 @@ async function show() {
   if (!canSee() || !view()) return;
   if (busy()) return;
   if (sheet()?.open) sheet().close();
-  portal.hideViews(); view().hidden = false;
+  portal.hideViews(); view().hidden = false; portal.current?.('pedidos');
   $('#feedback').textContent = '';
   const match = /^#pedidos\/(\d{1,20})(?:\/(editar|reembolsar))?$/.exec(location.hash);
   if (!match) return showList(true);
