@@ -52,7 +52,8 @@
 .ds-alert-toggle.has-unread{background:var(--ds-accent)!important;border-color:var(--ds-accent)!important;color:#fff!important}
 .ds-alerts h3{margin:0}
 .ds-staff-alert{display:grid;gap:4px;padding:12px 0;border-top:1px solid #eee4da}
-.ds-staff-alert.is-unread{border-left:3px solid var(--ds-accent);padding-left:12px}
+.ds-staff-alert.is-unread{background:var(--ds-tint);border-top-color:transparent;border-radius:12px;padding:12px}
+.ds-staff-alert.is-unread>strong::before{content:'';display:inline-block;width:8px;height:8px;margin-right:8px;border-radius:50%;background:var(--ds-accent);vertical-align:middle}
 .ds-staff-alert .ds-actions{margin-top:6px}
 .ds-search{display:flex;gap:8px}
 .ds-search input{flex:1}
