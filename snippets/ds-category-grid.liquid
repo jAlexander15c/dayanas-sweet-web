@@ -54,7 +54,9 @@
             {%- elsif category.handle == 'galletas' or category.handle == 'brownies' -%}
               {%- comment -%} Sin imagen en el admin: se usa la foto de marca incluida en el tema para no dejar la tarjeta vacía. {%- endcomment -%}
               {%- if category.handle == 'galletas' -%}{%- assign category_asset = 'ds-r-cookies-category.png' -%}{%- else -%}{%- assign category_asset = 'ds-r-brownie-category.png' -%}{%- endif -%}
-              <img class="ds-r-category-photo" src="{{ category_asset | asset_url }}" width="1200" height="1200" alt="" loading="lazy">
+              {%- comment -%} Tamaños medidos con el recorte cover: 465–660 px de ancho según la pantalla. {%- endcomment -%}
+              {%- assign category_src = category_asset | asset_url -%}
+              <img class="ds-r-category-photo" src="{{ category_src }}" srcset="{{ category_src }}&amp;width=500 500w, {{ category_src }}&amp;width=700 700w, {{ category_src }}&amp;width=1000 1000w, {{ category_src }}&amp;width=1400 1400w, {{ category_src }} 1511w" sizes="(max-width: 430px) 470px, (max-width: 600px) 570px, (max-width: 989px) 500px, 680px" width="1200" height="1200" alt="" loading="lazy">
             {%- endif -%}
             <div class="ds-r-category-caption">
               <{{ heading_tag }}>{{ category.title | escape }}</{{ heading_tag }}>
@@ -97,7 +99,8 @@
                 {%- if category_image != blank -%}
                   {{ category_image | image_url: width: 1600 | image_tag: class: 'ds-r-category-photo', widths: '400, 600, 800, 1200, 1600', sizes: '(min-width: 990px) 50vw, (min-width: 601px) 50vw, 100vw', alt: image_alt, loading: 'lazy' }}
                 {%- else -%}
-                  <img class="ds-r-category-photo" src="{{ category_asset | asset_url }}" width="1200" height="1200" alt="{{ block.settings.image_alt | escape }}" loading="lazy">
+                  {%- assign category_src = category_asset | asset_url -%}
+                  <img class="ds-r-category-photo" src="{{ category_src }}" srcset="{{ category_src }}&amp;width=500 500w, {{ category_src }}&amp;width=700 700w, {{ category_src }}&amp;width=1000 1000w, {{ category_src }}&amp;width=1400 1400w, {{ category_src }} 1511w" sizes="(max-width: 430px) 470px, (max-width: 600px) 570px, (max-width: 989px) 500px, 680px" width="1200" height="1200" alt="{{ block.settings.image_alt | escape }}" loading="lazy">
                 {%- endif -%}
                 <div class="ds-r-category-caption">
                   <{{ heading_tag }}>{{ category_title | escape }}</{{ heading_tag }}>

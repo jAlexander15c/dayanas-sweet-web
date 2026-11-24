@@ -101,6 +101,21 @@ try {
   await page.getByLabel('Concepto').nth(1).fill('Envío');
   await page.getByLabel('Monto').nth(1).fill('10,00');
   check('total calculado', (await page.locator('#cobro-total').textContent()) === '$85.00');
+  {
+    // D17: en el celular el concepto va a lo ancho y el monto debajo; en escritorio, una sola fila.
+    const geometry = () => page.evaluate(() => {
+      const line = document.querySelector('.cobro-line'), [concept, amount] = line.querySelectorAll('input'), remove = line.querySelector('button');
+      const r = el => el.getBoundingClientRect();
+      return { line: Math.round(r(line).width), concept: Math.round(r(concept).width), sameRow: Math.abs(r(concept).top - r(amount).top) < 2, removeBesideAmount: Math.abs(r(remove).bottom - r(amount).bottom) < 4, removeWidth: Math.round(r(remove).width) };
+    });
+    const mobile = await geometry();
+    check('D17 390px: concepto a lo ancho, monto y quitar debajo', mobile.concept >= mobile.line * 0.9 && !mobile.sameRow && mobile.removeBesideAmount && mobile.removeWidth >= 44, JSON.stringify(mobile));
+    check('D17: la etiqueta dice la moneda', await page.getByText('Monto (USD)', { exact: true }).count() === 2);
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    const desktop = await geometry();
+    check('D17 1440px: concepto, monto y quitar en una fila', desktop.sameRow && desktop.removeBesideAmount, JSON.stringify(desktop));
+    await page.setViewportSize({ width: 390, height: 844 });
+  }
   await page.getByLabel('Mensaje para la clienta').fill('Hola Mariela, aquí está tu cotización.');
   await screenshots(page, 'formulario');
   await page.getByRole('button', { name: 'Revisar y enviar' }).click();

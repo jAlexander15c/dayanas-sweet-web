@@ -1,6 +1,17 @@
 {{ 'ds-celebracion-solicitud.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'ds-celebracion-solicitud.js' | asset_url }}" defer="defer"></script>
 
+{%- liquid
+  # El formulario se muestra desde el HTML cuando el servicio está activo, para que no salte al cargar (D21).
+  # Los sabores del piso 1 y el resumen llegan escritos con los valores por defecto de ds-celebracion-solicitud.js
+  # (selection); el JS los vacía y los vuelve a dibujar igual, así el paso 1 no cambia de alto.
+  assign ds_request_live = false
+  if section.settings.service_enabled
+    if customer or section.settings.guest_enabled
+      assign ds_request_live = true
+    endif
+  endif
+-%}
 <section class="ds-request" data-ds-request data-enabled="{{ section.settings.service_enabled }}" data-guest-enabled="{{ section.settings.guest_enabled }}" data-customer="{% if customer %}true{% else %}false{% endif %}" data-customer-key="{{ customer.id }}" data-proxy="{{ section.settings.proxy_path | escape }}" data-tracking-url="{{ section.settings.tracking_page.url | escape }}" aria-labelledby="DSRequestTitle-{{ section.id }}">
   <div class="ds-request__wrap">
     <header>
@@ -8,7 +19,7 @@
       <h1 id="DSRequestTitle-{{ section.id }}">{{ section.settings.title | escape }} <em>{{ section.settings.title_accent | escape }}</em></h1>
       <p class="ds-request__intro">{{ section.settings.intro | escape }}</p>
     </header>
-    <div class="ds-request__note" data-gate role="status">
+    <div class="ds-request__note" data-gate role="status"{% if ds_request_live %} hidden{% endif %}>
       {% if section.settings.service_enabled == false %}
         {{ section.settings.unavailable_message | escape }}
       {% elsif customer == blank and section.settings.guest_enabled == false %}
@@ -19,8 +30,8 @@
       {% endif %}
     </div>
     {% if customer or section.settings.guest_enabled %}
-      <p class="ds-request__muted" data-js-note>Necesitas JavaScript para completar la solicitud y adjuntar fotos.</p>
-      <div data-live hidden>
+      <noscript><p class="ds-request__muted">Necesitas JavaScript para completar la solicitud y adjuntar fotos.</p><style>.ds-request [data-live]{display:none!important}</style></noscript>
+      <div data-live{% unless ds_request_live %} hidden{% endunless %}>
         <ol class="ds-request__steps" aria-label="Pasos de tu solicitud">
           <li data-marker="0" aria-current="step"><b>1</b>Tu pastel</li>
           <li data-marker="1"><b>2</b>Tu idea</li>
@@ -48,7 +59,7 @@
                 </div>
               </fieldset>
               <p class="ds-request__note" data-height-note>Dayana propondrá la altura según tu diseño.</p>
-              <div data-flavors></div>
+              <div data-flavors><fieldset><legend>Sabores · Piso 1</legend><div class="ds-request__two"><label>Bizcocho 1<select><option selected>Vainilla</option></select></label><label>Bizcocho 2<select><option selected>Chocolate</option></select></label><label>Relleno 1<select><option selected>Guayaba</option></select></label><label>Relleno 2<select><option selected>Nutella</option></select></label></div></fieldset></div>
               <label>Cobertura para todo el pastel<select data-coating></select></label>
             </section>
             <section data-step="1" hidden aria-labelledby="DSRequestStep1-{{ section.id }}">
@@ -115,7 +126,7 @@
           </form>
           <aside class="ds-request__aside" aria-label="Resumen de tu selección">
             <h3>Tu pastel</h3>
-            <dl class="ds-request__summary" data-summary></dl>
+            <dl class="ds-request__summary" data-summary><div><dt>Pastel redondo</dt><dd>1 piso · 8″</dd></div><div><dt>Piso 1</dt><dd>Vainilla + Chocolate · Guayaba + Nutella</dd></div><div><dt>Cobertura</dt><dd>Buttercream</dd></div><div><dt>Decoraciones</dt><dd>Sin selección</dd></div></dl>
             <p class="ds-request__note">Hecho a mano, para tu celebración. El precio se define en tu cotización.</p>
             <p class="ds-request__muted">Tu selección se conserva al avanzar o volver.</p>
           </aside>

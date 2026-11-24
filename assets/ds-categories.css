@@ -9,6 +9,8 @@
 }
 .ds-r-category-auto-grid[data-category-count="1"] { grid-template-columns: minmax(0, 1fr); }
 .ds-r-category-auto-grid[data-category-count="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* Con cuatro, 2×2 en vez de una tarjeta sola bajo tres (D04). */
+.ds-r-category-auto-grid[data-category-count="4"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .ds-r-category-item { min-width: 0; }
 .ds-r-category-auto-grid .ds-r-category {
   display: block;

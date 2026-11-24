@@ -33,6 +33,9 @@ try {
   assert.equal(await page.locator('.stock-number').textContent(), '4');
   assert.equal(await page.getByText('2 apartadas para pedidos').count(), 1);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  // D15: Productos tiene título propio; el aviso general queda vacío salvo errores o resultados.
+  assert.equal(await page.getByRole('heading', { name: 'Productos', level: 2 }).isVisible(), true);
+  await page.waitForFunction(() => document.querySelector('#feedback').textContent === '');
   await page.screenshot({ path: resolve(evidence, 'mobile.png'), fullPage: true });
   assert.match(await page.locator('#products').innerText(), /\$12\.00/);
   await worker.fetch('/__test/format');

@@ -109,7 +109,7 @@ function renderForm(error = '') {
       <label>Correo<input id="cobro-email" type="email" inputmode="email" maxlength="254" autocomplete="off" value="${esc(draft.email)}"></label>
       <fieldset class="cobro-lines"><legend>Conceptos</legend>${draft.lines.map((line, index) => `<div class="cobro-line">
         <label>Concepto<input data-line="${index}" data-field="title" maxlength="80" value="${esc(line.title)}" placeholder="Torta 30 personas"></label>
-        <label>Monto<input data-line="${index}" data-field="amount" inputmode="decimal" maxlength="10" value="${esc(line.amount)}" placeholder="75.00"></label>
+        <label>Monto (USD)<input data-line="${index}" data-field="amount" inputmode="decimal" maxlength="10" value="${esc(line.amount)}" placeholder="75.00"></label>
         <button type="button" data-remove="${index}" aria-label="Quitar ${esc(line.title || `línea ${index + 1}`)}" ${draft.lines.length === 1 ? 'disabled' : ''}>×</button></div>`).join('')}
         ${draft.lines.length < MAX_LINES ? '<button type="button" class="text-button" id="cobro-add">+ Agregar línea</button>' : ''}</fieldset>
       <p class="order-row order-total cobro-total"><span>Total</span><span id="cobro-total">${usd(totalCents())}</span></p>

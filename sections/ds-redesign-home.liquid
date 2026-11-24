@@ -13,7 +13,9 @@
     {%- comment -%} En móvil la foto ocupa el ancho completo con 235 px de alto; en escritorio, toda la portada. {%- endcomment -%}
     {{ section.settings.hero_image | image_url: width: 1920 | image_tag: widths: '480, 750, 1080, 1440, 1920', sizes: '100vw', class: 'ds-r-hero-photo', alt: section.settings.hero_image_alt, loading: 'eager', fetchpriority: 'high', preload: true }}
   {%- else -%}
-    <img class="ds-r-hero-photo" src="{{ 'ds-r-hero.png' | asset_url }}" width="1440" height="576" alt="{{ section.settings.hero_image_alt | escape }}" loading="eager" fetchpriority="high">
+    {%- comment -%} El CDN de Shopify redimensiona la foto del tema con &width=. Con el recorte cover, el móvil necesita ~590 px y de 601 a 1279 px ~1180 px (medido). {%- endcomment -%}
+    {%- assign hero_src = 'ds-r-hero.png' | asset_url -%}
+    <img class="ds-r-hero-photo" src="{{ hero_src }}" srcset="{{ hero_src }}&amp;width=600 600w, {{ hero_src }}&amp;width=900 900w, {{ hero_src }}&amp;width=1200 1200w, {{ hero_src }}&amp;width=1500 1500w, {{ hero_src }} 1983w" sizes="(max-width: 600px) 600px, (max-width: 1279px) 1180px, 100vw" width="1440" height="576" alt="{{ section.settings.hero_image_alt | escape }}" loading="eager" fetchpriority="high">
   {%- endif -%}
   <div class="ds-r-hero-inner">
     <div class="ds-r-hero-copy">

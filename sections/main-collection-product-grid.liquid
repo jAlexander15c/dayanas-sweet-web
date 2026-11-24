@@ -30,8 +30,25 @@
 >
   <div class="section-{{ section.id }}-padding gradient color-{{ section.settings.color_scheme }}">
     {%- paginate collection.products by section.settings.products_per_page -%}
+      {%- comment -%} Categoría sin productos y sin filtros activos: sin barra de filtros y con una salida útil (D05). Una búsqueda filtrada sin resultados conserva el mensaje de Shopify. {%- endcomment -%}
+      {%- assign has_active_filters = false -%}
+      {%- for filter in collection.filters -%}
+        {%- if filter.active_values.size > 0 -%}
+          {%- assign has_active_filters = true -%}
+        {%- elsif filter.type == 'price_range' -%}
+          {%- if filter.min_value.value != nil -%}
+            {%- assign has_active_filters = true -%}
+          {%- elsif filter.max_value.value != nil -%}
+            {%- assign has_active_filters = true -%}
+          {%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {%- assign ds_empty_collection = false -%}
+      {%- if collection.products.size == 0 and has_active_filters == false -%}
+        {%- assign ds_empty_collection = true -%}
+      {%- endif -%}
       {% comment %} Sort is the first tabbable element when filter type is vertical {% endcomment %}
-      {%- if section.settings.enable_sorting and section.settings.filter_type == 'vertical' -%}
+      {%- if section.settings.enable_sorting and section.settings.filter_type == 'vertical' and ds_empty_collection == false -%}
         <facet-filters-form class="facets facets-vertical-sort page-width small-hide">
           <form class="facets-vertical-form" id="FacetSortForm">
             <div class="facet-filters sorting caption">
@@ -92,6 +109,7 @@
       <div class="{% if section.settings.filter_type == 'vertical' %} facets-vertical page-width{% endif %}">
         {{ 'component-facets.css' | asset_url | stylesheet_tag }}
         <script src="{{ 'facets.js' | asset_url }}" defer="defer"></script>
+        {%- if ds_empty_collection == false -%}
         {%- if section.settings.enable_filtering or section.settings.enable_sorting -%}
           <aside
             aria-labelledby="verticalTitle"
@@ -108,6 +126,7 @@
             %}
           </aside>
         {%- endif -%}
+        {%- endif -%}
 
         <div
           class="product-grid-container{% if settings.animations_reveal_on_scroll %} scroll-trigger animate--slide-in{% endif %}"
@@ -117,20 +136,20 @@
           {% endif %}
         >
           {%- if collection.products.size == 0 -%}
-            {%- assign has_active_filters = false -%}
-            {%- for filter in collection.filters -%}
-              {%- if filter.active_values.size > 0 -%}
-                {%- assign has_active_filters = true -%}
-              {%- elsif filter.type == 'price_range' -%}
-                {%- if filter.min_value.value != nil -%}
-                  {%- assign has_active_filters = true -%}
-                {%- elsif filter.max_value.value != nil -%}
-                  {%- assign has_active_filters = true -%}
-                {%- endif -%}
-              {%- endif -%}
-            {%- endfor -%}
             <div class="collection collection--empty page-width" id="product-grid" data-id="{{ section.id }}">
               <div class="loading-overlay gradient"></div>
+              {%- if ds_empty_collection -%}
+              <div class="ds-collection-empty">
+                <h2 class="ds-collection-empty__title">Por ahora no hay {{ collection.title | downcase | escape }} en el menú</h2>
+                <p>Esta categoría vuelve cuando la carguemos en una próxima tanda. Mientras, mira lo que sí está disponible o deja tu correo para el aviso.</p>
+                <div class="ds-collection-empty__actions">
+                  {%- if collection.handle != 'all' -%}
+                    <a class="ds-collection-empty__primary" href="{{ routes.all_products_collection_url }}">Ver todo el menú</a>
+                  {%- endif -%}
+                  <a class="ds-collection-empty__secondary" href="{{ routes.root_url }}#ds-r-email" data-ds-r-signup>Dejar mi correo</a>
+                </div>
+              </div>
+              {%- else -%}
               <div class="title-wrapper center">
                 <h2 class="title title--primary">
                   {{ 'sections.collection_template.empty' | t -}}
@@ -143,6 +162,7 @@
                   {%- endif -%}
                 </h2>
               </div>
+              {%- endif -%}
             </div>
           {%- else -%}
             <div

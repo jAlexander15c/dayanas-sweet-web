@@ -156,7 +156,7 @@
     root.dataset.mounted = 'true';
     const q = s => root.querySelector(s), qa = s => Array.from(root.querySelectorAll(s));
     let service;
-    try { service = createService(root.dataset.proxy, { guest }); } catch (_) { q('[data-gate]').textContent = messages.UNAVAILABLE; return; }
+    try { service = createService(root.dataset.proxy, { guest }); } catch (_) { const gate = q('[data-gate]'); gate.textContent = messages.UNAVAILABLE; gate.hidden = false; q('[data-live]').hidden = true; return; }
     const storageKey = `ds-celebracion-photo-recovery:${guest ? 'guest' : root.dataset.customerKey}`;
     let recovery;
     try { recovery = JSON.parse(global.sessionStorage.getItem(storageKey)); } catch (_) { /* Storage may be unavailable. */ }
@@ -201,7 +201,7 @@
     if (!controller.state.id && !controller.state.intent) recovery = null;
     q('[data-gate]').hidden = true;
     q('[data-live]').hidden = false;
-    q('[data-js-note]').hidden = true;
+    q('[data-js-note]')?.setAttribute('hidden', '');
 
     function renderReceipt(state) {
       q('[data-guest-receipt]').hidden = false;

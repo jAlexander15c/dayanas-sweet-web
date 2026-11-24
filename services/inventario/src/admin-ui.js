@@ -83,7 +83,7 @@ async function search(append = false) {
   products = append ? [...products, ...result.nodes] : result.nodes;
   cursor = result.pageInfo.hasNextPage ? result.pageInfo.endCursor : null;
   renderProducts();
-  feedback('Cajas consultadas en Shopify. Abre una acción para revisar el conteo más reciente.');
+  feedback('');
 }
 const field = (label, name, value = '', extra = '') => `<label>${label}<input name="${name}" value="${esc(value)}" ${extra}></label>`;
 function locationField() {
@@ -441,7 +441,7 @@ function showCategoryConfirmation(payload, summary) {
 $('#categories').addEventListener('click', guard(async () => {
   await loadCategories(); renderCategories();
   $('#workspace').hidden = true; $('#history-view').hidden = true; $('#categories-view').hidden = false;
-  feedback('Las categorías se consultan en Shopify. Puedes ocultarlas de la portada sin borrarlas.');
+  feedback('');
 }));
 $('#new-category').onclick = () => openCategory();
 $('#close-category').onclick = () => $('#category-editor').close();
@@ -520,7 +520,7 @@ $('#history').addEventListener('click', guard(async () => {
   historyEvents = events;
   $('#workspace').hidden = true; $('#history-view').hidden = false; $('#categories-view').hidden = true;
   $('#events').innerHTML = events.length ? events.map(e => `<article class="card event"><h3>${esc(actionText[e.action])} · ${e.result === 'succeeded' ? 'Guardado' : ['pending', 'uncertain'].includes(e.result) ? 'Sin confirmar: revisa antes de repetir' : 'Fallido'}</h3><p>${esc(new Date(e.date).toLocaleString('es'))} · ${esc(e.staffName || e.staffId)}</p>${e.reason ? `<p>${esc(e.reason)}</p>` : ''}${e.error ? `<p>${esc(e.error.message)}</p>` : ''}${e.retryable && e.staffId === activeStaffId ? `<button data-retry="${esc(e.operationId)}">Reintentar</button>` : ''}<details><summary>Ver detalle del cambio</summary><pre>${esc(JSON.stringify({ producto: e.productId, opción: e.variantId, tienda: e.locationId, antes: readable(e.before), cambio: readable(e.change), después: readable(e.after), pasos: e.steps.map(s => `${s.label}: ${stepText(s)}`), confirmación: e.operationId }, null, 2))}</pre></details></article>`).join('') : '<div class="card"><p>Todavía no hay cambios. Aquí aparecerá cada operación que confirmes.</p></div>';
-  feedback('Historial de los últimos 100 cambios. Los conteos actuales siempre se consultan en Shopify.');
+  feedback('');
 }));
 $('#events').addEventListener('click', guard(event => {
   const button = event.target.closest('button[data-retry]');

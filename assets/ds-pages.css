@@ -50,6 +50,9 @@
 .ds-contact__aside-copy{padding:clamp(24px,3vw,38px)}
 .ds-contact__aside-copy .rte{font-size:15px}
 .ds-contact__aside-copy .rte p{margin:0 0 14px}
+/* Antes de escribir en bloques (D10): el primer <strong> de cada párrafo es su subtítulo. */
+.ds-contact__aside-copy .rte p+p{padding-top:14px;border-top:1px solid var(--ds-line)}
+.ds-contact__aside-copy .rte p>strong:first-child{display:block;margin-bottom:2px;color:var(--ds-ink);font-weight:700}
 .ds-contact__links{display:flex;flex-direction:column;gap:0;margin-top:26px;border-top:1px solid var(--ds-line)}
 .ds-contact__links a{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 0;border-bottom:1px solid var(--ds-line);color:var(--ds-ink);font-weight:700;font-size:15px;text-decoration:none}
 .ds-contact__links a:hover{color:var(--ds-pink-deep)}
