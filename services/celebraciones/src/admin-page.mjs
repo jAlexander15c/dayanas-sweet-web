@@ -63,7 +63,7 @@ export function celebrationsMarkup() {
     <section id="ds-panel-propuesta" class="ds-panel" role="tabpanel" aria-labelledby="ds-tab-propuesta" hidden>
       <section id="ds-accepted" class="ds-card" hidden><p class="ds-eyebrow">Diseño y precio vigentes</p><h3>Propuesta aceptada</h3><div id="ds-accepted-copy"></div></section>
       <section id="ds-pending" class="ds-card ds-pending" hidden><p class="ds-eyebrow">Esperando que la clienta acepte</p><h3>Propuesta enviada</h3><div id="ds-pending-copy"></div></section>
-      <details id="ds-proposal-editor" class="ds-card ds-editor" open><summary><h3 id="ds-proposal-heading">Prepara la propuesta</h3></summary><p id="ds-proposal-note" class="ds-muted">La clienta debe aceptar la propuesta para que cambien el diseño y el precio vigentes.</p>
+      <details id="ds-proposal-editor" class="ds-card ds-editor" open><summary><h3 id="ds-proposal-heading">Prepara la propuesta</h3><span id="ds-proposal-draft" class="ds-draft" hidden>Borrador sin enviar</span></summary><p id="ds-proposal-note" class="ds-muted">La clienta debe aceptar la propuesta para que cambien el diseño y el precio vigentes.</p>
         <form id="ds-proposal-form" class="ds-stack"><fieldset id="ds-proposal-fields" class="ds-stack">
           <label>Lo que podemos preparar<textarea name="canPrepare" required maxlength="2000"></textarea></label>
           <label>Lo que cambia o no podemos reproducir<textarea name="changes" maxlength="2000"></textarea></label>
@@ -73,7 +73,6 @@ export function celebrationsMarkup() {
           <label>¿Cómo paga la clienta?<select name="paymentMode"><option value="deposit">Anticipo del 60 %</option><option value="full">Pago completo antes de preparar</option><option value="delivery">Pago completo contra entrega</option></select></label>
           <p id="ds-payment-mode-note" class="ds-muted"></p>
           <p id="ds-price-preview" class="ds-note" aria-live="polite">Completa el precio de la propuesta.</p>
-          <p id="ds-proposal-draft" class="ds-draft" hidden>Borrador sin enviar</p>
           <button type="submit" class="ds-primary">Enviar propuesta</button>
         </fieldset></form>
       </details>

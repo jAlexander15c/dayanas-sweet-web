@@ -109,6 +109,12 @@ try {
   check('D16: propuesta enviada arriba y editor plegado', !d16.open && d16.heading === 'Preparar una nueva versión' && d16.pendingAbove && d16.pendingShown, JSON.stringify(d16));
   await editor.locator('summary').click();
   check('D16: «Preparar una nueva versión» abre el editor', await editor.evaluate(d => d.open) && await page.locator('[name=canPrepare]').isVisible());
+  // Revisión Codex (P2): un borrador sin enviar sigue anunciado aunque se pliegue el editor con el teclado.
+  await page.locator('[name=canPrepare]').fill('Versión 2: pastel de tres pisos.');
+  await editor.locator('summary').focus(); await page.keyboard.press('Enter');
+  const folded = await page.evaluate(() => ({ open: document.querySelector('#ds-proposal-editor').open, draft: !!document.querySelector('#ds-proposal-draft').checkVisibility?.(), inSummary: !!document.querySelector('#ds-proposal-editor > summary #ds-proposal-draft') }));
+  check('D16: plegado con borrador, el aviso sigue a la vista en el encabezado', !folded.open && folded.draft && folded.inSummary, JSON.stringify(folded));
+  page.once('dialog', dialog => dialog.accept()); // el borrador queda sin enviar a propósito: se acepta el aviso de salida
 
   // 3. Conversación y estados en la reserva contra entrega
   await page.goto(`https://audit.local/apps/inventario#celebraciones/${reserved.id}`);
