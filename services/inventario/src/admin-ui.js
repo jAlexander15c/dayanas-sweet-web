@@ -34,6 +34,25 @@ function readable(value) {
   if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, item]) => [labels[key] || key, key === 'price' && item != null ? money(item) : readable(item)]));
   return typeof value === 'string' ? statusText[value] || value : value;
 }
+// D18: una línea legible por cambio (producto y qué pasó). Los cambios anteriores a esta versión no guardaban el
+// nombre en producción ni en correcciones: se muestran sin él. El detalle técnico sigue en el desplegable.
+function eventSummary(e) {
+  const title = [e.productTitle, e.change?.title, e.before?.title, e.after?.title].find(t => typeof t === 'string' && t.trim());
+  const n = value => Number.isSafeInteger(value), boxes = value => `${value} ${Math.abs(value) === 1 ? 'caja' : 'cajas'}`;
+  let what = '';
+  if (e.action === 'production' && n(e.change?.delta)) {
+    what = `+${boxes(e.change.delta)}`;
+    if (n(e.before?.available) && n(e.after?.available)) what += `, de ${e.before.available} a ${e.after.available} disponibles`;
+    else if (n(e.before?.available)) what += `; había ${e.before.available} disponibles`;
+  } else if (e.action === 'correction' && n(e.change?.quantity)) {
+    const before = n(e.before?.on_hand) ? e.before.on_hand : e.change.expected, q = e.change.quantity;
+    const counted = `${q} ${Math.abs(q) === 1 ? 'caja física' : 'cajas físicas'}`;
+    what = n(before) ? `Conteo de ${before} a ${counted}` : `Conteo: ${counted}`;
+  } else if (e.action === 'create' && n(e.change?.initialQuantity)) what = `${boxes(e.change.initialQuantity)} iniciales`;
+  else if (e.action === 'delete') what = 'Eliminado de la tienda';
+  if (!title && !what) return '';
+  return `<p class="event-summary">${title ? `<strong>${esc(title)}</strong>` : ''}${title && what ? ' · ' : ''}${esc(what)}</p>`;
+}
 let locations = [], products = [], cursor = null, context = null, pending = null, sending = false;
 let searchGeneration = 0, historyEvents = [], activeStaffId;
 let pendingSubmitted = false;
@@ -519,7 +538,7 @@ $('#history').addEventListener('click', guard(async () => {
   const { events } = await api('/api/history');
   historyEvents = events;
   $('#workspace').hidden = true; $('#history-view').hidden = false; $('#categories-view').hidden = true;
-  $('#events').innerHTML = events.length ? events.map(e => `<article class="card event"><h3>${esc(actionText[e.action])} · ${e.result === 'succeeded' ? 'Guardado' : ['pending', 'uncertain'].includes(e.result) ? 'Sin confirmar: revisa antes de repetir' : 'Fallido'}</h3><p>${esc(new Date(e.date).toLocaleString('es'))} · ${esc(e.staffName || e.staffId)}</p>${e.reason ? `<p>${esc(e.reason)}</p>` : ''}${e.error ? `<p>${esc(e.error.message)}</p>` : ''}${e.retryable && e.staffId === activeStaffId ? `<button data-retry="${esc(e.operationId)}">Reintentar</button>` : ''}<details><summary>Ver detalle del cambio</summary><pre>${esc(JSON.stringify({ producto: e.productId, opción: e.variantId, tienda: e.locationId, antes: readable(e.before), cambio: readable(e.change), después: readable(e.after), pasos: e.steps.map(s => `${s.label}: ${stepText(s)}`), confirmación: e.operationId }, null, 2))}</pre></details></article>`).join('') : '<div class="card"><p>Todavía no hay cambios. Aquí aparecerá cada operación que confirmes.</p></div>';
+  $('#events').innerHTML = events.length ? events.map(e => `<article class="card event"><h3>${esc(actionText[e.action])} · ${e.result === 'succeeded' ? 'Guardado' : ['pending', 'uncertain'].includes(e.result) ? 'Sin confirmar: revisa antes de repetir' : 'Fallido'}</h3>${eventSummary(e)}<p class="muted">${esc(new Date(e.date).toLocaleString('es'))} · ${esc(e.staffName || e.staffId)}</p>${e.reason ? `<p>${esc(e.reason)}</p>` : ''}${e.error ? `<p>${esc(e.error.message)}</p>` : ''}${e.retryable && e.staffId === activeStaffId ? `<button data-retry="${esc(e.operationId)}">Reintentar</button>` : ''}<details class="event-tech"><summary>Detalle técnico</summary><pre>${esc(JSON.stringify({ producto: e.productId, opción: e.variantId, tienda: e.locationId, antes: readable(e.before), cambio: readable(e.change), después: readable(e.after), pasos: e.steps.map(s => `${s.label}: ${stepText(s)}`), confirmación: e.operationId }, null, 2))}</pre></details></article>`).join('') : '<div class="card"><p>Todavía no hay cambios. Aquí aparecerá cada operación que confirmes.</p></div>';
   feedback('');
 }));
 $('#events').addEventListener('click', guard(event => {

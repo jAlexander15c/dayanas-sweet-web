@@ -103,6 +103,12 @@ try {
   // Captura después del envío: una captura de página completa justo antes de tocar «Enviar» mueve la página en pleno toque (efecto de Playwright).
   await page.screenshot({ path: shot('propuesta-mobile'), fullPage: true });
   check('propuesta enviada y borrador limpio', !(await page.locator('#ds-proposal-draft').isVisible()) && (await page.locator('#ds-status').textContent()) === 'Cotización disponible');
+  // D16: con la propuesta enviada, esa propuesta es lo principal y el editor queda plegado; se abre al tocarlo.
+  const editor = page.locator('#ds-proposal-editor');
+  const d16 = await page.evaluate(() => ({ open: document.querySelector('#ds-proposal-editor').open, heading: document.querySelector('#ds-proposal-heading').textContent, pendingAbove: document.querySelector('#ds-pending').getBoundingClientRect().top < document.querySelector('#ds-proposal-editor').getBoundingClientRect().top, pendingShown: !document.querySelector('#ds-pending').hidden }));
+  check('D16: propuesta enviada arriba y editor plegado', !d16.open && d16.heading === 'Preparar una nueva versión' && d16.pendingAbove && d16.pendingShown, JSON.stringify(d16));
+  await editor.locator('summary').click();
+  check('D16: «Preparar una nueva versión» abre el editor', await editor.evaluate(d => d.open) && await page.locator('[name=canPrepare]').isVisible());
 
   // 3. Conversación y estados en la reserva contra entrega
   await page.goto(`https://audit.local/apps/inventario#celebraciones/${reserved.id}`);

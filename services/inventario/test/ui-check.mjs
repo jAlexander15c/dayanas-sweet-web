@@ -98,6 +98,13 @@ try {
   await page.getByRole('heading', { name: 'Últimos cambios' }).waitFor();
   assert.equal(await page.locator('.event').count(), 3);
   assert.match(await page.locator('#events').textContent(), /\$15\.00/);
+  // D18: resumen legible con el producto y el antes/después; el JSON queda plegado en «Detalle técnico».
+  const production = page.locator('.event', { hasText: 'Agregar producción' }).first();
+  const summary = await production.locator('.event-summary').textContent();
+  assert.match(summary, /^.+ · \+6 cajas, de 4 a 10 disponibles$/, `D18: ${summary}`);
+  assert.ok((await production.locator('.event-summary strong').textContent()).trim().length > 0, 'D18: lleva el nombre del producto');
+  assert.equal(await production.locator('details.event-tech').evaluate(d => !d.open && d.querySelector('summary').textContent === 'Detalle técnico'), true);
+  assert.match(await page.locator('.event', { hasText: 'Corregir existencias' }).first().locator('.event-summary').textContent(), /^.+ · Conteo de \d+ a (1 caja física|\d+ cajas físicas)$/);
   await page.getByRole('button', { name: 'Productos', exact: true }).click();
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole('heading', { name: 'Brownie de prueba', exact: true }).waitFor();

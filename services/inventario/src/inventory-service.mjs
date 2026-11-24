@@ -193,6 +193,8 @@ export function createInventoryService({ store, clientFactory, now = () => new D
           const state = saved ? { [name]: saved.args.expected } : quantities(level);
           event.before = { [name]: state[name] };
           event.change = input.action === 'production' ? { delta: input.quantity } : { quantity: input.quantity, expected: input.expected };
+          // D18: el Historial muestra el nombre del producto. Un reintento conserva el del primer intento (product es null).
+          if (product?.title) event.productTitle = product.title;
           if (!resumed && input.action === 'correction' && state[name] !== input.expected) throw fail(409, 'QUANTITY_CHANGED', `Las cajas cambiaron mientras revisabas: ahora hay ${state[name]}. Revisa y confirma otra vez.`, { current: state[name] });
           let group;
           try {

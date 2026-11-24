@@ -147,3 +147,7 @@ body.ds-page{margin:0;background:#fbf7f1;color:#342920;font-family:system-ui,-ap
 .ds-brand{font:400 22px/1.2 Georgia,serif}
 .ds-head>span:last-child{font-size:14px}
 .ds-main{max-width:1180px;margin:auto;padding:20px 16px 60px}
+/* D16: el editor de la propuesta se pliega cuando ya hay una propuesta enviada. */
+.ds-editor>summary{justify-content:space-between;gap:12px;list-style:none}.ds-editor>summary::-webkit-details-marker{display:none}.ds-editor>summary h3{margin:0}
+.ds-editor>summary::after{content:"";flex:none;width:9px;height:9px;margin-right:4px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:transform .2s}.ds-editor[open]>summary::after{transform:rotate(-135deg)}.ds-editor[open]>summary{margin-bottom:8px}
+@media(prefers-reduced-motion:reduce){.ds-editor>summary::after{transition:none}}

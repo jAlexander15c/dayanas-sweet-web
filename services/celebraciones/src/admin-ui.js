@@ -436,6 +436,11 @@ function startPanel(root, { api, portal, visible = () => true }) {
     q('#ds-accepted').hidden = !snapshot.acceptedProposal; if (snapshot.acceptedProposal) renderProposal('#ds-accepted-copy', snapshot.acceptedProposal);
     q('#ds-pending').hidden = !snapshot.pendingProposal; if (snapshot.pendingProposal) renderProposal('#ds-pending-copy', snapshot.pendingProposal);
     const draft = draftFor(snapshot);
+    // D16: con una propuesta ya enviada, lo principal es esa propuesta; el editor queda cerrado salvo que haya
+    // un borrador sin enviar o que la pastelera lo haya abierto. Sin propuestas, el editor se ve abierto.
+    const sent = !!(snapshot.pendingProposal || snapshot.acceptedProposal), editor = q('#ds-proposal-editor');
+    q('#ds-proposal-heading').textContent = sent ? 'Preparar una nueva versión' : 'Prepara la propuesta';
+    editor.open = !sent || draft.proposalDirty || draft.editorOpen === true;
     if (snapshot.paymentModeLocked) draft.paymentMode = proposalPaymentMode(snapshot);
     for (const key of ['canPrepare', 'changes', 'reply', 'baseCents', 'surchargeCents', 'display', 'paymentMode']) proposalForm.elements[key].value = draft[key];
     q('#ds-payment-mode-note').textContent = snapshot.paymentModeLocked ? 'La modalidad está fijada porque ya se inició el cobro o se aceptó la reserva contra entrega.' : 'Solo la pastelera elige esta condición; la clienta la revisa al aceptar. También puedes elegirla en solicitudes urgentes.';
@@ -462,6 +467,7 @@ function startPanel(root, { api, portal, visible = () => true }) {
   }
   const editProposal = () => { saveDraft(); const snapshot = current(); if (snapshot) draftFor(snapshot).proposalDirty = true; renderDraftNotes(); };
   on(proposalForm, 'input', editProposal); on(proposalForm, 'change', editProposal);
+  on(q('#ds-proposal-editor'), 'toggle', event => { const snapshot = current(); if (snapshot && (snapshot.pendingProposal || snapshot.acceptedProposal)) draftFor(snapshot).editorOpen = event.target.open; });
   on(commentForm, 'input', () => { saveDraft(); renderDraftNotes(); });
   async function mutate(action, payload) {
     const id = selected, key = `${id}/${action}`, operationId = operations.get(key, payload);
@@ -470,7 +476,7 @@ function startPanel(root, { api, portal, visible = () => true }) {
       const snapshot = await api(`${pathFor(id)}/${action}`, { ...payload, operationId });
       remember(snapshot); operations.complete(key);
       if (action === 'comments') draftFor(snapshots.get(id)).text = '';
-      if (action === 'proposals') draftFor(snapshots.get(id)).proposalDirty = false;
+      if (action === 'proposals') Object.assign(draftFor(snapshots.get(id)), { proposalDirty: false, editorOpen: false });
       renderList(); if (selected === id) renderDetail();
       if (action === 'proposals') {
         feedback('Propuesta enviada. Esperando que la clienta la acepte. El estado del correo está en Pagos › Correos de actualizaciones.');

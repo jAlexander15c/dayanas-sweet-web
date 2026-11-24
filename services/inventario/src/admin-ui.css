@@ -177,3 +177,8 @@ a.action-link{display:inline-flex;align-items:center;min-height:44px;padding:0 1
 .order-money-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}@media(max-width:340px){.order-money-actions{grid-template-columns:1fr}}
 /* Hoy (D14): el aviso de cobro pendiente lleva a Pedidos. */
 .today-alert p{margin:0}.today-alert-link{display:inline-flex;align-items:center;min-height:44px;color:inherit;font-weight:700}
+/* Historial (D18): resumen legible arriba; el detalle técnico queda plegado. */
+.event h3{margin-bottom:4px}.event .event-summary{margin:0 0 2px;overflow-wrap:anywhere}.event>.muted{margin-top:0}.event-tech summary{color:#6c5b4d;font-size:15px}
+/* Usuarios (D19): «Invitar persona» en el encabezado y el equipo primero. */
+.users-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}.users-head h2{margin:0}
+@media(max-width:600px){.users-head #invite-toggle{width:100%}}

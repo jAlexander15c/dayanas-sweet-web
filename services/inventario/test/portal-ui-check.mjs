@@ -62,7 +62,12 @@ try {
   await embedded.getByRole('button', { name: 'Conectar acceso externo', exact: true }).click(); await embedded.getByText('Acceso externo conectado a Shopify.', { exact: true }).waitFor();
   await portal.getByRole('button', { name: 'Productos', exact: true }).click(); await portal.getByRole('button', { name: 'Agregar producción', exact: true }).waitFor();
   await screenshots(portal, 'panel');
-  await tocar(portal, 'Usuarios'); await portal.getByText('Invitar a alguien').waitFor();
+  // D19: el equipo se ve primero; el formulario se abre con «Invitar persona» y lleva el foco al primer campo.
+  await tocar(portal, 'Usuarios'); const inviteToggle = portal.getByRole('button', { name: 'Invitar persona', exact: true }); await inviteToggle.waitFor();
+  assert.equal(await portal.locator('#invite-form').isHidden(), true, 'D19: la invitación empieza cerrada');
+  assert.ok(await portal.locator('.user-card').count() >= 1, 'D19: el equipo se ve sin abrir la invitación');
+  await inviteToggle.click(); await portal.getByText('Invitar a alguien').waitFor();
+  assert.equal(await portal.evaluate(() => [document.querySelector('#invite-toggle').getAttribute('aria-expanded'), document.activeElement?.name]).then(v => v.join()), 'true,name', 'D19: abierta y con el foco en Nombre');
   await portal.getByLabel('Nombre', { exact: true }).fill('María de prueba'); await portal.getByLabel('Usuario', { exact: true }).fill('maria'); await portal.getByLabel('Correo', { exact: true }).fill('maria@example.test');
   await portal.getByRole('button', { name: 'Enviar invitación', exact: true }).click(); await portal.getByRole('heading', { name: 'María de prueba' }).waitFor();
   await screenshots(portal, 'usuarios');

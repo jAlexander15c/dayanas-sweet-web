@@ -76,6 +76,7 @@ try {
   const bakeRow = page.getByRole('button', { name: /^Para hornear · \d+ pedidos?/ });
   await bakeRow.waitFor();
   assert.equal(await page.getByRole('heading', { name: 'Para hornear' }).isVisible(), false, 'D12: en el celular «Para hornear» no ocupa una tarjeta completa');
+  await page.evaluate(() => scrollTo(0, 0)); // el primer pantallazo se mide desde arriba, sin el desplazamiento de pasos anteriores
   const top = sel => page.locator(sel).first().evaluate(n => Math.round(n.getBoundingClientRect().top));
   const [searchTop, bakeTop, cardTop] = [await top('#order-query'), await top('.bake-summary'), await top('.order-card')];
   assert.ok(searchTop < bakeTop && bakeTop < cardTop && cardTop < 844, `D12: búsqueda ${searchTop} < Para hornear ${bakeTop} < primera tarjeta ${cardTop} < 844`);
