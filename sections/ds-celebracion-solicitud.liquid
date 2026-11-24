@@ -1,8 +1,9 @@
 {{ 'ds-celebracion-solicitud.css' | asset_url | stylesheet_tag }}
 <script>
-  // Si ds-celebracion-solicitud.js no llega o no termina de montar (el formulario sigue inerte), el aviso no puede depender de ese archivo.
+  // Si ds-celebracion-solicitud.js no llega o no termina de montar (el aviso sigue visible), el aviso no puede depender de ese archivo.
+  // Los controles llevan inert hasta montar; el aviso queda fuera de ellos para que los lectores de pantalla lo anuncien.
   window.dsRequestLoadFailed = function () {
-    document.querySelectorAll('[data-ds-request] [data-live][inert] [data-pending-note]').forEach(function (note) {
+    document.querySelectorAll('[data-ds-request] [data-pending-note]:not([hidden])').forEach(function (note) {
       note.textContent = 'No pudimos cargar el formulario. Revisa tu conexión y vuelve a cargar la página.';
     });
   };
@@ -40,8 +41,8 @@
     </div>
     {% if customer or section.settings.guest_enabled %}
       <noscript><p class="ds-request__muted">Necesitas JavaScript para completar la solicitud y adjuntar fotos.</p><style>.ds-request [data-live]{display:none!important}</style></noscript>
-      <div data-live{% if ds_request_live %} inert{% else %} hidden{% endif %}>
-        <ol class="ds-request__steps" aria-label="Pasos de tu solicitud">
+      <div data-live{% unless ds_request_live %} hidden{% endunless %}>
+        <ol class="ds-request__steps" aria-label="Pasos de tu solicitud"{% if ds_request_live %} inert data-until-mount{% endif %}>
           <li data-marker="0" aria-current="step"><b>1</b>Tu pastel</li>
           <li data-marker="1"><b>2</b>Tu idea</li>
           <li data-marker="2"><b>3</b>Fecha y contacto</li>
@@ -49,7 +50,7 @@
         </ol>
         <div class="ds-request__layout" data-layout>
           <form data-form novalidate>
-            <section data-step="0" aria-labelledby="DSRequestStep0-{{ section.id }}">
+            <section data-step="0" aria-labelledby="DSRequestStep0-{{ section.id }}"{% if ds_request_live %} inert data-until-mount{% endif %}>
               <h2 id="DSRequestStep0-{{ section.id }}" tabindex="-1">Empecemos por tu pastel</h2>
               <fieldset>
                 <legend>¿Cuántos pisos?</legend>
@@ -130,11 +131,11 @@
             </section>
             <div class="ds-request__actions">
               <button class="ds-request__back" data-back type="button" hidden>Volver</button>
-              <button class="ds-request__button" data-next type="submit">Continuar a tu idea</button>
+              <button class="ds-request__button" data-next type="submit"{% if ds_request_live %} inert data-until-mount{% endif %}>Continuar a tu idea</button>
               {%- if ds_request_live -%}<p class="ds-request__muted ds-request__pending" data-pending-note role="status">Cargando el formulario…</p>{%- endif -%}
             </div>
           </form>
-          <aside class="ds-request__aside" aria-label="Resumen de tu selección">
+          <aside class="ds-request__aside" aria-label="Resumen de tu selección"{% if ds_request_live %} inert data-until-mount{% endif %}>
             <h3>Tu pastel</h3>
             <dl class="ds-request__summary" data-summary><div><dt>Pastel redondo</dt><dd>1 piso · 8″</dd></div><div><dt>Piso 1</dt><dd>Vainilla + Chocolate · Guayaba + Nutella</dd></div><div><dt>Cobertura</dt><dd>Buttercream</dd></div><div><dt>Decoraciones</dt><dd>Sin selección</dd></div></dl>
             <p class="ds-request__note">Hecho a mano, para tu celebración. El precio se define en tu cotización.</p>

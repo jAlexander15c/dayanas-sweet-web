@@ -201,7 +201,7 @@
     if (!controller.state.id && !controller.state.intent) recovery = null;
     q('[data-gate]').hidden = true;
     q('[data-live]').hidden = false;
-    q('[data-live]').removeAttribute('inert');
+    qa('[data-until-mount]').forEach(el => { el.removeAttribute('inert'); el.removeAttribute('data-until-mount'); });
     q('[data-pending-note]')?.setAttribute('hidden', '');
     q('[data-js-note]')?.setAttribute('hidden', '');
 

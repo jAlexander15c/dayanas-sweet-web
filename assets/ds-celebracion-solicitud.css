@@ -78,5 +78,5 @@
 .ds-request__receipt{padding:20px;border:1px solid var(--ds-line);border-radius:12px;background:var(--ds-white);margin:22px 0}
 .ds-request .ds-request__reference{font-size:25px;font-weight:600;letter-spacing:.04em}
 .ds-request [data-copy-link]{margin:10px 0}
-/* Antes de montar (D21): el formulario llega con su tamaño final pero inerte y atenuado, con su aviso junto al botón. */
-.ds-request [data-live][inert] :is(.ds-request__steps,[data-step],.ds-request__aside,.ds-request__button){opacity:.55}.ds-request__actions:has(.ds-request__pending:not([hidden])){flex-wrap:wrap}.ds-request__pending{flex:1 0 100%;margin:0}
+/* Antes de montar (D21): los controles llegan con su tamaño final pero inertes y atenuados; el aviso, fuera de ellos, debajo del botón. */
+.ds-request [data-until-mount]{opacity:.55}.ds-request__actions:has(.ds-request__pending:not([hidden])){flex-wrap:wrap}.ds-request__pending{flex:1 0 100%;margin:0}

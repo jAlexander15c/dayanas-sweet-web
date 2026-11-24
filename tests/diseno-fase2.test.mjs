@@ -103,11 +103,18 @@ rendered('D21: con el servicio activo el primer paso llega visible y el aviso de
   for (const options of [{ guestEnabled: true }, { guestEnabled: false, customer: { id: 9, name: 'Ana', email: 'ana@example.test' } }]) {
     const html = await renderRequest(options);
     assert.doesNotMatch(tag(html, 'data-live'), /\bhidden\b/);
-    assert.match(tag(html, 'data-live'), /\binert\b/, 'inerte hasta que el JS monte');
+    // inert va en los controles, no en [data-live]: un ancestro inert sacaría el aviso del árbol de accesibilidad
+    // (verificación Codex task_388520546568).
+    assert.doesNotMatch(tag(html, 'data-live'), /\binert\b/);
+    const untilMount = [...html.matchAll(/<(\w+)[^>]*\binert data-until-mount\b[^>]*>/g)].map(m => m[0].match(/class="([^"]+)"|data-step="(\d)"/).slice(1).find(Boolean));
+    assert.deepEqual(untilMount, ['ds-request__steps', '0', 'ds-request__button', 'ds-request__aside'], 'pasos, paso 1, botón y resumen, inertes hasta montar');
+    const beforeNote = html.slice(html.indexOf('<div data-live'), html.indexOf('data-pending-note'));
+    const opened = [...beforeNote.matchAll(/<(\w+)\b[^>]*\binert\b[^>]*>/g)].filter(m => (beforeNote.slice(m.index).match(new RegExp(`</${m[1]}>`, 'g')) || []).length < (beforeNote.slice(m.index).match(new RegExp(`<${m[1]}\\b`, 'g')) || []).length);
+    assert.equal(opened.length, 0, 'el aviso no puede quedar dentro de un elemento inert');
     assert.match(html, /<p class="ds-request__muted ds-request__pending" data-pending-note role="status">Cargando el formulario…<\/p>/);
     assert.match(html, /<script src="[^"]*ds-celebracion-solicitud\.js[^"]*" defer="defer" onerror="window\.dsRequestLoadFailed\(\)"><\/script>/);
     assert.match(html, /setTimeout\(window\.dsRequestLoadFailed, 15000\)/);
-    assert.match(html, /querySelectorAll\('\[data-ds-request\] \[data-live\]\[inert\] \[data-pending-note\]'\)/);
+    assert.match(html, /querySelectorAll\('\[data-ds-request\] \[data-pending-note\]:not\(\[hidden\]\)'\)/);
     assert.match(tag(html, 'data-gate'), /\bhidden\b/);
     assert.doesNotMatch(tag(html, 'data-step="0"'), /\bhidden\b/);
     assert.match(tag(html, 'data-step="1"'), /\bhidden\b/);
@@ -129,7 +136,7 @@ test('D21: si el servicio no se puede crear, el JS vuelve a mostrar el aviso y o
   const js = read('assets/ds-celebracion-solicitud.js');
   assert.match(js, /catch \(_\) \{ const gate = q\('\[data-gate\]'\); gate\.textContent = messages\.UNAVAILABLE; gate\.hidden = false; q\('\[data-live\]'\)\.hidden = true; return; \}/);
   assert.match(js, /q\('\[data-js-note\]'\)\?\.setAttribute\('hidden', ''\);/);
-  assert.match(js, /q\('\[data-live\]'\)\.hidden = false;\s*q\('\[data-live\]'\)\.removeAttribute\('inert'\);\s*q\('\[data-pending-note\]'\)\?\.setAttribute\('hidden', ''\);/);
+  assert.match(js, /q\('\[data-live\]'\)\.hidden = false;\s*qa\('\[data-until-mount\]'\)\.forEach\(el => \{ el\.removeAttribute\('inert'\); el\.removeAttribute\('data-until-mount'\); \}\);\s*q\('\[data-pending-note\]'\)\?\.setAttribute\('hidden', ''\);/);
 });
 
 test('D21: el primer piso y el resumen del HTML coinciden con los valores por defecto del JS', () => {
