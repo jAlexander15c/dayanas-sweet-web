@@ -53,7 +53,7 @@
           "settings": {
             "question": "¿Cuándo puedo hacer mi pedido?",
             "answer": "<p>Mientras el menú esté abierto. Para la [tanda], recibimos pedidos hasta el [cierre]. Horneamos el [horneado] y despachamos [despacho]. Las fechas de la tanda actual siempre están en la barra superior.</p>",
-            "closed_answer": "<p>La tanda ya cerró. Suscríbete al boletín y te avisamos cuando abra el próximo menú.</p>"
+            "closed_answer": "<p>La tanda ya cerró. <a href=\"/#ds-r-email\">Suscríbete al boletín</a> y te avisamos cuando abra el próximo menú.</p>"
           }
         },
         "q-soldout": {

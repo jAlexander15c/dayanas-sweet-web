@@ -6,6 +6,7 @@
   --tracking-ink: #3a2430;
   --tracking-soft: #705361;
   --tracking-line: #e8c9d6;
+  --tracking-field-line: #9a7083;
   background: var(--tracking-paper);
   color: var(--tracking-ink);
   color-scheme: light;
@@ -308,7 +309,7 @@
   min-width: 0;
   min-height: 130px;
   padding: 12px;
-  border: 1px solid var(--tracking-line);
+  border: 1px solid var(--tracking-field-line);
   border-radius: 10px;
   background: var(--tracking-white);
   color: var(--tracking-ink);

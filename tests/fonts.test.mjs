@@ -23,7 +23,10 @@ test('all five font variants are genuine compressed WOFF2 with content-addressed
 test('font optimization preserves every family, style, weight and swap policy',()=>{
  const before=execFileSync('git',['show',`${manifest.base}:assets/ds-redesign.css`],{encoding:'utf8'});
  const normalize=text=>text.replace(/ds-r-font-[a-f0-9]+\.woff2/g,'FONT').replaceAll("format('truetype')","format('woff2')").replaceAll('\r\n','\n');
- assert.equal(normalize(css),normalize(before));
+ // Solo las declaraciones de fuentes: el resto de la hoja puede cambiar por diseño (p. ej. cabecera 44×44).
+ const faces=text=>normalize(text).match(/@font-face\s*\{[^}]*\}/g)||[];
+ assert.equal(faces(css).length,5);
+ assert.deepEqual(faces(css),faces(before));
  assert.equal((css.match(/font-display: swap/g)||[]).length,5);
 });
 

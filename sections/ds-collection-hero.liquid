@@ -40,7 +40,7 @@
     {%- if section.settings.show_batch -%}
       <ul class="ds-chero__batch" role="list" aria-label="Fechas de pedidos">
         {%- if ds_closed == '1' -%}
-          <li>{% render 'ds-icon', name: 'clock' %}<span>{{ settings.ds_batch_closed_text | escape }}</span></li>
+          <li>{% render 'ds-icon', name: 'clock' %}<span>{{ settings.ds_batch_closed_text | escape }} {% render 'ds-signup-link' %}</span></li>
         {%- endif -%}
         {% render 'ds-order-dates' %}
       </ul>

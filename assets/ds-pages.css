@@ -21,6 +21,10 @@
 .ds-page__content h2{font-size:clamp(27px,3vw,38px)}
 .ds-page__content h3{font-size:23px}
 .ds-page__content img{max-width:100%;height:auto;border-radius:var(--ds-r-card)}
+/* Formulario de baja de datos que inserta Shopify: su contenedor flex dejaba la casilla a ancho natural (desborde en móvil). */
+.ds-page__content [class^="pc--"]{max-width:100%;min-width:0}
+.ds-page__content .pc--show-email-field label{width:auto;max-width:100%;align-items:flex-start;gap:10px;overflow-wrap:anywhere}
+.ds-page__content .pc--show-email-field input{flex:none;margin-top:.3em}
 
 /* Contacto */
 .ds-contact__grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(280px,.8fr);gap:clamp(20px,4vw,48px);align-items:start}

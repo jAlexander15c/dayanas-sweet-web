@@ -130,6 +130,18 @@ try {
   await page.locator('#today-pedidos .today-stat').first().waitFor();
   check('Reintentar carga las cifras', true);
 
+  // 6b. Pedidos sin respuesta: «Volver a cargar pedidos» junto al error (revisión de diseño D24).
+  await page.route('**/apps/inventario/api/pedidos/orders', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ code: 'UNAVAILABLE', message: 'Shopify no respondió.' }) }));
+  await nav(page, 'Pedidos').click();
+  const ordersRetry = page.getByRole('button', { name: 'Volver a cargar pedidos', exact: true });
+  await ordersRetry.waitFor();
+  check('Pedidos caído: error anunciado y Volver a cargar', (await page.locator('#orders-status[role=alert]').textContent()).includes('Shopify no respondió'));
+  await page.unroute('**/apps/inventario/api/pedidos/orders');
+  await ordersRetry.click();
+  await page.locator('#order-cards').waitFor();
+  check('Volver a cargar muestra la lista sin el botón', await page.locator('#orders-retry').count() === 0);
+  await nav(page, 'Hoy').click(); await page.getByRole('heading', { name: 'Hoy', exact: true }).waitFor();
+
   // 7. Escritorio: navegación en fila arriba, sin «Más» ni «Cuenta»; las secciones a la vista.
   await page.setViewportSize({ width: 1440, height: 1000 });
   check('escritorio: Categorías y Salir visibles, sin Más ni Cuenta', await page.getByRole('button', { name: 'Categorías', exact: true }).isVisible() && await page.getByRole('button', { name: 'Salir', exact: true }).isVisible()

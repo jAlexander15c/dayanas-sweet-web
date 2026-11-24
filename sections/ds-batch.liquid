@@ -7,6 +7,7 @@
     {%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
     {%- if ds_closed == '1' -%}
       <p class="ds-batch__closed" role="status">{{ settings.ds_batch_closed_text | escape }}</p>
+      <p class="ds-batch__signup">{% render 'ds-signup-link' %}</p>
     {%- endif -%}
     {%- capture dates -%}{%- render 'ds-order-dates' -%}{%- endcapture -%}
     {%- if dates != blank -%}

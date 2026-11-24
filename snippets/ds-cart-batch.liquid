@@ -19,7 +19,8 @@
       {%- if ds_closed == '1' -%}
         {{ settings.ds_batch_closed_text | escape }}
         {%- assign start_text = settings.ds_batch_start | strip -%}
-        {%- if start_text != blank %} Apertura de pedidos: {{ start_text | escape }}.{% endif -%}
+        {%- if start_text != blank %} Apertura de pedidos: {{ start_text | escape }}.{% endif %}
+        {% render 'ds-signup-link' %}
       {%- else -%}
         {%- assign bake_text = settings.ds_batch_bake | strip -%}
         {%- if bake_text != blank %}Preparamos tu pedido el {{ bake_text | escape }}. {% endif -%}

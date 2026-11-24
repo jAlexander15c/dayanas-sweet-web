@@ -1,0 +1,7 @@
+{% comment %}
+  Enlace al boletín del inicio (#ds-r-email) junto a los avisos de pedidos cerrados.
+  En el inicio, ds-redesign.js lo intercepta: cierra el diálogo o el carrito y lleva el foco al campo.
+  En otras páginas navega al inicio y el campo recibe el foco al cargar.
+  label: texto opcional; por defecto «Dejar mi correo».
+{% endcomment %}
+<a class="ds-signup-link" href="{{ routes.root_url }}#ds-r-email" data-ds-r-signup>{{ label | default: 'Dejar mi correo' }}</a>

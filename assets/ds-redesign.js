@@ -46,6 +46,7 @@
       const email = document.getElementById('ds-r-email');
       if (email) {
         event.preventDefault();
+        signup.closest('cart-drawer')?.close();
         email.focus();
       }
       return; // Without a local email, follow the anchor's actual homepage URL.
@@ -109,4 +110,7 @@
     openers.delete(event.target);
     if (opener?.isConnected) opener.focus();
   }, true);
+
+  // Al llegar desde un aviso de pedidos cerrados (/#ds-r-email), dejar el foco en el campo del boletín.
+  if (globalThis.location?.hash === '#ds-r-email') document.getElementById('ds-r-email')?.focus();
 })();

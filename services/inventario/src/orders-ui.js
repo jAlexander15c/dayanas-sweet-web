@@ -70,7 +70,14 @@ async function showList(reload = true) {
   view().innerHTML = `<div class="orders-head"><p class="eyebrow">Pedidos de la tienda</p><h2 class="orders-title">Pedidos</h2></div><p class="muted" role="status" id="orders-status">Cargando pedidos…</p>`;
   if (reload || !list) {
     try { list = await portal.request('pedidos/orders'); }
-    catch (error) { $('#orders-status').textContent = errorText(error); $('#orders-status').classList.add('error'); return; }
+    catch (error) {
+      const status = $('#orders-status');
+      if (!status) return; // La persona ya cambió de vista.
+      status.textContent = errorText(error); status.classList.add('error'); status.setAttribute('role', 'alert');
+      status.insertAdjacentHTML('afterend', '<button type="button" id="orders-retry">Volver a cargar pedidos</button>');
+      $('#orders-retry').onclick = () => showList(true);
+      return;
+    }
   }
   renderList();
 }
