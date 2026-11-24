@@ -165,3 +165,15 @@ a.action-link{display:inline-flex;align-items:center;min-height:44px;padding:0 1
 /* Título de Productos (D15) y líneas de cobro a lo ancho en el celular (D17). */
 .view-head{margin-bottom:12px}.view-head h2{margin:0}.view-head p{margin:4px 0 0}
 @media(max-width:600px){.cobro-line{grid-template-columns:minmax(0,1fr) 48px;row-gap:2px}.cobro-line>label:first-child{grid-column:1/-1}.cobro-line+.cobro-line{margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}}
+/* Pedidos (D12): la lista primero; «Para hornear» en fila compacta (celular, Historial) o columna lateral (escritorio). */
+.orders:has(>.orders-layout){max-width:none}
+.orders-layout,.orders-controls,.orders-list{display:grid;gap:12px;min-width:0}.orders-controls .order-tabs{margin-bottom:0}.orders-layout>.bake{padding:8px 16px}
+.bake-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:56px;padding:4px 0;border:0;border-radius:0;background:none;text-align:left;font-weight:400}.bake-summary>span{display:grid;gap:2px;min-width:0}.bake-summary .muted{margin:0}.bake-summary svg{flex:none;color:var(--accent);transition:transform .2s}.bake-summary[aria-expanded=true] svg{transform:rotate(180deg)}.bake-full{display:none}
+@media(prefers-reduced-motion:reduce){.bake-summary svg{transition:none}}
+@media(min-width:900px){.orders-layout{grid-template-columns:minmax(0,1fr) 320px;grid-template-areas:"controls bake" "list bake";grid-template-rows:auto 1fr;column-gap:24px;align-items:start}.orders-controls{grid-area:controls}.orders-list{grid-area:list}.orders-layout>.bake{grid-area:bake;padding:20px}.bake:not(.bake-compact) .bake-summary{display:none}.bake:not(.bake-compact) .bake-full{display:grid;gap:10px}.order-cards{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}}
+/* Detalle de pedido (D13): resumen con estado, dinero y siguiente paso arriba; dinero y cambios en un grupo aparte. */
+.order-summary,.order-money{display:grid;gap:12px}.order-summary p,.order-money p{margin:0}.order-summary .order-actions button{min-height:52px}
+.order-figures{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}.order-figures>div{display:grid;background:#f4ede4;border-radius:12px;padding:10px 12px}.order-figures span{font-size:14px;color:#6c5b4d}.order-figures strong{font-size:22px;font-weight:650}.order-figures .order-due{background:#fbeee6}.order-figures .order-due span,.order-figures .order-due strong{color:#7a3a10}
+.order-money-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}@media(max-width:340px){.order-money-actions{grid-template-columns:1fr}}
+/* Hoy (D14): el aviso de cobro pendiente lleva a Pedidos. */
+.today-alert p{margin:0}.today-alert-link{display:inline-flex;align-items:center;min-height:44px;color:inherit;font-weight:700}

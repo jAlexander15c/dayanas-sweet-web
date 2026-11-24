@@ -72,9 +72,20 @@ try {
   const page = await newPage(admin.body.session);
   await page.goto(`${origin}/apps/inventario`);
   await page.getByRole('button', { name: 'Pedidos', exact: true }).click();
+  // D12 (390): búsqueda, pestañas y filtros arriba; «Para hornear» es una fila que se abre; la primera tarjeta entra en el primer pantallazo.
+  const bakeRow = page.getByRole('button', { name: /^Para hornear · \d+ pedidos?/ });
+  await bakeRow.waitFor();
+  assert.equal(await page.getByRole('heading', { name: 'Para hornear' }).isVisible(), false, 'D12: en el celular «Para hornear» no ocupa una tarjeta completa');
+  const top = sel => page.locator(sel).first().evaluate(n => Math.round(n.getBoundingClientRect().top));
+  const [searchTop, bakeTop, cardTop] = [await top('#order-query'), await top('.bake-summary'), await top('.order-card')];
+  assert.ok(searchTop < bakeTop && bakeTop < cardTop && cardTop < 844, `D12: búsqueda ${searchTop} < Para hornear ${bakeTop} < primera tarjeta ${cardTop} < 844`);
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole('heading', { name: 'Para hornear' }).waitFor();
   await page.getByText('Suma de los pedidos sin despachar ni retirar.').waitFor();
   await page.getByText('pedidos en total').waitFor();
+  const columns = await page.evaluate(() => ({ bake: document.querySelector('#pedidos-view section.bake').getBoundingClientRect().left, cards: document.querySelector('#order-cards').getBoundingClientRect().left, perRow: getComputedStyle(document.querySelector('#order-cards')).gridTemplateColumns.split(' ').length }));
+  assert.ok(columns.bake > columns.cards && columns.perRow === 2, `D12 (1440): «Para hornear» al lado y tarjetas en 2 columnas ${JSON.stringify(columns)}`);
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'Por preparar · 6' }).waitFor();
   await page.getByRole('button', { name: 'Listos · 1' }).waitFor();
   await page.getByRole('button', { name: 'Activos · 7' }).waitFor();
@@ -84,8 +95,9 @@ try {
   await first.getByText('Envío USPS', { exact: true }).waitFor(); await first.getByText('Pagado', { exact: true }).waitFor();
   const pickup = page.locator('.order-card', { hasText: '#1043 · Beatriz L.' });
   await pickup.getByText('Retiro en Fulshear').waitFor(); await pickup.getByText('Efectivo pendiente').waitFor();
-  await page.getByRole('button', { name: 'Ver detalle por sabor y hoja de empaque' }).click();
+  await bakeRow.click();
   await page.getByRole('heading', { name: 'Hoja de empaque' }).waitFor();
+  assert.equal(await bakeRow.getAttribute('aria-expanded'), 'true');
   await screenshots(page, 'lista');
   await page.getByRole('button', { name: 'Listos · 1' }).click();
   await page.locator('.order-card', { hasText: '#1045' }).getByText('Envío USPS · gratis').waitFor();
@@ -100,6 +112,9 @@ try {
   await page.getByText('Saldo por cobrar').waitFor();
   await page.getByText('Pago: efectivo al retirar', { exact: false }).waitFor();
   await page.getByText('Cobrar, editar, reembolsar y cancelar: solo la administradora, con su contraseña.').waitFor();
+  // D13: el resumen (estado, saldo y siguiente paso) va primero; «Dinero y cambios» después de Cliente y Productos.
+  const order13 = await page.evaluate(() => { const y = n => n ? Math.round(n.getBoundingClientRect().top) : null; const summary = document.querySelector('.order-summary'); return { summary: y(summary), next: !!summary?.querySelector('button.primary[data-action]'), due: /Saldo por cobrar/.test(summary?.textContent || ''), cliente: y([...document.querySelectorAll('#pedidos-view h3')].find(h => h.textContent === 'Cliente')), money: y([...document.querySelectorAll('#pedidos-view h3')].find(h => h.textContent === 'Dinero y cambios')), cash: !!document.querySelector('.order-money [data-action="cash"]') }; });
+  assert.ok(order13.next && order13.due && order13.cash && order13.summary < order13.cliente && order13.cliente < order13.money, `D13: orden del detalle ${JSON.stringify(order13)}`);
   assert.equal(await page.getByLabel('Nota interna').getAttribute('placeholder'), 'Solo la ve el personal');
   await page.getByLabel('Nota interna').fill('Viene su hermana a recoger.');
   await page.getByRole('button', { name: 'Guardar nota' }).click(); await page.getByText('Nota guardada.').waitFor();

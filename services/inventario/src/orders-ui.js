@@ -81,25 +81,43 @@ async function showList(reload = true) {
   }
   renderList();
 }
+// Resumen de una línea de «Para hornear» (D12): los dos productos con más unidades y cuántos más hay.
+function bakeLine() {
+  const products = list.bake.products, more = products.length - 2;
+  if (!products.length) return 'No hay nada pendiente por hornear.';
+  return `${products.slice(0, 2).map(item => `${item.quantity} ${esc(item.title)}`).join(' · ')}${more > 0 ? ` · ${more} ${more === 1 ? 'producto' : 'productos'} más` : ''}`;
+}
 function renderList() {
   const tiles = list.bake.products.slice(0, 3).map(item => `<div class="bake-tile"><div class="bake-number">${item.quantity}</div><div>${esc(item.title)}</div></div>`).join('');
+  // La lista va primero (D12): en el celular «Para hornear» es una fila que se abre; en escritorio, una columna al lado.
+  // En Historial se queda compacto en todos los anchos, porque no es la producción de ese momento.
   view().innerHTML = `<div class="orders-head"><p class="eyebrow">Pedidos de la tienda · últimos ${list.days} días</p><h2 class="orders-title">Pedidos</h2></div>
-  <section class="card bake"><h3>Para hornear</h3><p class="muted">Suma de los pedidos sin despachar ni retirar.</p>${list.bakeComplete === false ? '<p class="notice">Conteo parcial: hay pedidos o productos que el panel no alcanzó a leer. Completa la cuenta en Shopify con los pedidos marcados «y más».</p>' : ''}
+  <div class="orders-layout">
+  <div class="orders-controls">
+  <label class="order-search">Buscar pedido<input id="order-query" type="search" maxlength="80" placeholder="Número, nombre o correo" value="${esc(query)}" autocomplete="off"></label>
+  <div class="order-tabs" role="group" aria-label="Pedidos activos o historial">${Object.entries(TABS).map(([key, { label, stages }]) => `<button type="button" class="order-tab" data-tab="${key}" aria-pressed="${tab === key}">${label} · ${stages.reduce((sum, stage) => sum + (list.counts[stage] || 0), 0)}</button>`).join('')}</div>
+  <div class="order-chips" role="group" aria-label="Filtrar pedidos">${TABS[tab].stages.map(key => `<button type="button" class="chip" data-stage="${key}" aria-pressed="${filter === key}">${STAGES[key]} · ${list.counts[key] || 0}</button>`).join('')}</div>
+  </div>
+  <section class="card bake${tab === 'historial' ? ' bake-compact' : ''}" aria-label="Para hornear">
+    <button type="button" class="bake-summary" data-bake-toggle aria-expanded="${bakeOpen}" aria-controls="bake-detail"><span><strong>Para hornear · ${list.bake.orders} ${list.bake.orders === 1 ? 'pedido' : 'pedidos'}</strong><span class="muted">${bakeLine()}</span></span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="bake-full"><h3>Para hornear</h3><p class="muted">Suma de los pedidos sin despachar ni retirar.</p>
     <div class="bake-tiles">${tiles}<div class="bake-tile"><div class="bake-number">${list.bake.orders}</div><div>pedidos en total</div></div></div>
-    <button type="button" id="bake-toggle" aria-expanded="${bakeOpen}" aria-controls="bake-detail">Ver detalle por sabor y hoja de empaque</button>
+    <button type="button" id="bake-toggle" data-bake-toggle aria-expanded="${bakeOpen}" aria-controls="bake-detail">Ver detalle por sabor y hoja de empaque</button></div>
+    ${list.bakeComplete === false ? '<p class="notice">Conteo parcial: hay pedidos o productos que el panel no alcanzó a leer. Completa la cuenta en Shopify con los pedidos marcados «y más».</p>' : ''}
     <div id="bake-detail" ${bakeOpen ? '' : 'hidden'}>
       <h4>Por sabor</h4>${list.bake.variants.length ? `<ul class="bake-list">${list.bake.variants.map(v => `<li><span>${esc(v.title)}${v.variantTitle ? ` · ${esc(v.variantTitle)}` : ''}</span><strong>${v.quantity}</strong></li>`).join('')}</ul>` : '<p class="muted">No hay nada pendiente por hornear.</p>'}
       <h4>Hoja de empaque</h4>${packing()}
     </div>
   </section>
-  <div class="order-tabs" role="group" aria-label="Pedidos activos o historial">${Object.entries(TABS).map(([key, { label, stages }]) => `<button type="button" class="order-tab" data-tab="${key}" aria-pressed="${tab === key}">${label} · ${stages.reduce((sum, stage) => sum + (list.counts[stage] || 0), 0)}</button>`).join('')}</div>
-  <div class="order-chips" role="group" aria-label="Filtrar pedidos">${TABS[tab].stages.map(key => `<button type="button" class="chip" data-stage="${key}" aria-pressed="${filter === key}">${STAGES[key]} · ${list.counts[key] || 0}</button>`).join('')}</div>
-  <label class="order-search">Buscar pedido<input id="order-query" type="search" maxlength="80" placeholder="Número, nombre o correo" value="${esc(query)}" autocomplete="off"></label>
+  <div class="orders-list">
   ${list.complete ? '' : '<p class="notice">Hay más pedidos de los que el panel muestra. Los más antiguos están en Shopify.</p>'}
   <p class="muted" id="orders-status" role="status"></p>
   <div id="orders-bulk"></div>
-  <div id="order-cards" class="order-cards"></div>`;
-  $('#bake-toggle').onclick = () => { bakeOpen = !bakeOpen; $('#bake-toggle').setAttribute('aria-expanded', String(bakeOpen)); $('#bake-detail').hidden = !bakeOpen; };
+  <div id="order-cards" class="order-cards"></div>
+  </div>
+  </div>`;
+  const bakeButtons = view().querySelectorAll('[data-bake-toggle]');
+  for (const button of bakeButtons) button.onclick = () => { bakeOpen = !bakeOpen; for (const other of bakeButtons) other.setAttribute('aria-expanded', String(bakeOpen)); $('#bake-detail').hidden = !bakeOpen; };
   for (const chip of view().querySelectorAll('.chip')) chip.onclick = () => { filter = chip.dataset.stage; for (const other of view().querySelectorAll('.chip')) other.setAttribute('aria-pressed', String(other === chip)); renderCards(); };
   for (const button of view().querySelectorAll('.order-tab')) button.onclick = () => { if (tab === button.dataset.tab) return; tab = button.dataset.tab; filter = TABS[tab].stages[0]; renderList(); };
   $('#order-query').oninput = event => { query = event.target.value; renderCards(); };
@@ -150,42 +168,51 @@ async function showDetail(id, notice = '') {
   catch (error) { view().querySelector('[role=status]').textContent = errorText(error); view().querySelector('[role=status]').classList.add('error'); return; }
   renderDetail(notice);
 }
-function actionButtons(order) {
-  const buttons = [], admin = isAdmin(), notes = [];
-  if (!order.cancelled) {
-    if (order.delivery === 'pickup') {
-      if (order.stage === 'preparar') buttons.push('<button type="button" class="primary" data-action="ready">Listo para retirar</button>');
-      if (order.stage === 'listo') buttons.push('<button type="button" class="primary" data-action="delivered">Entregado</button>');
-    } else if (order.fulfillment !== 'FULFILLED') buttons.push('<button type="button" class="primary" data-action="fulfill">Marcar despachado</button>');
-    if (admin && order.celebraciones) notes.push('<p class="notice">Este pedido se cobra desde Celebraciones</p>');
-    if (admin && !order.celebraciones) {
-      if (order.outstandingCents > 0 && order.cashAllowed === true) buttons.push('<button type="button" data-action="cash">Cobré en efectivo</button>');
-      if (order.lines.some(line => line.unfulfilled > 0)) buttons.push('<button type="button" data-action="edit">Editar pedido</button>');
-      if (order.netPaymentCents > 0) buttons.push('<button type="button" data-action="refund">Reembolsar</button>');
-      if (order.canCancel) buttons.push('<button type="button" class="danger" data-action="cancel">Cancelar pedido</button>');
-      else if (order.cancelPending) notes.push('<p class="notice">Shopify está procesando la cancelación de este pedido. Vuelve a abrirlo en unos segundos.</p>');
-      else notes.push('<p class="muted">Un pedido despachado ya no se cancela: se reembolsa.</p>');
-    }
-  } else if (order.unrefundedCents > 0) {
-    notes.push(`<p class="notice notice-due">Pedido cancelado con ${usd(order.unrefundedCents)} pagados sin devolver. El panel no reembolsa pedidos cancelados: hazlo desde Shopify.</p>`);
-    if (order.adminUrl) notes.push(`<p><a class="action-link" href="${esc(order.adminUrl)}" target="_blank" rel="noopener">Reembolsar en Shopify</a></p>`);
-  } else notes.push('<p class="notice">Este pedido está cancelado.</p>');
-  return `${buttons.length ? `<div class="order-actions">${buttons.join('')}</div>` : ''}${notes.join('')}<p class="muted">Cobrar, editar, reembolsar y cancelar: solo la administradora, con su contraseña.</p>`;
+const MONEY_NOTE = '<p class="muted">Cobrar, editar, reembolsar y cancelar: solo la administradora, con su contraseña.</p>';
+// Siguiente paso operativo (D13): va en el resumen, arriba. Un pedido cancelado explica aquí qué falta.
+function nextStep(order) {
+  if (order.cancelled) {
+    if (order.unrefundedCents > 0) return `<p class="notice notice-due">Pedido cancelado con ${usd(order.unrefundedCents)} pagados sin devolver. El panel no reembolsa pedidos cancelados: hazlo desde Shopify.</p>${order.adminUrl ? `<p><a class="action-link" href="${esc(order.adminUrl)}" target="_blank" rel="noopener">Reembolsar en Shopify</a></p>` : ''}`;
+    return '<p class="notice">Este pedido está cancelado.</p>';
+  }
+  if (order.delivery === 'pickup') {
+    if (order.stage === 'preparar') return '<div class="order-actions"><button type="button" class="primary" data-action="ready">Listo para retirar</button></div>';
+    if (order.stage === 'listo') return '<div class="order-actions"><button type="button" class="primary" data-action="delivered">Entregado</button></div>';
+  } else if (order.fulfillment !== 'FULFILLED') return '<div class="order-actions"><button type="button" class="primary" data-action="fulfill">Marcar despachado</button></div>';
+  return '';
+}
+// Dinero y cambios (D13): grupo secundario, mismos botones, permisos y contraseña que antes. null = no se muestra el grupo.
+function moneyActions(order) {
+  if (order.cancelled || !isAdmin()) return null;
+  if (order.celebraciones) return '<p class="notice">Este pedido se cobra desde Celebraciones</p>';
+  const buttons = [], notes = [];
+  if (order.outstandingCents > 0 && order.cashAllowed === true) buttons.push('<button type="button" data-action="cash">Cobré en efectivo</button>');
+  if (order.lines.some(line => line.unfulfilled > 0)) buttons.push('<button type="button" data-action="edit">Editar pedido</button>');
+  if (order.netPaymentCents > 0) buttons.push('<button type="button" data-action="refund">Reembolsar</button>');
+  if (order.canCancel) buttons.push('<button type="button" class="danger" data-action="cancel">Cancelar pedido</button>');
+  else if (order.cancelPending) notes.push('<p class="notice">Shopify está procesando la cancelación de este pedido. Vuelve a abrirlo en unos segundos.</p>');
+  else notes.push('<p class="muted">Un pedido despachado ya no se cancela: se reembolsa.</p>');
+  return `${MONEY_NOTE}${buttons.length ? `<div class="order-money-actions">${buttons.join('')}</div>` : ''}${notes.join('')}`;
 }
 function renderDetail(notice = '') {
   const order = detail;
   const rows = order.lines.filter(line => line.quantity > 0).map(line => `<div class="order-row"><span>${esc(lineName(line))}</span><span>${line.quantity} × ${usd(line.unitCents)}</span></div>`).join('');
   const shipping = order.delivery === 'pickup' ? `<div class="order-row"><span>Retiro</span><span>${order.shippingCents ? usd(order.shippingCents) : 'Gratis'}</span></div>` : `<div class="order-row"><span>Envío</span><span>${order.shippingCents ? usd(order.shippingCents) : 'Gratis'}</span></div>`;
+  const money = moneyActions(order), units = order.lines.reduce((sum, line) => sum + Math.max(line.quantity, 0), 0);
   view().innerHTML = `<div class="order-top">${back({ aria: 'Volver a pedidos' })}<h2 id="order-title">Pedido ${esc(order.name)}</h2></div>
   ${notice ? `<p class="notice" role="status">${esc(notice)}</p>` : ''}
-  <div class="badges">${deliveryBadge(order)}${paymentBadges({ ...order, cash: order.payment.includes('Efectivo') })}<span class="badge">${order.cancelled ? 'Cancelado' : STAGE_ONE[order.stage]}</span></div>
+  <section class="card order-summary" aria-label="Resumen y siguiente paso">
+    <div class="badges">${deliveryBadge(order)}${paymentBadges({ ...order, cash: order.payment.includes('Efectivo') })}<span class="badge">${order.cancelled ? 'Cancelado' : STAGE_ONE[order.stage]}</span></div>
+    <p><strong>${esc(order.customer.name)}</strong> · ${units} ${units === 1 ? 'producto' : 'productos'}</p>
+    <div class="order-figures"><div><span>Total</span><strong>${usd(order.totalCents)}</strong></div>${order.outstandingCents > 0 ? `<div class="order-due"><span>Saldo por cobrar</span><strong>${usd(order.outstandingCents)}</strong></div>` : order.refundedCents > 0 ? `<div><span>Reembolsado</span><strong>${usd(order.refundedCents)}</strong></div>` : ''}</div>
+    ${nextStep(order)}${money === null && !order.cancelled ? MONEY_NOTE : ''}
+  </section>
   <section class="card"><h3>Cliente</h3><p>${esc(order.customer.name)}</p><p class="muted">${[order.customer.email, order.customer.phone].filter(Boolean).map(esc).join(' · ') || 'Sin datos de contacto'}</p>${order.customerNote ? `<p>Nota del cliente: «${esc(order.customerNote)}».</p>` : ''}</section>
   <section class="card"><h3>Productos</h3>${rows}${order.linesTruncated ? '<p class="muted">El pedido tiene más productos; revisa Shopify.</p>' : ''}${shipping}
     <div class="order-row order-total"><span>Total</span><span>${usd(order.totalCents)}</span></div>
     ${order.refundedCents > 0 ? `<div class="order-row"><span>Reembolsado</span><span>${usd(order.refundedCents)}</span></div>` : ''}
-    ${order.outstandingCents > 0 ? `<div class="order-row order-due"><span>Saldo por cobrar</span><span>${usd(order.outstandingCents)}</span></div>` : ''}
     ${order.fulfillments.flatMap(f => f.tracking).filter(t => t.number).map(t => `<p class="muted">Seguimiento: ${esc(t.company || '')} ${t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">${esc(t.number)}</a>` : esc(t.number)}</p>`).join('')}</section>
-  <section class="card"><h3>Acciones</h3>${actionButtons(order)}</section>
+  ${money === null ? '' : `<section class="card order-money"><h3>Dinero y cambios</h3>${money}</section>`}
   <section class="card"><h3>Historial del pedido</h3>${order.timeline.map(event => `<p class="order-event">${esc(dateTime(event.at))} · ${esc(event.title)}${event.by ? ` · ${esc(event.by)}` : ''}${event.state === 'unconfirmed' ? ' · sin confirmar' : event.state === 'failed' ? ' · no se aplicó' : ''}</p>`).join('')}</section>
   <section class="card"><form id="note-form"><label for="internal-note">Nota interna</label><textarea id="internal-note" maxlength="2000" placeholder="Solo la ve el personal">${esc(order.note.text)}</textarea>
     <p class="muted" id="note-meta">${order.note.staffName ? `Última edición: ${esc(order.note.staffName)} · ${esc(dateTime(order.note.updatedAt))}` : ''}</p>

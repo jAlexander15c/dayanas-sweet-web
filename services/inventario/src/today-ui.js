@@ -25,7 +25,7 @@ const blocks = {
         <a class="today-stat" href="#pedidos"><strong>${list.counts.preparar}</strong><span>por preparar</span></a>
         <a class="today-stat" href="#pedidos"><strong>${pickupReady}</strong><span>listos para retirar</span></a>
       </div>
-      ${due.length ? `<p class="today-alert">${due.length} ${due.length === 1 ? 'pedido activo con' : 'pedidos activos con'} cobro pendiente (${usd(due.reduce((sum, order) => sum + order.outstandingCents, 0))}).</p>` : ''}
+      ${due.length ? `<div class="today-alert"><p>${due.length} ${due.length === 1 ? 'pedido activo con' : 'pedidos activos con'} cobro pendiente (${usd(due.reduce((sum, order) => sum + order.outstandingCents, 0))}).</p><a class="today-alert-link" href="#pedidos">Revisar en Pedidos</a></div>` : ''}
       <h4>Para hornear</h4>
       ${bake.length ? `<ul class="today-bake">${bake.map(item => `<li><strong>${esc(item.quantity)}</strong> ${esc(item.title)}</li>`).join('')}</ul>` : '<p class="muted">No hay nada pendiente por hornear.</p>'}
       ${list.bakeComplete === false ? '<p class="today-alert">Conteo parcial: hay pedidos o productos que el panel no alcanzó a leer. Completa la cuenta en Shopify.</p>' : ''}

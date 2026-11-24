@@ -83,6 +83,10 @@ try {
   check('Hoy: Pedidos, Celebraciones y Productos', await page.locator('#today-pedidos').isVisible() && await page.locator('#today-celebraciones').isVisible() && await page.locator('#today-productos').isVisible());
   const preparar = await page.locator('#today-pedidos .today-stat').first().locator('strong').textContent();
   check('Hoy: «por preparar» coincide con Pedidos', Number(preparar) === orders.counts.preparar, `${preparar} vs ${orders.counts.preparar}`);
+  // D14: con pedidos activos con saldo, el aviso lleva «Revisar en Pedidos».
+  const dueOrders = orders.orders.filter(order => ['preparar', 'listo'].includes(order.stage) && order.outstandingCents > 0).length;
+  const dueLinks = await page.locator('#today-pedidos .today-alert-link').evaluateAll(links => links.map(a => ({ text: a.textContent.trim(), href: a.getAttribute('href'), h: Math.round(a.getBoundingClientRect().height) })));
+  check('Hoy: aviso de cobro con «Revisar en Pedidos» (D14)', dueOrders > 0 && dueLinks.length === 1 && dueLinks[0].text === 'Revisar en Pedidos' && dueLinks[0].href === '#pedidos' && dueLinks[0].h >= 44, JSON.stringify({ dueOrders, dueLinks }));
   check('Hoy: 1 aviso, 1 por responder', JSON.stringify(await page.locator('#today-celebraciones .today-stat strong').allTextContents()) === '["1","1"]');
   check('Hoy: recogidas de la semana en orden (Ana, Marta) y sin la de 12 días', JSON.stringify((await page.locator('#today-celebraciones .today-list a > span:first-child').allTextContents())) === '["Ana","Marta"]');
   check('Hoy marcado en la barra', await nav(page, 'Hoy').getAttribute('aria-current') === 'page');
@@ -95,7 +99,7 @@ try {
 
   // 2. Una cifra lleva a su sección.
   await page.locator('#today-pedidos .today-stat').first().click();
-  await page.getByRole('heading', { name: 'Para hornear' }).waitFor();
+  await page.locator('#pedidos-view .bake-summary').waitFor();
   check('cifra de Pedidos abre Pedidos', await page.locator('#today-view').isHidden() && await nav(page, 'Pedidos').getAttribute('aria-current') === 'page');
 
   // 3. «Más» abre Categorías, Historial y Usuarios; Escape cierra y devuelve el foco.
