@@ -10,7 +10,16 @@
   endif
   assign shown = 0
 -%}
+{%- comment -%}
+  D09: en la ficha este es el único bloque de recomendaciones. Si la colección elegida no deja
+  ningún producto (vacía o solo el actual), una segunda pasada usa todo el menú.
+{%- endcomment -%}
 {%- capture cards -%}
+  {%- for rail_pass in (1..2) -%}
+  {%- if rail_pass == 2 -%}
+    {%- if shown > 0 or template.name != 'product' or section.settings.collection == blank -%}{%- break -%}{%- endif -%}
+    {%- assign source = collections.all -%}
+  {%- endif -%}
   {%- for rail_product in source.products -%}
     {%- liquid
       if rail_product.id == current_id
@@ -26,6 +35,7 @@
       endif
     -%}
     <li>{% render 'ds-product-card', product: rail_product, section_id: section.id, rank_badge: rank_badge %}</li>
+  {%- endfor -%}
   {%- endfor -%}
 {%- endcapture -%}
 {%- if shown > 0 -%}

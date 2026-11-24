@@ -8,7 +8,7 @@
   assign menu_title_id = 'ds-r-menu-title-' | append: section.id
   assign closed_text = settings.ds_batch_closed_text | default: section.settings.closed_text
 -%}
-<section class="ds-r-hero" id="inicio" aria-labelledby="{{ hero_title_id }}">
+<section class="ds-r-hero{% if ds_closed == '1' %} ds-r-hero--closed{% endif %}" id="inicio" aria-labelledby="{{ hero_title_id }}">
   {%- if section.settings.hero_image != blank -%}
     {%- comment -%} En móvil la foto ocupa el ancho completo con 235 px de alto; en escritorio, toda la portada. {%- endcomment -%}
     {{ section.settings.hero_image | image_url: width: 1920 | image_tag: widths: '480, 750, 1080, 1440, 1920', sizes: '100vw', class: 'ds-r-hero-photo', alt: section.settings.hero_image_alt, loading: 'eager', fetchpriority: 'high', preload: true }}
@@ -21,10 +21,17 @@
     <div class="ds-r-hero-copy">
       <h1 id="{{ hero_title_id }}"><span>{{ section.settings.hero_line_1 | escape }}</span><span>{{ section.settings.hero_line_2 | escape }}</span><em>{{ section.settings.hero_line_3 | escape }}</em></h1>
       <p>{{ section.settings.hero_text | escape }}</p>
+      {%- comment -%} D03: con la tanda cerrada (mismo dato que muestra el formulario del correo) el aviso va antes de los botones. {%- endcomment -%}
+      {%- if ds_closed == '1' -%}
+        <div class="ds-r-hero-notice">
+          <p>{{ section.settings.hero_closed_text | escape }}</p>
+          <a href="#{{ newsletter_id }}">{{ section.settings.hero_closed_link | escape }}</a>
+        </div>
+      {%- endif -%}
       <div class="ds-r-hero-actions">
         <a class="ds-r-button" href="#menu">{{ section.settings.hero_cta | escape }}<img class="ds-r-light-icon" src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="22" height="22"></a>
         {%- if pages['pasteles-personalizados'] != blank -%}
-          <a class="ds-r-button" href="{{ pages['pasteles-personalizados'].url }}">Cotiza tu pastel<img class="ds-r-light-icon" src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="22" height="22"></a>
+          <a class="ds-r-button ds-r-button--secondary" href="{{ pages['pasteles-personalizados'].url }}">Cotiza tu pastel<img src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="22" height="22"></a>
         {%- else -%}
           <button class="ds-r-text-link" type="button" data-ds-r-open="how">{{ section.settings.how_label | escape }}</button>
         {%- endif -%}
@@ -92,6 +99,8 @@
     {"type":"image_picker","id":"hero_image","label":"Foto de portada"},
     {"type":"text","id":"hero_image_alt","label":"Descripción de la foto","default":"Galletas con trozos de chocolate sobre una base de cerámica"},
     {"type":"text","id":"hero_cta","label":"Botón de portada","default":"Descubre el menú"},
+    {"type":"text","id":"hero_closed_text","label":"Aviso de portada con la tanda cerrada","default":"Los pedidos están cerrados por ahora. Te avisamos por correo cuando abra la próxima tanda."},
+    {"type":"text","id":"hero_closed_link","label":"Enlace del aviso al formulario de correo","default":"Avísame cuando abra"},
     {"type":"text","id":"how_label","label":"Botón de instrucciones","default":"Cómo pedir"},
     {"type":"text","id":"closed_title","label":"Título con pedidos cerrados","default":"Que no se te pase"},
     {"type":"textarea","id":"closed_text","label":"Aviso cerrado de respaldo","info":"Se usa si el mensaje en Ajustes del tema > DS · Pedidos y envíos está vacío.","default":"Los pedidos están cerrados. Déjanos tu correo para saber cuándo abrimos y cuál será la próxima fecha de envío."},

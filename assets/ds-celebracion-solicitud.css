@@ -80,3 +80,11 @@
 .ds-request [data-copy-link]{margin:10px 0}
 /* Antes de montar (D21): los controles llegan con su tamaño final pero inertes y atenuados; el aviso, fuera de ellos, debajo del botón. */
 .ds-request [data-until-mount]{opacity:.55}.ds-request__actions:has(.ds-request__pending:not([hidden])){flex-wrap:wrap}.ds-request__pending{flex:1 0 100%;margin:0}
+/* D11: «Cómo funciona» antes del formulario. */
+.ds-request__how{margin:4px 0 18px;padding:18px 20px;background:var(--ds-white);border:1px solid var(--ds-line);border-radius:16px;max-width:720px}
+.ds-request__how h2{margin:0 0 12px;font-size:18px;line-height:1.3}
+.ds-request__how ol{margin:0;padding:0;list-style:none;display:grid;gap:12px;counter-reset:ds-how}
+.ds-request__how li{display:grid;grid-template-columns:32px minmax(0,1fr);gap:12px;counter-increment:ds-how}
+.ds-request__how li::before{content:counter(ds-how);width:32px;height:32px;border-radius:999px;background:var(--ds-rose);color:var(--ds-pink);font-weight:700;display:flex;align-items:center;justify-content:center}
+.ds-request__how li p{margin:0}.ds-request__how li strong{display:block;line-height:1.4}.ds-request__how li span{display:block;color:var(--ds-soft);font-size:14px;line-height:1.5}
+.ds-request__how-lead{margin:14px 0 0;padding:10px 12px;border-radius:12px;background:var(--ds-rose);font-size:14px;line-height:1.5}

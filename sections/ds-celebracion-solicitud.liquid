@@ -29,6 +29,20 @@
       <h1 id="DSRequestTitle-{{ section.id }}">{{ section.settings.title | escape }} <em>{{ section.settings.title_accent | escape }}</em></h1>
       <p class="ds-request__intro">{{ section.settings.intro | escape }}</p>
     </header>
+    {%- comment -%} D11: cómo funciona antes de pedir datos. Los textos se editan en el editor del tema. {%- endcomment -%}
+    {%- if section.settings.service_enabled and section.settings.how_title != blank -%}
+      <section class="ds-request__how" aria-labelledby="DSRequestHow-{{ section.id }}">
+        <h2 id="DSRequestHow-{{ section.id }}">{{ section.settings.how_title | escape }}</h2>
+        <ol>
+          <li><p><strong>{{ section.settings.how_step1_title | escape }}</strong><span>{{ section.settings.how_step1_text | escape }}</span></p></li>
+          <li><p><strong>{{ section.settings.how_step2_title | escape }}</strong><span>{{ section.settings.how_step2_text | escape }}</span></p></li>
+          <li><p><strong>{{ section.settings.how_step3_title | escape }}</strong><span>{{ section.settings.how_step3_text | escape }}</span></p></li>
+        </ol>
+        {%- if section.settings.how_lead != blank -%}
+          <p class="ds-request__how-lead">{{ section.settings.how_lead | escape }}</p>
+        {%- endif -%}
+      </section>
+    {%- endif -%}
     <div class="ds-request__note" data-gate role="status"{% if ds_request_live %} hidden{% endif %}>
       {% if section.settings.service_enabled == false %}
         {{ section.settings.unavailable_message | escape }}
@@ -198,6 +212,16 @@
     { "type": "text", "id": "title", "label": "Título", "default": "Un pastel para" },
     { "type": "text", "id": "title_accent", "label": "Título destacado", "default": "tu celebración." },
     { "type": "textarea", "id": "intro", "label": "Introducción", "default": "Cuéntanos la idea que tienes en mente. Dayana preparará una propuesta para tu pastel personalizado." },
+    { "type": "header", "content": "Cómo funciona" },
+    { "type": "text", "id": "how_title", "label": "Título", "default": "Cómo funciona", "info": "Vacío oculta el bloque." },
+    { "type": "text", "id": "how_step1_title", "label": "Paso 1", "default": "Cuéntanos tu idea" },
+    { "type": "textarea", "id": "how_step1_text", "label": "Paso 1 · detalle", "default": "Tamaño, sabores, decoración y fecha. Enviar la solicitud todavía no reserva la fecha." },
+    { "type": "text", "id": "how_step2_title", "label": "Paso 2", "default": "Dayana te envía una propuesta" },
+    { "type": "textarea", "id": "how_step2_text", "label": "Paso 2 · detalle", "default": "Con el precio y lo que puede preparar. Puedes escribirle antes de aceptarla." },
+    { "type": "text", "id": "how_step3_title", "label": "Paso 3", "default": "Aceptas y reservas" },
+    { "type": "textarea", "id": "how_step3_text", "label": "Paso 3 · detalle", "default": "Pagas según la propuesta, por ejemplo un anticipo del 60 %. Recoges en Fulshear, TX, de 8:00 a. m. a 6:00 p. m." },
+    { "type": "textarea", "id": "how_lead", "label": "Aviso de anticipación", "default": "Con tiempo: pídelo con 7 días o más. Con menos (desde 24 horas) es urgente: necesita aprobación y lleva un recargo." },
+    { "type": "header", "content": "Servicio" },
     { "type": "checkbox", "id": "service_enabled", "label": "Activar solicitudes", "default": false, "info": "Activar solo después de configurar y validar el servicio, la agenda y el acceso de clientes." },
     { "type": "checkbox", "id": "guest_enabled", "label": "Permitir solicitudes sin cuenta", "default": false, "info": "Activar solo tras validar acceso privado, correo y pagos de invitados. Desactivar no elimina las solicitudes existentes." },
     { "type": "text", "id": "proxy_path", "label": "Ruta del servicio", "default": "/apps/celebraciones", "info": "Ruta local del app proxy de Shopify, sin barra final." },

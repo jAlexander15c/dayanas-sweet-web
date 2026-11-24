@@ -88,3 +88,14 @@ dialog.ds-r-dialog{width:min(600px,calc(100% - 32px));max-height:calc(100dvh - 4
 .ds-batch-closed__signup,.ds-batch__signup{margin:8px 0 0}
 /* Categoría sin productos (D05): explica y ofrece dos salidas. */
 .ds-collection-empty{box-sizing:border-box;max-width:560px;margin:8px auto 48px;padding:28px 24px;border:1px solid var(--line);border-radius:18px;background:#fff;display:grid;gap:14px;font-family:var(--body);color:var(--ink);text-align:left}.ds-collection-empty__title{margin:0;font:400 clamp(26px,3vw,34px)/1.15 var(--display);letter-spacing:normal;color:var(--ink);text-wrap:balance}.ds-collection-empty p{margin:0;font-size:15px;line-height:1.6;color:var(--muted)}.ds-collection-empty__actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}.ds-collection-empty__actions a{box-sizing:border-box;min-height:48px;padding:0 24px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;text-decoration:none}.ds-collection-empty__primary{background:var(--deep-pink);color:#fff}.ds-collection-empty__primary:hover{background:#9b2249}.ds-collection-empty__secondary{border:1.5px solid var(--ink);color:var(--ink)}.ds-collection-empty__secondary:hover{background:var(--blush)}@media(max-width:600px){.ds-collection-empty{padding:22px 18px}.ds-collection-empty__actions a{flex:1 1 100%}}
+/* D03: aviso de tanda cerrada en la portada y «Cotiza tu pastel» como acción secundaria. Con el aviso la portada crece en vez de recortar. */
+.ds-r-hero.ds-r-hero--closed{height:auto;min-height:500px}.ds-r-hero--closed .ds-r-hero-inner{height:auto}
+.ds-r-hero-notice{margin-top:16px;max-width:540px;padding:8px 16px;border-radius:16px;background:#fff;border:1px solid #e5c8d4;display:flex;flex-wrap:wrap;align-items:center;column-gap:16px;row-gap:0}
+.ds-r-hero-notice p{flex:1 1 240px;margin:0;padding:6px 0;font-size:14px;line-height:1.45;color:var(--ink)}
+.ds-r-hero-notice a{min-height:44px;display:inline-flex;align-items:center;font-size:14px;font-weight:700;color:var(--deep-pink);text-decoration:underline;text-underline-offset:3px}
+.ds-r-hero-notice a:hover{color:var(--ink)}
+.ds-r-button.ds-r-button--secondary{background:#fff;color:var(--deep-pink);box-shadow:inset 0 0 0 2px var(--pink)}
+.ds-r-button.ds-r-button--secondary:hover{background:var(--blush)}
+@media(min-width:1440px){.ds-r-hero.ds-r-hero--closed{min-height:574px}}
+@media(max-width:1150px){.ds-r-hero.ds-r-hero--closed{min-height:470px}}
+@media(max-width:600px){.ds-r-hero.ds-r-hero--closed{min-height:0}.ds-r-hero-notice{margin-top:18px}}
