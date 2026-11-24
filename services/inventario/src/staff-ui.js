@@ -269,6 +269,8 @@ function showCelebraciones() {
 }
 window.inventarioPortal = { mode: portal, request, hideViews, user: () => currentUser, current: markNav };
 window.inventarioAccess = {
+  // Productos consulta esto al terminar de cargar: si la persona ya se fue a otra sección, no se le muestra encima.
+  navigated: () => starting && moved,
   async inventory(path, body) { const url = new URL(path, location.origin); return request(`inventory/${url.pathname.slice('/api/'.length)}`, { params: Object.fromEntries(url.searchParams), ...(body ? { body } : {}) }); },
   async boot(start) {
     initializeInventory = start;

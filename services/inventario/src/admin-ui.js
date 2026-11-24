@@ -556,7 +556,7 @@ const startInventory = guard(async () => {
   const session = await api('/api/session'); activeStaffId = session.staffId;
   $('#scope-warning').textContent = session.warning || ''; $('#scope-warning').hidden = !session.warning;
   ({ locations } = await api('/api/locations'));
-  $('#workspace').hidden = false;
+  if (!window.inventarioAccess?.navigated?.()) $('#workspace').hidden = false;
   await search();
   await loadCategories();
 });

@@ -70,8 +70,14 @@ try {
 
   // a) Lista: «Para hornear», filtros, búsqueda e insignias.
   const page = await newPage(admin.body.session);
+  // Arranque lento (revisión Codex): si se toca Pedidos mientras Productos termina de cargar, Productos no aparece encima.
+  let locationsDone; const locationsServed = new Promise(resolve => { locationsDone = resolve; });
+  await page.route('**/inventory/locations*', async route => { await new Promise(resolve => setTimeout(resolve, 1500)); await route.fallback(); locationsDone(); });
   await page.goto(`${origin}/apps/inventario`);
   await page.getByRole('button', { name: 'Pedidos', exact: true }).click();
+  await locationsServed; await page.waitForTimeout(300);
+  assert.deepEqual(await page.evaluate(() => [document.querySelector('#workspace').hidden, document.querySelector('#pedidos-view').hidden]), [true, false], 'arranque: Productos no se muestra sobre Pedidos');
+  await page.unroute('**/inventory/locations*');
   // D12 (390): búsqueda, pestañas y filtros arriba; «Para hornear» es una fila que se abre; la primera tarjeta entra en el primer pantallazo.
   const bakeRow = page.getByRole('button', { name: /^Para hornear · \d+ pedidos?/ });
   await bakeRow.waitFor();
