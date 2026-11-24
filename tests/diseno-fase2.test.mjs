@@ -26,7 +26,7 @@ function engine(options = {}) {
 }
 
 // ---------- D05 · categoría vacía ----------
-async function renderGrid(collection) {
+async function renderGrid(collection, paginate = { pages: 1, current_page: 1 }) {
   const markup = withoutSchema(read('sections/main-collection-product-grid.liquid'))
     .replace(/{%-?\s*style\s*-?%}[\s\S]*?{%-?\s*endstyle\s*-?%}/, '')
     .replace(/{%-?\s*render\s+'([\w-]+)'[\s\S]*?-?%}/g, '<div data-test-render="$1"></div>');
@@ -35,7 +35,7 @@ async function renderGrid(collection) {
     section: { id: 'grid', settings: { enable_filtering: true, enable_sorting: true, filter_type: 'horizontal', products_per_page: 16, columns_mobile: '2', columns_desktop: 4, image_shape: 'default', quick_add: 'none', padding_top: 36, padding_bottom: 36, color_scheme: 'scheme-1' } },
     settings: { animations_reveal_on_scroll: false },
     routes: { all_products_collection_url: '/collections/all', root_url: '/' },
-    paginate: { pages: 1 },
+    paginate,
   });
 }
 const facets = html => html.includes('data-test-render="facets"');
@@ -72,6 +72,19 @@ rendered('D05: con productos no cambia nada; en /collections/all no se ofrece vo
   assert.match(await renderGrid({ title: 'Café & <Té>', handle: 'cafe' }), /no hay café &amp; &lt;té&gt; en el menú/);
 });
 
+rendered('D05: una página fuera de rango de una colección con productos no es una categoría vacía', async () => {
+  // Shopify responde 200 con la página vacía en /collections/all?page=99 (revisión Codex task_5f8f3350608f).
+  const page99 = await renderGrid({ title: 'Productos', handle: 'all', products: [], products_count: 6, all_products_count: 6 }, { pages: 1, current_page: 99 });
+  assert.doesNotMatch(page99, /ds-collection-empty/);
+  assert.equal(facets(page99), true);
+  assert.match(page99, /sections\.collection_template\.empty/);
+  assert.match(page99, /<a class="underlined-link link" href="\/collections\/all">Volver a la primera página<\/a>/);
+  // Página 1 vacía con total positivo (p. ej. productos ocultos): mensaje de Shopify, sin enlace a sí misma.
+  const firstPage = await renderGrid({ title: 'Brownies', handle: 'brownies', products: [], products_count: 0, all_products_count: 1 });
+  assert.doesNotMatch(firstPage, /ds-collection-empty|Volver a la primera página/);
+  assert.equal(facets(firstPage), true);
+});
+
 // ---------- D21 · solicitud visible desde el HTML ----------
 async function renderRequest({ serviceEnabled = true, guestEnabled = true, customer = null } = {}) {
   const source = read('sections/ds-celebracion-solicitud.liquid');
@@ -90,6 +103,11 @@ rendered('D21: con el servicio activo el primer paso llega visible y el aviso de
   for (const options of [{ guestEnabled: true }, { guestEnabled: false, customer: { id: 9, name: 'Ana', email: 'ana@example.test' } }]) {
     const html = await renderRequest(options);
     assert.doesNotMatch(tag(html, 'data-live'), /\bhidden\b/);
+    assert.match(tag(html, 'data-live'), /\binert\b/, 'inerte hasta que el JS monte');
+    assert.match(html, /<p class="ds-request__muted ds-request__pending" data-pending-note role="status">Cargando el formulario…<\/p>/);
+    assert.match(html, /<script src="[^"]*ds-celebracion-solicitud\.js[^"]*" defer="defer" onerror="window\.dsRequestLoadFailed\(\)"><\/script>/);
+    assert.match(html, /setTimeout\(window\.dsRequestLoadFailed, 15000\)/);
+    assert.match(html, /querySelectorAll\('\[data-ds-request\] \[data-live\]\[inert\] \[data-pending-note\]'\)/);
     assert.match(tag(html, 'data-gate'), /\bhidden\b/);
     assert.doesNotMatch(tag(html, 'data-step="0"'), /\bhidden\b/);
     assert.match(tag(html, 'data-step="1"'), /\bhidden\b/);
@@ -104,13 +122,14 @@ rendered('D21: servicio apagado o visitante sin permiso: el aviso sigue visible 
   const login = await renderRequest({ guestEnabled: false });
   assert.doesNotMatch(tag(login, 'data-gate'), /\bhidden\b/);
   assert.match(login, /Iniciar sesión/);
-  assert.doesNotMatch(login, /data-live/);
+  assert.doesNotMatch(login, /<div data-live/);
 });
 
 test('D21: si el servicio no se puede crear, el JS vuelve a mostrar el aviso y oculta el formulario', () => {
   const js = read('assets/ds-celebracion-solicitud.js');
   assert.match(js, /catch \(_\) \{ const gate = q\('\[data-gate\]'\); gate\.textContent = messages\.UNAVAILABLE; gate\.hidden = false; q\('\[data-live\]'\)\.hidden = true; return; \}/);
   assert.match(js, /q\('\[data-js-note\]'\)\?\.setAttribute\('hidden', ''\);/);
+  assert.match(js, /q\('\[data-live\]'\)\.hidden = false;\s*q\('\[data-live\]'\)\.removeAttribute\('inert'\);\s*q\('\[data-pending-note\]'\)\?\.setAttribute\('hidden', ''\);/);
 });
 
 test('D21: el primer piso y el resumen del HTML coinciden con los valores por defecto del JS', () => {

@@ -201,6 +201,8 @@
     if (!controller.state.id && !controller.state.intent) recovery = null;
     q('[data-gate]').hidden = true;
     q('[data-live]').hidden = false;
+    q('[data-live]').removeAttribute('inert');
+    q('[data-pending-note]')?.setAttribute('hidden', '');
     q('[data-js-note]')?.setAttribute('hidden', '');
 
     function renderReceipt(state) {

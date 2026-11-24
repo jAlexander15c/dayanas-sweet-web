@@ -1,5 +1,14 @@
 {{ 'ds-celebracion-solicitud.css' | asset_url | stylesheet_tag }}
-<script src="{{ 'ds-celebracion-solicitud.js' | asset_url }}" defer="defer"></script>
+<script>
+  // Si ds-celebracion-solicitud.js no llega o no termina de montar (el formulario sigue inerte), el aviso no puede depender de ese archivo.
+  window.dsRequestLoadFailed = function () {
+    document.querySelectorAll('[data-ds-request] [data-live][inert] [data-pending-note]').forEach(function (note) {
+      note.textContent = 'No pudimos cargar el formulario. Revisa tu conexión y vuelve a cargar la página.';
+    });
+  };
+  setTimeout(window.dsRequestLoadFailed, 15000);
+</script>
+<script src="{{ 'ds-celebracion-solicitud.js' | asset_url }}" defer="defer" onerror="window.dsRequestLoadFailed()"></script>
 
 {%- liquid
   # El formulario se muestra desde el HTML cuando el servicio está activo, para que no salte al cargar (D21).
@@ -31,7 +40,7 @@
     </div>
     {% if customer or section.settings.guest_enabled %}
       <noscript><p class="ds-request__muted">Necesitas JavaScript para completar la solicitud y adjuntar fotos.</p><style>.ds-request [data-live]{display:none!important}</style></noscript>
-      <div data-live{% unless ds_request_live %} hidden{% endunless %}>
+      <div data-live{% if ds_request_live %} inert{% else %} hidden{% endif %}>
         <ol class="ds-request__steps" aria-label="Pasos de tu solicitud">
           <li data-marker="0" aria-current="step"><b>1</b>Tu pastel</li>
           <li data-marker="1"><b>2</b>Tu idea</li>
@@ -122,6 +131,7 @@
             <div class="ds-request__actions">
               <button class="ds-request__back" data-back type="button" hidden>Volver</button>
               <button class="ds-request__button" data-next type="submit">Continuar a tu idea</button>
+              {%- if ds_request_live -%}<p class="ds-request__muted ds-request__pending" data-pending-note role="status">Cargando el formulario…</p>{%- endif -%}
             </div>
           </form>
           <aside class="ds-request__aside" aria-label="Resumen de tu selección">

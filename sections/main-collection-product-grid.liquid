@@ -30,7 +30,7 @@
 >
   <div class="section-{{ section.id }}-padding gradient color-{{ section.settings.color_scheme }}">
     {%- paginate collection.products by section.settings.products_per_page -%}
-      {%- comment -%} Categoría sin productos y sin filtros activos: sin barra de filtros y con una salida útil (D05). Una búsqueda filtrada sin resultados conserva el mensaje de Shopify. {%- endcomment -%}
+      {%- comment -%} Categoría sin productos y sin filtros activos: sin barra de filtros y con una salida útil (D05). Se decide por el total de la colección (all_products_count), no por la página: ?page=99 de una colección con productos no es una categoría vacía. Una búsqueda filtrada sin resultados conserva el mensaje de Shopify. {%- endcomment -%}
       {%- assign has_active_filters = false -%}
       {%- for filter in collection.filters -%}
         {%- if filter.active_values.size > 0 -%}
@@ -44,7 +44,7 @@
         {%- endif -%}
       {%- endfor -%}
       {%- assign ds_empty_collection = false -%}
-      {%- if collection.products.size == 0 and has_active_filters == false -%}
+      {%- if collection.all_products_count == 0 and has_active_filters == false -%}
         {%- assign ds_empty_collection = true -%}
       {%- endif -%}
       {% comment %} Sort is the first tabbable element when filter type is vertical {% endcomment %}
@@ -153,6 +153,10 @@
               <div class="title-wrapper center">
                 <h2 class="title title--primary">
                   {{ 'sections.collection_template.empty' | t -}}
+                  {%- if has_active_filters == false and paginate.current_page > 1 -%}
+                    <br>
+                    <a class="underlined-link link" href="{{ collection.url }}">Volver a la primera página</a>
+                  {%- endif -%}
                   {%- if has_active_filters -%}
                     <br>
                     {{
