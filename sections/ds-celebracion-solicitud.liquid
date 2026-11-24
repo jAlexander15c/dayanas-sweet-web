@@ -33,7 +33,8 @@
     {%- if section.settings.service_enabled and section.settings.how_title != blank -%}
       <section class="ds-request__how" aria-labelledby="DSRequestHow-{{ section.id }}">
         <h2 id="DSRequestHow-{{ section.id }}">{{ section.settings.how_title | escape }}</h2>
-        <ol>
+        {%- comment -%} role="list": Safari quita la semántica de lista a las listas con list-style:none. {%- endcomment -%}
+        <ol role="list">
           <li><p><strong>{{ section.settings.how_step1_title | escape }}</strong><span>{{ section.settings.how_step1_text | escape }}</span></p></li>
           <li><p><strong>{{ section.settings.how_step2_title | escape }}</strong><span>{{ section.settings.how_step2_text | escape }}</span></p></li>
           <li><p><strong>{{ section.settings.how_step3_title | escape }}</strong><span>{{ section.settings.how_step3_text | escape }}</span></p></li>

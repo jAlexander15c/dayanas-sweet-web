@@ -95,7 +95,7 @@ dialog.ds-r-dialog{width:min(600px,calc(100% - 32px));max-height:calc(100dvh - 4
 .ds-r-hero-notice a{min-height:44px;display:inline-flex;align-items:center;font-size:14px;font-weight:700;color:var(--deep-pink);text-decoration:underline;text-underline-offset:3px}
 .ds-r-hero-notice a:hover{color:var(--ink)}
 .ds-r-button.ds-r-button--secondary{background:#fff;color:var(--deep-pink);box-shadow:inset 0 0 0 2px var(--pink)}
-.ds-r-button.ds-r-button--secondary:hover{background:var(--blush)}
+.ds-r-button.ds-r-button--secondary:hover{background:var(--blush)}@media(forced-colors:active){.ds-r-button.ds-r-button--secondary{border:2px solid ButtonText}}
 @media(min-width:1440px){.ds-r-hero.ds-r-hero--closed{min-height:574px}}
 @media(max-width:1150px){.ds-r-hero.ds-r-hero--closed{min-height:470px}}
 @media(max-width:600px){.ds-r-hero.ds-r-hero--closed{min-height:0}.ds-r-hero-notice{margin-top:18px}}

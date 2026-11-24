@@ -85,6 +85,7 @@ test('D03: el aviso ensancha la portada en vez de recortarla y su enlace mide al
   assert.match(css, /\.ds-r-hero--closed \.ds-r-hero-inner\{height:auto\}/);
   assert.match(css, /\.ds-r-hero-notice a\{min-height:44px/);
   assert.match(css, /@media\(max-width:600px\)\{\.ds-r-hero\.ds-r-hero--closed\{min-height:0\}/);
+  assert.match(css, /@media\(forced-colors:active\)\{\.ds-r-button\.ds-r-button--secondary\{border:2px solid ButtonText\}\}/, 'en alto contraste el borde por box-shadow desaparece');
 });
 
 // ---------- D09 · un solo bloque de recomendaciones en la ficha ----------
@@ -159,6 +160,7 @@ rendered('D11: «Cómo funciona» va entre la introducción y el formulario, con
   assert.match(block, /aria-labelledby="DSRequestHow-req"/);
   assert.match(block, /<h2 id="DSRequestHow-req">Cómo funciona<\/h2>/);
   assert.equal((block.match(/<li>/g) || []).length, 3);
+  assert.match(block, /<ol role="list">/, 'Safari conserva la lista aunque no tenga viñetas');
   for (const text of ['Cuéntanos tu idea', 'Dayana te envía una propuesta', 'Aceptas y reservas', 'anticipo del 60 %', 'Fulshear, TX', '7 días o más', 'desde 24 horas']) assert.ok(block.includes(text), text);
 });
 
