@@ -100,13 +100,25 @@ function proposalInput(input, defaultMode) {
 }
 
 function detailsInput(value) {
-  object(value, ['pickupAt', 'urgent', 'tiers', 'coating', 'decorations']);
+  // Formulario nuevo: trae `cake` y `extras` (postres o salados). El anterior, sin esas claves, sigue igual.
+  const extended = !!value && typeof value === 'object' && Object.hasOwn(value, 'cake');
+  const base = ['pickupAt', 'urgent', 'tiers', 'coating', 'decorations'];
+  object(value, extended ? [...base, 'cake', 'extras'] : base);
+  if (extended && typeof value.cake !== 'boolean') fail('VALIDATION');
+  const extras = extended ? text(value.extras, { empty: true, limit: 2000 }) : '';
   const pickupTime = Date.parse(value.pickupAt);
   if (typeof value.pickupAt !== 'string' || !/^\d{4}-\d{2}-\d{2}T.*Z$/.test(value.pickupAt) || !Number.isFinite(pickupTime) || typeof value.urgent !== 'boolean'
       || pickupTime < Date.now() + (value.urgent ? 1 : 7) * 86400000 || pickupTime > Date.now() + 366 * 86400000) fail('VALIDATION');
   const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(pickupTime)).map(p=>[p.type,p.value]));
   const minutes = Number(parts.hour)*60+Number(parts.minute);
   if(minutes<480 || minutes>1080) fail('VALIDATION');
+  const pickupAt = new Date(pickupTime).toISOString();
+  if (extended && value.cake === false) {
+    // Sin pastel: no se aceptan datos del pastel y los postres o salados son obligatorios.
+    if (!Array.isArray(value.tiers) || value.tiers.length !== 0 || !Array.isArray(value.decorations) || value.decorations.length !== 0
+        || value.coating !== '' || !extras) fail('VALIDATION');
+    return { pickupAt, urgent: value.urgent, tiers: [], coating: '', decorations: [], cake: false, extras };
+  }
   if (!Array.isArray(value.tiers) || value.tiers.length < 1 || value.tiers.length > 2) fail('VALIDATION');
   const pair = values => {
     if (!Array.isArray(values) || values.length !== 2) fail('VALIDATION');
@@ -118,7 +130,8 @@ function detailsInput(value) {
     return { diameter: tier.diameter, sponges: pair(tier.sponges), fillings: pair(tier.fillings) };
   });
   if (!Array.isArray(value.decorations) || value.decorations.length > 10) fail('VALIDATION');
-  return { pickupAt: new Date(pickupTime).toISOString(), urgent: value.urgent, tiers, coating: text(value.coating, {limit: 100}), decorations: value.decorations.map(v => text(v, {limit:100})) };
+  const details = { pickupAt, urgent: value.urgent, tiers, coating: text(value.coating, {limit: 100}), decorations: value.decorations.map(v => text(v, {limit:100})) };
+  return extended ? { ...details, cake: true, extras } : details;
 }
 
 function photoInput(input) {

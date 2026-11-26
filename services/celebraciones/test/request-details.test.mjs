@@ -23,6 +23,30 @@ test('server rejects invalid dates, short lead time, too many tiers and invalid 
  }
  }finally{s.close();}
 });
+test('cotización sin pastel: acepta postres o salados y los exige', () => {
+ const s=createStore(':memory:'); try {
+ const noCake={ pickupAt: input.details.pickupAt, urgent:false, tiers:[], coating:'', decorations:[], cake:false, extras:'  Brownie Box: 12 cajas. Croquetas: 30.  ' };
+ const a=s.createRequest(customer,{...input,details:noCake},'no-cake');
+ assert.deepEqual(a.details,{...noCake,extras:'Brownie Box: 12 cajas. Croquetas: 30.'});
+ for(const d of [{extras:''},{extras:'   '},{extras:'x'.repeat(2001)},{tiers:input.details.tiers},{coating:'Merengue'},{decorations:['Flores']},{cake:'no'}]) {
+  assert.throws(()=>s.createRequest(customer,{...input,details:{...noCake,...d}},'bad-'+Object.keys(d)[0]),e=>e.code==='VALIDATION');
+ }
+ const {extras, ...missingExtras}=noCake;
+ assert.throws(()=>s.createRequest(customer,{...input,details:missingExtras},'missing'),e=>e.code==='VALIDATION');
+ } finally {s.close();}
+});
+test('cotización con pastel y extras opcionales; el formulario anterior sigue igual', () => {
+ const s=createStore(':memory:'); try {
+ const withCake={...input.details,cake:true,extras:''};
+ assert.deepEqual(s.createRequest(customer,{...input,details:withCake},'cake-empty').details,withCake);
+ const withExtras={...withCake,extras:'Pastelitos de guayaba: 24'};
+ assert.deepEqual(s.createRequest(customer,{...input,details:withExtras},'cake-extras').details,withExtras);
+ const legacy=s.createRequest(customer,input,'legacy');
+ assert.deepEqual(legacy.details,input.details);
+ assert.equal(Object.hasOwn(legacy.details,'cake'),false);
+ assert.throws(()=>s.createRequest(customer,{...input,details:{...input.details,extras:'x'}},'extras-without-cake'),e=>e.code==='VALIDATION');
+ } finally {s.close();}
+});
 test('photo bytes are private, idempotent, capped and absent from JSON snapshots',()=>{
  const s=createStore(':memory:');try {
  const a=s.createRequest(customer,input,'new');
