@@ -68,6 +68,16 @@
             <section data-step="0" aria-labelledby="DSRequestStep0-{{ section.id }}"{% if ds_request_live %} inert data-until-mount{% endif %}>
               <h2 id="DSRequestStep0-{{ section.id }}" tabindex="-1">Empecemos por tu pastel</h2>
               <fieldset>
+                <legend>¿Tu pedido incluye pastel?</legend>
+                <div class="ds-request__choices">
+                  <button type="button" data-cake="true" aria-pressed="true">Sí, con pastel</button>
+                  <button type="button" data-cake="false" aria-pressed="false">Sin pastel, solo postres o salados</button>
+                </div>
+              </fieldset>
+              <p class="ds-request__note" data-prefill-note hidden></p>
+              <p class="ds-request__note" data-no-cake-note hidden>Perfecto. En el siguiente paso escribe los postres o salados que quieres cotizar.</p>
+              <div data-cake-fields>
+              <fieldset>
                 <legend>¿Cuántos pisos?</legend>
                 <div class="ds-request__choices">
                   <button type="button" data-floors="1" aria-pressed="true">Un piso</button>
@@ -86,15 +96,19 @@
               <p class="ds-request__note" data-height-note>Dayana propondrá la altura según tu diseño.</p>
               <div data-flavors><fieldset><legend>Sabores · Piso 1</legend><div class="ds-request__two"><label>Bizcocho 1<select><option selected>Vainilla</option></select></label><label>Bizcocho 2<select><option selected>Chocolate</option></select></label><label>Relleno 1<select><option selected>Guayaba</option></select></label><label>Relleno 2<select><option selected>Nutella</option></select></label></div></fieldset></div>
               <label>Cobertura para todo el pastel<select data-coating></select></label>
+              </div>
             </section>
             <section data-step="1" hidden aria-labelledby="DSRequestStep1-{{ section.id }}">
               <h2 id="DSRequestStep1-{{ section.id }}" tabindex="-1">Cuéntanos cómo lo imaginas</h2>
+              <label><span data-extras-title>¿Quieres sumar postres o salados? (opcional)</span><textarea data-extras rows="4" maxlength="2000" aria-describedby="DSRequestExtrasHelp-{{ section.id }}" placeholder="Ej.: Brownie Box, 12 cajas con topping de chocolate. Croquetas, unas 30."></textarea></label>
+              <p id="DSRequestExtrasHelp-{{ section.id }}" class="ds-request__muted">Escribe cuáles y cuántos. Mira el <a href="{{ routes.root_url }}#menu">menú</a> para ver opciones. Dayana los incluye en tu cotización.</p>
               <label for="DSRequestPhotos-{{ section.id }}">Fotos de referencia</label>
               <input id="DSRequestPhotos-{{ section.id }}" data-files type="file" accept="image/jpeg,image/png,image/webp" multiple aria-describedby="DSRequestPhotoHelp-{{ section.id }}">
               <p id="DSRequestPhotoHelp-{{ section.id }}" class="ds-request__muted">Opcionales. Hasta 3 fotos JPEG, PNG o WEBP, de 2 MB cada una. Son referencias privadas para Dayana; no garantizan una reproducción exacta. Al elegir nuevas fotos, se reemplaza la selección anterior.</p>
               <div class="ds-request__photos" data-photos></div>
               <label for="DSRequestComments-{{ section.id }}">Notas e información adicional (opcional)</label>
               <textarea id="DSRequestComments-{{ section.id }}" data-comments rows="7" maxlength="2000" placeholder="Cuéntanos los colores, nombres, textos y cualquier detalle importante de tu idea."></textarea>
+              <div data-cake-decorations>
               <fieldset class="ds-request__decorations">
                 <legend>Decoración que te gustaría</legend>
                 <label class="ds-request__check"><input type="checkbox" data-decoration="0">Topper personalizado</label>
@@ -102,6 +116,7 @@
                 <label class="ds-request__check"><input type="checkbox" data-decoration="2">Flores de fondant</label>
               </fieldset>
               <p class="ds-request__note">Dayana revisará todos los detalles y cotizará la decoración según tu diseño.</p>
+              </div>
             </section>
             <section data-step="2" hidden aria-labelledby="DSRequestStep2-{{ section.id }}">
               <h2 id="DSRequestStep2-{{ section.id }}" tabindex="-1">¿Cuándo celebramos?</h2>
@@ -134,6 +149,7 @@
                 <p class="ds-request__muted">Continuarás a la revisión de tu pastel, fotos y fecha antes de enviar la solicitud.</p>
               </div>
               {% endif %}
+              <label class="ds-request__check"><input type="checkbox" data-newsletter>Quiero recibir novedades y ofertas de Dayana’s Sweet por correo. Puedo darme de baja cuando quiera.</label>
               <p class="ds-request__note">{{ section.settings.payment_policy | escape }}</p>
             </section>
             <section data-step="3" hidden aria-labelledby="DSRequestStep3-{{ section.id }}">
@@ -151,7 +167,7 @@
             </div>
           </form>
           <aside class="ds-request__aside" aria-label="Resumen de tu selección"{% if ds_request_live %} inert data-until-mount{% endif %}>
-            <h3>Tu pastel</h3>
+            <h3>Tu pedido</h3>
             <dl class="ds-request__summary" data-summary><div><dt>Pastel redondo</dt><dd>1 piso · 8″</dd></div><div><dt>Piso 1</dt><dd>Vainilla + Chocolate · Guayaba + Nutella</dd></div><div><dt>Cobertura</dt><dd>Buttercream</dd></div><div><dt>Decoraciones</dt><dd>Sin selección</dd></div></dl>
             <p class="ds-request__note">Hecho a mano, para tu celebración. El precio se define en tu cotización.</p>
             <p class="ds-request__muted">Tu selección se conserva al avanzar o volver.</p>
@@ -182,6 +198,7 @@
             <p data-email-status role="status"></p>
             <p class="ds-request__muted">Conserva tu enlace privado. Desde allí podrás ver la propuesta, conversar con Dayana y pagar, sin crear una cuenta. No compartas el enlace.</p>
           </div>
+          <p class="ds-request__muted" data-newsletter-status role="status"></p>
           <a class="ds-request__button" data-success-link hidden>Ver mi cotización</a>
           {% unless customer %}
           <button type="button" data-copy-link>Copiar enlace</button>
@@ -198,8 +215,30 @@
           <button type="button" data-list-retry>Actualizar mis solicitudes</button>
         </section>
         {% endif %}
+        {%- comment -%} Casilla de novedades: el JS envía este formulario de clientas de Shopify (etiqueta newsletter) solo si la clienta la marcó. {%- endcomment -%}
+        <div data-newsletter-form hidden>
+          {%- form 'customer' -%}
+            <input type="hidden" name="contact[tags]" value="newsletter">
+            <input type="hidden" name="contact[email]" value="{{ customer.email | escape }}">
+          {%- endform -%}
+        </div>
       </div>
     {% endif %}
+    {%- capture ds_gallery -%}
+      {%- for block in section.blocks -%}
+        {%- if block.type == 'photo' and block.settings.image != blank -%}
+          {%- assign ds_gallery_alt = block.settings.alt | default: block.settings.image.alt -%}
+          <li {{ block.shopify_attributes }}>{{ block.settings.image | image_url: width: 900 | image_tag: widths: '300, 450, 600, 900', sizes: '(min-width: 750px) 33vw, 50vw', alt: ds_gallery_alt, loading: 'lazy' }}</li>
+        {%- endif -%}
+      {%- endfor -%}
+    {%- endcapture -%}
+    {%- comment -%} La galería solo aparece cuando Dayana carga fotos en el editor del tema. {%- endcomment -%}
+    {%- if ds_gallery != blank -%}
+      <section class="ds-request__gallery" aria-labelledby="DSRequestGallery-{{ section.id }}">
+        <h2 id="DSRequestGallery-{{ section.id }}">{{ section.settings.gallery_title | escape }}</h2>
+        <ul role="list">{{ ds_gallery }}</ul>
+      </section>
+    {%- endif -%}
   </div>
 </section>
 
@@ -212,13 +251,13 @@
     { "type": "text", "id": "eyebrow", "label": "Texto superior", "default": "Dayana’s Sweet · Celebraciones" },
     { "type": "text", "id": "title", "label": "Título", "default": "Un pastel para" },
     { "type": "text", "id": "title_accent", "label": "Título destacado", "default": "tu celebración." },
-    { "type": "textarea", "id": "intro", "label": "Introducción", "default": "Cuéntanos la idea que tienes en mente. Dayana preparará una propuesta para tu pastel personalizado." },
+    { "type": "textarea", "id": "intro", "label": "Introducción", "default": "Cuéntanos tu idea y, si quieres, suma postres o salados. Dayana te envía la cotización en menos de 12 horas." },
     { "type": "header", "content": "Cómo funciona" },
     { "type": "text", "id": "how_title", "label": "Título", "default": "Cómo funciona", "info": "Vacío oculta el bloque." },
     { "type": "text", "id": "how_step1_title", "label": "Paso 1", "default": "Cuéntanos tu idea" },
-    { "type": "textarea", "id": "how_step1_text", "label": "Paso 1 · detalle", "default": "Tamaño, sabores, decoración y fecha. Enviar la solicitud todavía no reserva la fecha." },
-    { "type": "text", "id": "how_step2_title", "label": "Paso 2", "default": "Dayana te envía una propuesta" },
-    { "type": "textarea", "id": "how_step2_text", "label": "Paso 2 · detalle", "default": "Con el precio y lo que puede preparar. Puedes escribirle antes de aceptarla." },
+    { "type": "textarea", "id": "how_step1_text", "label": "Paso 1 · detalle", "default": "Tamaño, sabores, decoración, fecha y los postres o salados que quieras sumar. Enviar la solicitud todavía no reserva la fecha." },
+    { "type": "text", "id": "how_step2_title", "label": "Paso 2", "default": "Recibes la cotización" },
+    { "type": "textarea", "id": "how_step2_text", "label": "Paso 2 · detalle", "default": "En menos de 12 horas, con el precio y lo que Dayana puede preparar. Puedes escribirle antes de aceptarla." },
     { "type": "text", "id": "how_step3_title", "label": "Paso 3", "default": "Aceptas y reservas" },
     { "type": "textarea", "id": "how_step3_text", "label": "Paso 3 · detalle", "default": "Pagas según la propuesta, por ejemplo un anticipo del 60 %. Recoges en Fulshear, TX, de 8:00 a. m. a 6:00 p. m." },
     { "type": "textarea", "id": "how_lead", "label": "Aviso de anticipación", "default": "Con tiempo: pídelo con 7 días o más. Con menos (desde 24 horas) es urgente: necesita aprobación y lleva un recargo." },
@@ -232,7 +271,20 @@
     { "type": "textarea", "id": "payment_policy", "label": "Política de pagos", "default": "Dayana indicará en tu cotización si corresponde anticipo del 60% y saldo hasta 24 horas antes de recoger, pago completo anticipado o pago completo contra entrega. Los pasteles se entregan en su caja, sin impuesto de venta. No pagas al enviar la solicitud. La reserva se confirma según la condición acordada y la disponibilidad." },
     { "type": "textarea", "id": "unavailable_message", "label": "Servicio no disponible", "default": "Estamos preparando las solicitudes de pasteles personalizados. Pronto podrás contarnos tu idea desde aquí." },
     { "type": "text", "id": "success_title", "label": "Título al enviar", "default": "Tu idea ya está en manos de Dayana." },
-    { "type": "textarea", "id": "success_message", "label": "Mensaje al enviar", "default": "Recibimos tu solicitud y las fotos seleccionadas. Dayana revisará los detalles y la disponibilidad. Podrás consultar la propuesta y continuar la conversación desde tu seguimiento. Todavía no hay una reserva confirmada." }
+    { "type": "textarea", "id": "success_message", "label": "Mensaje al enviar", "default": "Recibimos tu solicitud y las fotos seleccionadas. Dayana revisará los detalles y la disponibilidad, y te enviará la cotización en menos de 12 horas. Podrás consultarla y continuar la conversación desde tu seguimiento. Todavía no hay una reserva confirmada." },
+    { "type": "header", "content": "Galería de celebraciones" },
+    { "type": "text", "id": "gallery_title", "label": "Título de la galería", "default": "Galería de celebraciones", "info": "La galería se muestra solo cuando agregas fotos como bloques." }
+  ],
+  "max_blocks": 12,
+  "blocks": [
+    {
+      "type": "photo",
+      "name": "Foto de galería",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Foto" },
+        { "type": "text", "id": "alt", "label": "Descripción de la foto", "info": "Qué se ve en la foto, para lectores de pantalla." }
+      ]
+    }
   ],
   "presets": [{ "name": "DS — Solicitud pastel" }]
 }

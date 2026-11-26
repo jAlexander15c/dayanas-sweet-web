@@ -127,7 +127,8 @@
               </h3>
             </div>
             <div class="card__badge {{ settings.badge_position }}">
-              {%- if card_product.available == false -%}
+              {%- if settings.ds_quote_mode -%}
+              {%- elsif card_product.available == false -%}
                 <span
                   id="NoMediaStandardBadge-{{ section_id }}-{{ card_product.id }}"
                   class="badge badge--bottom-left color-{{ settings.sold_out_badge_color_scheme }}"
@@ -206,7 +207,7 @@
                 </p>
               {%- endif -%}
 
-              {% render 'price', product: card_product, price_class: '', show_compare_at_price: true %}
+              {%- unless settings.ds_quote_mode -%}{% render 'price', product: card_product, price_class: '', show_compare_at_price: true %}{%- endunless -%}
               {%- if card_product.quantity_price_breaks_configured? -%}
                 {% if card_product.variants_count == 1 and quick_add == 'bulk' %}
                   {% liquid
@@ -293,7 +294,13 @@
           {% assign product_form_id = 'quick-add-' | append: section_id | append: card_product.id %}
           {%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
           {%- capture requires_topping -%}{%- render 'ds-topping-picker', product: card_product, mode: 'requires' -%}{%- endcapture -%}
-          {% if ds_closed == '1' %}
+          {% if settings.ds_quote_mode %}
+            <div class="quick-add">
+              <a class="quick-add__submit button button--full-width button--secondary" href="{{ card_product.url }}" aria-label="Ver y cotizar {{ card_product.title | escape }}">
+                Ver y cotizar
+              </a>
+            </div>
+          {% elsif ds_closed == '1' %}
             <p class="ds-pbatch__stock is-out">Tanda cerrada</p>
           {% elsif requires_topping == '1' and card_product.available and quick_add == 'standard' or requires_topping == '1' and card_product.available and quick_add == 'bulk' %}
             <div class="quick-add">
@@ -525,7 +532,7 @@
                           <a href="{{ card_product.url }}" class="full-unstyled-link">
                             <h3>{{ card_product.title | escape }}</h3>
                           </a>
-                          {% render 'price', product: card_product, price_class: '', show_compare_at_price: true %}
+                          {%- unless settings.ds_quote_mode -%}{% render 'price', product: card_product, price_class: '', show_compare_at_price: true %}{%- endunless -%}
                           {%- if card_product.quantity_price_breaks_configured? -%}
                             <div class="card__information-volume-pricing-note">
                               <span class="caption">{{ 'products.product.volume_pricing.note' | t }}</span>
@@ -540,7 +547,7 @@
                               {{ card_product.title | escape }}
                             </h3>
                           </a>
-                          {% render 'price', product: card_product, price_class: '', show_compare_at_price: true %}
+                          {%- unless settings.ds_quote_mode -%}{% render 'price', product: card_product, price_class: '', show_compare_at_price: true %}{%- endunless -%}
                           {%- if card_product.quantity_price_breaks_configured? -%}
                             <div class="card__information-volume-pricing-note">
                               <span class="caption">{{ 'products.product.volume_pricing.note' | t }}</span>
@@ -562,7 +569,8 @@
             {% endif %}
           {% endif %}
           <div class="card__badge {{ settings.badge_position }}">
-            {%- if card_product.available == false -%}
+            {%- if settings.ds_quote_mode -%}
+            {%- elsif card_product.available == false -%}
               <span
                 id="Badge-{{ section_id }}-{{ card_product.id }}"
                 class="badge badge--bottom-left color-{{ settings.sold_out_badge_color_scheme }}"
@@ -629,7 +637,7 @@
               <span class="visually-hidden">{{ 'accessibility.vendor' | t }}</span>
               <div class="caption-with-letter-spacing light">{{ 'products.product.vendor' | t }}</div>
             {%- endif -%}
-            {% render 'price', placeholder: placeholder, show_compare_at_price: true %}
+            {%- unless settings.ds_quote_mode -%}{% render 'price', placeholder: placeholder, show_compare_at_price: true %}{%- endunless -%}
           </div>
         </div>
       </div>

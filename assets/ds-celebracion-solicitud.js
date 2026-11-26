@@ -62,13 +62,26 @@
     return closed.sort();
   }
   function buildInput(selection, date) {
-    const tiers = selection.tiers.map(tier => ({ diameter: selection.tiers.length === 2 ? null : selection.diameter, sponges: tier.sponges.slice(), fillings: tier.fillings.slice() }));
+    // cake:false = solo postres o salados. Los extras van también en requestText, que es lo que Dayana lee en su panel.
+    const cake = selection.cake !== false;
+    const extras = String(selection.extras || '').trim();
+    const tiers = cake ? selection.tiers.map(tier => ({ diameter: selection.tiers.length === 2 ? null : selection.diameter, sponges: tier.sponges.slice(), fillings: tier.fillings.slice() })) : [];
     const description = tiers.map((tier, i) => `Piso ${i + 1}: ${tier.diameter ? `${tier.diameter} pulgadas` : 'diámetro a proponer por Dayana'}. Bizcochos: ${tier.sponges.join(' y ')}. Rellenos: ${tier.fillings.join(' y ')}.`).join('\n');
+    const order = cake
+      ? `Pastel personalizado redondo.\n${description}\nCobertura: ${selection.coating}.\nDecoraciones: ${selection.decorations.join(', ') || 'Sin selección'}.\n`
+      : 'Sin pastel: solo postres o salados.\n';
     return {
-      requestText: `Pastel personalizado redondo.\n${description}\nCobertura: ${selection.coating}.\nDecoraciones: ${selection.decorations.join(', ') || 'Sin selección'}.\nRecogida solicitada: ${date.label}.\n${date.urgent ? 'Solicitud urgente, sujeta a aprobación y recargo cotizado.\n' : ''}Comentarios: ${selection.comments.trim() || 'Sin comentarios adicionales.'}`,
+      requestText: `${order}${extras ? `Postres o salados: ${extras}\n` : ''}Recogida solicitada: ${date.label}.\n${date.urgent ? 'Solicitud urgente, sujeta a aprobación y recargo cotizado.\n' : ''}Comentarios: ${selection.comments.trim() || 'Sin comentarios adicionales.'}`,
       pickup: { label: date.label },
-      details: { pickupAt: date.pickupAt, urgent: date.urgent, tiers, coating: selection.coating, decorations: selection.decorations.slice() }
+      details: { pickupAt: date.pickupAt, urgent: date.urgent, tiers, coating: cake ? selection.coating : '', decorations: cake ? selection.decorations.slice() : [], cake, extras }
     };
+  }
+  // Texto de ?agregar= (título del dulce desde su ficha): sin caracteres de control, recortado y con tope.
+  function prefillText(search) {
+    let value = '';
+    try { value = new URLSearchParams(search || '').get('agregar') || ''; } catch (_) { return ''; }
+    value = value.replace(/[\x00-\x1f\x7f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200).trim();
+    return value;
   }
   function createService(basePath, { guest = false } = {}) {
     if (!/^\/apps\/[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*$/.test(basePath)) throw fail('UNAVAILABLE');
@@ -161,9 +174,9 @@
     let recovery;
     try { recovery = JSON.parse(global.sessionStorage.getItem(storageKey)); } catch (_) { /* Storage may be unavailable. */ }
     const persist = record => { try { if (record) global.sessionStorage.setItem(storageKey, JSON.stringify(record)); else global.sessionStorage.removeItem(storageKey); } catch (_) { /* In-memory retry still works. */ } };
-    const selection = { diameter: 8, tiers: [{ sponges: ['Vainilla', 'Chocolate'], fillings: ['Guayaba', 'Nutella'] }], coating: 'Buttercream', decorations: [], comments: '' };
+    const selection = { diameter: 8, tiers: [{ sponges: ['Vainilla', 'Chocolate'], fillings: ['Guayaba', 'Nutella'] }], coating: 'Buttercream', decorations: [], comments: '', cake: true, extras: '' };
     const secondTier = { sponges: ['Vainilla', 'Vainilla'], fillings: ['Dulce de leche', 'Dulce de leche'] };
-    let step = 0, files = [], previewUrls = [], lastSnapshot = null, checkingCalendar = false;
+    let step = 0, files = [], previewUrls = [], lastSnapshot = null, checkingCalendar = false, newsletterSent = false;
     const calendar = { ready: false, closed: [] };
     const form = q('[data-form]');
     const link = (anchor, id) => {
@@ -196,6 +209,10 @@
         link(q('[data-success-link]'), state.id);
         q('[data-success-title]').focus();
         if (guest) renderReceipt(state); else loadRequests();
+        if (!newsletterSent && q('[data-newsletter]')?.checked) {
+          newsletterSent = true;
+          subscribe(state.intent?.contact?.email || state.snapshot?.contact?.email || q('[data-newsletter-form] [name="contact[email]"]')?.value || '');
+        }
       }
     }, persist, recovery, { guest });
     if (!controller.state.id && !controller.state.intent) recovery = null;
@@ -218,10 +235,23 @@
       catch (_) { q('[data-private-link]').parentElement.hidden = false; q('[data-private-link]').hidden = false; q('[data-private-link]').value = anchor.href; q('[data-private-link]').select(); q('[data-copy-status]').textContent = 'Copia y guarda este enlace privado.'; }
     }
     if (guest) q('[data-copy-link]').addEventListener('click', copyTracking);
+    // Mejor esfuerzo: la cotización ya está enviada; si Shopify pide verificación (captcha) o falla, solo se avisa.
+    async function subscribe(email) {
+      const status = q('[data-newsletter-status]'), holder = q('[data-newsletter-form] form');
+      const failed = 'No pudimos suscribirte a las novedades ahora. Puedes hacerlo desde el inicio de la tienda.';
+      if (!holder || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { if (status) status.textContent = failed; return; }
+      const data = new FormData(holder); data.set('contact[email]', email);
+      try {
+        const response = await global.fetch(holder.getAttribute('action') || '/contact', { method: 'POST', body: data, credentials: 'same-origin' });
+        const ok = response.ok && !/\/challenge\b/.test(response.url || '');
+        if (status) status.textContent = ok ? `Listo: te escribiremos a ${email} con novedades y ofertas.` : failed;
+      } catch (_) { if (status) status.textContent = failed; }
+    }
     function contactInput() { return guest ? validContact({ name: q('[data-contact-name]').value, email: q('[data-contact-email]').value, phone: q('[data-contact-phone]').value }) : null; }
     function fieldMessage(field) {
       if (field.type === 'checkbox') return field.checked ? '' : 'Debes confirmar que entiendes las condiciones de la solicitud.';
       const value = field.value.trim();
+      if (!value && field.matches('[data-extras]')) return 'Escribe qué postres o salados quieres cotizar.';
       if (!value) return 'Este campo es obligatorio.';
       if (field.matches('[data-contact-email]') && !/^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,63}$/.test(value)) return 'Escribe un correo electrónico válido.';
       if (field.matches('[data-contact-phone]') && (!/^\+?[\d ().-]+$/.test(value) || value.replace(/\D/g, '').length < 7)) return 'Escribe un teléfono válido con al menos 7 dígitos.';
@@ -259,10 +289,27 @@
     }
     function summarize(target) {
       target.replaceChildren();
-      row(target, 'Pastel redondo', `${selection.tiers.length} ${selection.tiers.length === 1 ? `piso · ${selection.diameter}″` : 'pisos · Dayana propondrá los diámetros'}`);
-      selection.tiers.forEach((t, i) => row(target, `Piso ${i + 1}`, `${t.sponges.join(' + ')} · ${t.fillings.join(' + ')}`));
-      row(target, 'Cobertura', selection.coating);
-      row(target, 'Decoraciones', selection.decorations.join(', ') || 'Sin selección');
+      if (selection.cake) {
+        row(target, 'Pastel redondo', `${selection.tiers.length} ${selection.tiers.length === 1 ? `piso · ${selection.diameter}″` : 'pisos · Dayana propondrá los diámetros'}`);
+        selection.tiers.forEach((t, i) => row(target, `Piso ${i + 1}`, `${t.sponges.join(' + ')} · ${t.fillings.join(' + ')}`));
+        row(target, 'Cobertura', selection.coating);
+        row(target, 'Decoraciones', selection.decorations.join(', ') || 'Sin selección');
+      } else {
+        row(target, 'Pastel', 'Sin pastel');
+      }
+      if (selection.extras.trim() || !selection.cake) row(target, 'Postres o salados', selection.extras.trim() || 'Por indicar');
+    }
+    function setCake(value) {
+      selection.cake = value;
+      qa('[data-cake]').forEach(el => el.setAttribute('aria-pressed', String((el.dataset.cake === 'true') === value)));
+      q('[data-cake-fields]').hidden = !value;
+      q('[data-cake-decorations]').hidden = !value;
+      q('[data-no-cake-note]').hidden = value;
+      const extras = q('[data-extras]');
+      extras.required = !value;
+      q('[data-extras-title]').textContent = value ? '¿Quieres sumar postres o salados? (opcional)' : '¿Qué postres o salados quieres cotizar? (obligatorio)';
+      if (value) markField(extras, '');
+      updateSummary();
     }
     function updateSummary() { summarize(q('[data-summary]')); }
     function options(select, list, value) {
@@ -355,6 +402,15 @@
     q('[data-coating]').addEventListener('change', e => { selection.coating = e.target.value; updateSummary(); });
     qa('[data-decoration]').forEach(el => el.addEventListener('change', () => { selection.decorations = qa('[data-decoration]:checked').map(input => decorations[Number(input.dataset.decoration)]); updateSummary(); }));
     q('[data-comments]').addEventListener('input', e => { selection.comments = e.target.value; });
+    qa('[data-cake]').forEach(button => button.addEventListener('click', () => setCake(button.dataset.cake === 'true')));
+    q('[data-extras]').addEventListener('input', e => { selection.extras = e.target.value; updateSummary(); });
+    const prefill = prefillText(global.location?.search);
+    if (prefill && !controller.state.id && !controller.state.intent) {
+      selection.extras = `${prefill}: `;
+      q('[data-extras]').value = selection.extras;
+      q('[data-prefill-note]').textContent = `Ya anotamos «${prefill}» en el paso 2, donde puedes decirnos cuántos quieres. Si no quieres pastel, elige «Sin pastel».`;
+      q('[data-prefill-note]').hidden = false;
+    }
     q('[data-files]').addEventListener('change', e => {
       try {
         const next = validatePhotos(e.target.files);
@@ -419,7 +475,7 @@
     renderFlavors(); updateSummary(); if (!guest) loadRequests(); loadCalendar();
     global.addEventListener?.('pagehide', () => { previewUrls.forEach(url => global.URL.revokeObjectURL(url)); previewUrls = []; });
   }
-  global.DSCelebracionSolicitud = { pickupInfo, validateCalendar, validatePhotos, validContact, buildInput, createService, createController, mount };
+  global.DSCelebracionSolicitud = { pickupInfo, validateCalendar, validatePhotos, validContact, buildInput, prefillText, createService, createController, mount };
   if (global.document) {
     const init = () => global.document.querySelectorAll('[data-ds-request]').forEach(mount);
     if (global.document.readyState === 'loading') global.document.addEventListener('DOMContentLoaded', init); else init();

@@ -90,7 +90,9 @@ async function renderRequest({ serviceEnabled = true, guestEnabled = true, custo
   const source = read('sections/ds-celebracion-solicitud.liquid');
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*?){% endschema %}/)[1]);
   const settings = Object.fromEntries(schema.settings.filter(s => s.id).map(s => [s.id, s.default ?? '']));
-  return engine().parseAndRender(withoutSchema(source), {
+  // liquidjs no conoce {% form %} de Shopify (casilla de novedades): se sustituye por un <form> simple.
+  const markup = withoutSchema(source).replace(/{%-?\s*form\s+'customer'[\s\S]*?-?%}/, '<form>').replace(/{%-?\s*endform\s*-?%}/, '</form>');
+  return engine().parseAndRender(markup, {
     section: { id: 'req', settings: { ...settings, service_enabled: serviceEnabled, guest_enabled: guestEnabled } },
     customer, routes: { storefront_login_url: '/account/login', root_url: '/' }, request: { path: '/pages/pasteles-personalizados' },
   });

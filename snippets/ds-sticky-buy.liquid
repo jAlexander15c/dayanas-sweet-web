@@ -5,7 +5,7 @@
   Uso desde un bloque "Liquid personalizado": {% render 'ds-sticky-buy', product: product %}
 {% endcomment %}
 {%- capture ds_closed -%}{%- render 'ds-batch-state' -%}{%- endcapture -%}
-{%- if product.available and ds_closed != '1' -%}
+{%- if product.available and ds_closed != '1' and settings.ds_quote_mode != true -%}
   <div class="ds-sticky-buy" data-ds-sticky hidden>
     <div class="ds-sticky-buy__info">
       <strong>{{ product.title | escape }}</strong>

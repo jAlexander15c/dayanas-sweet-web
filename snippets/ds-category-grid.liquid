@@ -9,6 +9,12 @@
     assign category_count = 0
     assign heading_tag = heading_tag | default: 'h3'
     assign sorted_collections = collections | sort_natural: 'title'
+    if use_blocks == true
+      comment
+        use_blocks: se salta el modo automático por metacampos y usa solo los bloques.
+      endcomment
+      assign sorted_collections = '' | split: ','
+    endif
   -%}
   {%- capture category_keys -%}
     {%- for category in sorted_collections -%}
@@ -66,26 +72,38 @@
           </a>
         </li>
       {%- endfor -%}
-    {%- elsif configured == false or home_only -%}
+    {%- elsif configured == false or home_only or use_blocks == true -%}
       {%- for block in blocks -%}
         {%- if block.type == 'category' -%}
           {%- liquid
             assign category = block.settings.collection
             assign visible = true
+            assign block_url = block.settings.url
+            # Un bloque con enlace y sin colección siempre es visible; sin ambos, hide_empty lo oculta.
             if hide_empty
-              assign available_products = category.products | where: 'available', true
-              if available_products.size == 0
-                assign visible = false
+              if category == blank and block_url != blank
+                assign visible = true
+              else
+                assign available_products = category.products | where: 'available', true
+                if available_products.size == 0
+                  assign visible = false
+                endif
               endif
             endif
             assign category_title = category.title | default: block.settings.title
-            assign category_url = category.url | default: routes.all_products_collection_url
-            assign category_image = block.settings.image
+            assign category_url = category.url | default: block_url | default: routes.all_products_collection_url
+            assign category_image = block.settings.image | default: category.image
             assign category_style = 'ds-r-cookies'
             assign category_asset = 'ds-r-cookies-category.png'
             if block.settings.fallback_image == 'brownies'
               assign category_style = 'ds-r-brownies'
               assign category_asset = 'ds-r-brownie-category.png'
+            elsif block.settings.fallback_image == 'pastel'
+              assign category_style = 'ds-r-pastel'
+              assign category_asset = 'ds-r-cupcake.png'
+            elsif block.settings.fallback_image == 'plain'
+              assign category_style = 'ds-r-plain'
+              assign category_asset = ''
             endif
             assign image_alt = block.settings.image_alt | default: category_image.alt
             if image_alt == category_title
@@ -98,6 +116,10 @@
               <a class="ds-r-category {{ category_style }}" href="{{ category_url }}" aria-label="{{ category_title | escape }}">
                 {%- if category_image != blank -%}
                   {{ category_image | image_url: width: 1600 | image_tag: class: 'ds-r-category-photo', widths: '400, 600, 800, 1200, 1600', sizes: '(min-width: 990px) 50vw, (min-width: 601px) 50vw, 100vw', alt: image_alt, loading: 'lazy' }}
+                {%- elsif block.settings.fallback_image == 'plain' -%}
+                  {%- comment -%} Fondo liso: sin imagen. {%- endcomment -%}
+                {%- elsif block.settings.fallback_image == 'pastel' -%}
+                  <img class="ds-r-category-photo ds-r-category-icon" src="{{ category_asset | asset_url }}" width="64" height="76" alt="" loading="lazy">
                 {%- else -%}
                   {%- assign category_src = category_asset | asset_url -%}
                   <img class="ds-r-category-photo" src="{{ category_src }}" srcset="{{ category_src }}&amp;width=500 500w, {{ category_src }}&amp;width=700 700w, {{ category_src }}&amp;width=1000 1000w, {{ category_src }}&amp;width=1400 1400w, {{ category_src }} 1511w" sizes="(max-width: 430px) 470px, (max-width: 600px) 570px, (max-width: 989px) 500px, 680px" width="1200" height="1200" alt="{{ block.settings.image_alt | escape }}" loading="lazy">
@@ -115,7 +137,7 @@
     {%- endif -%}
   {%- endcapture -%}
   {%- if category_count > 0 -%}
-    <ul class="ds-r-category-grid{% if automatic %} ds-r-category-auto-grid{% else %} ds-r-category-manual{% endif %}" data-category-count="{{ category_count }}" role="list" aria-labelledby="{{ heading_id }}">{{ cards }}</ul>
+    <ul class="ds-r-category-grid{% if automatic %} ds-r-category-auto-grid{% else %} ds-r-category-manual{% endif %}{% if use_blocks == true %} ds-r-category-blocks{% endif %}" data-category-count="{{ category_count }}" role="list" aria-labelledby="{{ heading_id }}">{{ cards }}</ul>
   {%- else -%}
     <p class="ds-r-category-empty">No hay categorías disponibles. <a href="{{ routes.all_products_collection_url }}">Ver todo el menú</a></p>
   {%- endif -%}

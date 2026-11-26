@@ -147,7 +147,9 @@ async function renderRequest(overrides = {}) {
     section: { id: 'req', settings: { ...settings, service_enabled: true, guest_enabled: true, ...overrides } },
     customer: null, routes: { storefront_login_url: '/account/login', root_url: '/' }, request: { path: '/pages/pasteles-personalizados' },
   };
-  return engine(context).parseAndRender(withoutSchema(source), context);
+  // liquidjs no conoce {% form %} de Shopify (casilla de novedades): se sustituye por un <form> simple.
+  const markup = withoutSchema(source).replace(/{%-?\s*form\s+'customer'[\s\S]*?-?%}/, '<form>').replace(/{%-?\s*endform\s*-?%}/, '</form>');
+  return engine(context).parseAndRender(markup, context);
 }
 const how = html => html.match(/<section class="ds-request__how"[\s\S]*?<\/section>/)?.[0] || '';
 
@@ -161,7 +163,7 @@ rendered('D11: «Cómo funciona» va entre la introducción y el formulario, con
   assert.match(block, /<h2 id="DSRequestHow-req">Cómo funciona<\/h2>/);
   assert.equal((block.match(/<li>/g) || []).length, 3);
   assert.match(block, /<ol role="list">/, 'Safari conserva la lista aunque no tenga viñetas');
-  for (const text of ['Cuéntanos tu idea', 'Dayana te envía una propuesta', 'Aceptas y reservas', 'anticipo del 60 %', 'Fulshear, TX', '7 días o más', 'desde 24 horas']) assert.ok(block.includes(text), text);
+  for (const text of ['Cuéntanos tu idea', 'Recibes la cotización', 'En menos de 12 horas', 'Aceptas y reservas', 'anticipo del 60 %', 'Fulshear, TX', '7 días o más', 'desde 24 horas']) assert.ok(block.includes(text), text);
 });
 
 rendered('D11: con el servicio apagado o el título vacío no se muestra; los textos se escapan', async () => {

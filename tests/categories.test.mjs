@@ -153,10 +153,11 @@ rendered('manual cards preserve image overrides, fallback assets, positions and 
   ];
   const html = await render([], {blocks});
   assert.match(html, /ds-r-category ds-r-cookies/);
-  assert.match(html, /ds-r-cookies-category\.png/);
+  // Orden de la imagen: foto del bloque, luego la de la colección y por último el respaldo del tema.
+  assert.match(html, /\/images\/collection/);
   assert.match(html, /\/images\/custom/);
   assert.match(html, /alt="Alt del editor"/);
-  assert.doesNotMatch(html, /\/images\/collection|ds-r-brownie-category\.png/);
+  assert.doesNotMatch(html, /ds-r-cookies-category\.png|ds-r-brownie-category\.png/);
   assert.match(html, /<span>Explorar<img/);
   assert.match(html, /<span>Elegir<img/);
   assert.doesNotMatch(html, /ds-r-category-auto-grid|ds-r-category-auto"/);

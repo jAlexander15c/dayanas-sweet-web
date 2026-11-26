@@ -8,7 +8,13 @@
     {%- assign first_visible = true -%}
     {%- for block in section.blocks -%}
       {%- capture answer -%}
-        {%- if ds_closed == '1' and block.settings.closed_answer != blank -%}
+        {%- if settings.ds_quote_mode -%}
+          {%- comment -%}Modo cotización: se omiten las respuestas sobre tandas.{%- endcomment -%}
+          {%- assign answer_lower = block.settings.answer | downcase -%}
+          {%- unless block.settings.closed_answer != blank or answer_lower contains 'tanda' or answer_lower contains '[' -%}
+            {% render 'ds-batch-text', text: block.settings.answer %}
+          {%- endunless -%}
+        {%- elsif ds_closed == '1' and block.settings.closed_answer != blank -%}
           {% render 'ds-batch-text', text: block.settings.closed_answer %}
         {%- else -%}
           {% render 'ds-batch-text', text: block.settings.answer %}

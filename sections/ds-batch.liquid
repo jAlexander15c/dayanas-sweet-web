@@ -1,3 +1,4 @@
+{%- unless settings.ds_quote_mode -%}
 <section class="ds-batch color-{{ section.settings.color_scheme }}" id="ds-tandas" aria-labelledby="DSBatch-{{ section.id }}">
   <div class="ds-wrap">
     <h2 class="ds-display ds-h2 ds-batch__title" id="DSBatch-{{ section.id }}">{{ section.settings.title | escape }}</h2>
@@ -44,6 +45,7 @@
     {%- endif -%}
   </div>
 </section>
+{%- endunless -%}
 
 {% schema %}
 {

@@ -292,30 +292,52 @@
     "redesign": {
       "type": "ds-redesign-home",
       "blocks": {
-        "cookies": {
+        "pasteles": {
           "type": "category",
           "settings": {
-            "collection": "galletas",
-            "title": "Galletas",
-            "link_label": "Ver galletas",
-            "image_alt": "Caja rosa con galletas de chocolate",
-            "fallback_image": "cookies"
+            "url": "shopify://pages/pasteles-personalizados",
+            "title": "Pasteles de cumpleaños",
+            "link_label": "Cotiza tu pastel",
+            "image_alt": "",
+            "fallback_image": "pastel"
           }
         },
-        "brownies": {
+        "postres": {
           "type": "category",
           "settings": {
-            "collection": "brownies",
-            "title": "Brownies",
-            "link_label": "Ver brownies",
-            "image_alt": "Brownie de chocolate de corteza crujiente",
-            "fallback_image": "brownies"
+            "collection": "postres",
+            "title": "Postres",
+            "link_label": "Ver postres",
+            "image_alt": "",
+            "fallback_image": "plain"
+          }
+        },
+        "salados": {
+          "type": "category",
+          "settings": {
+            "collection": "salados",
+            "title": "Salados",
+            "link_label": "Ver salados",
+            "image_alt": "",
+            "fallback_image": "plain"
+          }
+        },
+        "jugos": {
+          "type": "category",
+          "settings": {
+            "collection": "jugos-y-bebidas",
+            "title": "Jugos y bebidas",
+            "link_label": "Ver jugos y bebidas",
+            "image_alt": "",
+            "fallback_image": "plain"
           }
         }
       },
       "block_order": [
-        "cookies",
-        "brownies"
+        "pasteles",
+        "postres",
+        "salados",
+        "jugos"
       ],
       "settings": {}
     }

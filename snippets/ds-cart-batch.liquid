@@ -16,7 +16,11 @@
   <p class="ds-cart-batch">
     {% render 'ds-icon', name: 'box' %}
     <span>
-      {%- if ds_closed == '1' -%}
+      {%- if settings.ds_quote_mode -%}
+        Ahora trabajamos por cotización.
+        {%- assign quote_page = pages['pasteles-personalizados'] -%}
+        {%- if quote_page.url != blank %} <a href="{{ quote_page.url }}">Cotiza tus dulces</a>{% endif -%}
+      {%- elsif ds_closed == '1' -%}
         {{ settings.ds_batch_closed_text | escape }}
         {%- assign start_text = settings.ds_batch_start | strip -%}
         {%- if start_text != blank %} Apertura de pedidos: {{ start_text | escape }}.{% endif %}

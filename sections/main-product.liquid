@@ -107,6 +107,9 @@
                     </a>
                   </div>
                 {%- when 'price' -%}
+                  {%- if settings.ds_quote_mode -%}
+                    {%- comment -%}Modo cotización: sin precio visible.{%- endcomment -%}
+                  {%- else -%}
                   <div id="price-{{ section.id }}" role="status" {{ block.shopify_attributes }}>
                     {%- render 'price',
                       product: product,
@@ -141,6 +144,7 @@
                       {{ form | payment_terms }}
                     {%- endform -%}
                   </div>
+                  {%- endif -%}
                 {%- when 'inventory' -%}
                   <p
                     class="product__inventory{% if block.settings.text_style == 'uppercase' %} caption-with-letter-spacing{% elsif block.settings.text_style == 'subtitle' %} subtitle{% endif %}{% if product.selected_or_first_available_variant.inventory_management != 'shopify' %} visibility-hidden{% endif %}"
@@ -229,6 +233,9 @@
                     </details>
                   </div>
                 {%- when 'quantity_selector' -%}
+                  {%- if settings.ds_quote_mode -%}
+                    {%- comment -%}Modo cotización: sin cantidad.{%- endcomment -%}
+                  {%- else -%}
                   <div
                     id="Quantity-Form-{{ section.id }}"
                     class="product-form__input product-form__quantity{% if settings.inputs_shadow_vertical_offset != 0 and settings.inputs_shadow_vertical_offset < 0 %} product-form__quantity-top{% endif %}"
@@ -456,6 +463,7 @@
                       </volume-pricing>
                     {%- endif -%}
                   </div>
+                  {%- endif -%}
                 {%- when 'popup' -%}
                   <modal-opener
                     class="product-popup-modal__opener quick-add-hidden"
@@ -495,13 +503,17 @@
                 {%- when 'ds_topping' -%}
                   {%- render 'ds-topping-picker', product: product, block: block, product_form_id: product_form_id -%}
                 {%- when 'buy_buttons' -%}
-                  {%- render 'buy-buttons',
-                    block: block,
-                    product: product,
-                    product_form_id: product_form_id,
-                    section_id: section.id,
-                    show_pickup_availability: true
-                  -%}
+                  {%- if settings.ds_quote_mode -%}
+                    {%- render 'ds-quote-buttons', block: block, product: product -%}
+                  {%- else -%}
+                    {%- render 'buy-buttons',
+                      block: block,
+                      product: product,
+                      product_form_id: product_form_id,
+                      section_id: section.id,
+                      show_pickup_availability: true
+                    -%}
+                  {%- endif -%}
                 {%- when 'rating' -%}
                   {%- if product.metafields.reviews.rating.value != blank -%}
                     <div class="rating-wrapper">

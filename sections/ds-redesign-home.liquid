@@ -7,8 +7,27 @@
   assign batch_title_id = 'ds-r-batch-title-' | append: section.id
   assign menu_title_id = 'ds-r-menu-title-' | append: section.id
   assign closed_text = settings.ds_batch_closed_text | default: section.settings.closed_text
+  assign quote_mode = settings.ds_quote_mode
+  assign quote_page = pages['pasteles-personalizados']
+  assign steps_title_id = 'ds-r-steps-title-' | append: section.id
+  assign contact_title_id = 'ds-r-contact-title-' | append: section.id
+  assign news_title_id = 'ds-r-news-title-' | append: section.id
+  assign wa_digits = settings.ds_whatsapp | remove: ' ' | remove: '-' | remove: '+' | remove: '(' | remove: ')' | remove: '.'
+  assign ig_url = settings.social_instagram_link
+  assign ig_user = ''
+  if ig_url != blank
+    assign ig_user = ig_url | split: 'instagram.com/' | last | split: '?' | first | split: '/' | first
+  endif
+  assign wa_phone = ''
+  if wa_digits != blank
+    assign wa_last = wa_digits | slice: -10, 10
+    assign wa_area = wa_last | slice: 0, 3
+    assign wa_prefix = wa_last | slice: 3, 3
+    assign wa_line = wa_last | slice: 6, 4
+    assign wa_phone = '(' | append: wa_area | append: ') ' | append: wa_prefix | append: '-' | append: wa_line
+  endif
 -%}
-<section class="ds-r-hero{% if ds_closed == '1' %} ds-r-hero--closed{% endif %}" id="inicio" aria-labelledby="{{ hero_title_id }}">
+<section class="ds-r-hero{% if quote_mode %} ds-r-hero--quote{% elsif ds_closed == '1' %} ds-r-hero--closed{% endif %}" id="inicio" aria-labelledby="{{ hero_title_id }}">
   {%- if section.settings.hero_image != blank -%}
     {%- comment -%} En móvil la foto ocupa el ancho completo con 235 px de alto; en escritorio, toda la portada. {%- endcomment -%}
     {{ section.settings.hero_image | image_url: width: 1920 | image_tag: widths: '480, 750, 1080, 1440, 1920', sizes: '100vw', class: 'ds-r-hero-photo', alt: section.settings.hero_image_alt, loading: 'eager', fetchpriority: 'high', preload: true }}
@@ -19,6 +38,17 @@
   {%- endif -%}
   <div class="ds-r-hero-inner">
     <div class="ds-r-hero-copy">
+      {%- if quote_mode -%}
+      <h1 id="{{ hero_title_id }}" class="ds-r-quote-title">{{ section.settings.quote_title | escape }} <em>{{ section.settings.quote_title_em | escape }}</em></h1>
+      <p>{{ section.settings.quote_text | escape }}</p>
+      <div class="ds-r-hero-actions">
+        {%- if quote_page != blank -%}
+          <a class="ds-r-button" href="{{ quote_page.url }}">{{ section.settings.quote_cta | escape }}<img class="ds-r-light-icon" src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="22" height="22"></a>
+        {%- endif -%}
+        <a class="ds-r-button ds-r-button--secondary" href="#menu">{{ section.settings.quote_secondary | escape }}</a>
+      </div>
+      <p class="ds-r-quote-note">{{ section.settings.quote_note | escape }}</p>
+      {%- else -%}
       <h1 id="{{ hero_title_id }}"><span>{{ section.settings.hero_line_1 | escape }}</span><span>{{ section.settings.hero_line_2 | escape }}</span><em>{{ section.settings.hero_line_3 | escape }}</em></h1>
       <p>{{ section.settings.hero_text | escape }}</p>
       {%- comment -%} D03: con la tanda cerrada (mismo dato que muestra el formulario del correo) el aviso va antes de los botones. {%- endcomment -%}
@@ -36,9 +66,42 @@
           <button class="ds-r-text-link" type="button" data-ds-r-open="how">{{ section.settings.how_label | escape }}</button>
         {%- endif -%}
       </div>
+      {%- endif -%}
     </div>
   </div>
 </section>
+{%- capture ds_newsletter_form -%}
+  {%- assign newsletter_class = 'ds-r-newsletter' -%}
+  {%- if quote_mode -%}{%- assign newsletter_class = 'ds-r-newsletter ds-r-newsletter--card' -%}{%- endif -%}
+  {% form 'customer', id: newsletter_id, class: newsletter_class %}
+    <input type="hidden" name="contact[tags]" value="newsletter">
+    <label class="{% unless quote_mode %}ds-r-sr-only{% else %}ds-r-news-label{% endunless %}" for="ds-r-email">{{ section.settings.email_label | escape }}</label>
+    <div class="ds-r-email-row">
+      <img src="{{ 'ds-r-icon-mail.svg' | asset_url }}" alt="" width="19" height="19">
+      <input id="ds-r-email" name="contact[email]" type="email" value="{{ form.email | escape }}" required autocomplete="email" autocorrect="off" autocapitalize="off" placeholder="{{ section.settings.email_label | escape }}" aria-describedby="{{ status_id }}"{% if form.errors %} aria-invalid="true"{% endif %}>
+      <button type="submit">{% if quote_mode %}{{ section.settings.news_button | escape }}{% else %}{{ section.settings.signup_label | escape }}{% endif %}</button>
+    </div>
+    <div class="ds-r-signup-status" id="{{ status_id }}" role="status" aria-live="polite">
+      {%- if form.posted_successfully? -%}
+        <p>{% if quote_mode %}{{ section.settings.news_success | escape }}{% else %}{{ section.settings.signup_success | escape }}{% endif %}</p>
+      {%- elsif form.errors -%}
+        {{ form.errors | default_errors }}
+      {%- endif -%}
+    </div>
+  {% endform %}
+{%- endcapture -%}
+{%- if quote_mode -%}
+<section class="ds-r-quote-steps" aria-labelledby="{{ steps_title_id }}">
+  <div class="ds-r-quote-steps-inner">
+    <h2 id="{{ steps_title_id }}">{{ section.settings.steps_title | escape }}</h2>
+    <ol role="list">
+      <li><span class="ds-r-quote-step-num" aria-hidden="true">1</span><p>{{ section.settings.step_1 }}</p></li>
+      <li><span class="ds-r-quote-step-num" aria-hidden="true">2</span><p>{{ section.settings.step_2 }}</p></li>
+      <li><span class="ds-r-quote-step-num" aria-hidden="true">3</span><p>{{ section.settings.step_3 }}</p></li>
+    </ol>
+  </div>
+</section>
+{%- else -%}
 <section class="ds-r-batch" aria-labelledby="{{ batch_title_id }}">
   <div class="ds-r-batch-inner">
     <div class="ds-r-batch-mark"><img src="{{ 'ds-r-cupcake.png' | asset_url }}" width="64" height="76" alt="" loading="lazy"></div>
@@ -54,36 +117,49 @@
       {%- endif -%}
     </div>
     {%- if ds_closed == '1' -%}
-      {%- assign newsletter_class = 'ds-r-newsletter' -%}
-      {% form 'customer', id: newsletter_id, class: newsletter_class %}
-        <input type="hidden" name="contact[tags]" value="newsletter">
-        <label class="ds-r-sr-only" for="ds-r-email">{{ section.settings.email_label | escape }}</label>
-        <div class="ds-r-email-row">
-          <img src="{{ 'ds-r-icon-mail.svg' | asset_url }}" alt="" width="19" height="19">
-          <input id="ds-r-email" name="contact[email]" type="email" value="{{ form.email | escape }}" required autocomplete="email" autocorrect="off" autocapitalize="off" placeholder="{{ section.settings.email_label | escape }}" aria-describedby="{{ status_id }}"{% if form.errors %} aria-invalid="true"{% endif %}>
-          <button type="submit">{{ section.settings.signup_label | escape }}</button>
-        </div>
-        <div class="ds-r-signup-status" id="{{ status_id }}" role="status" aria-live="polite">
-          {%- if form.posted_successfully? -%}
-            <p>{{ section.settings.signup_success | escape }}</p>
-          {%- elsif form.errors -%}
-            {{ form.errors | default_errors }}
-          {%- endif -%}
-        </div>
-      {% endform %}
+      {{ ds_newsletter_form }}
     {%- else -%}
       <a class="ds-r-button" href="#menu">{{ section.settings.open_cta | escape }}<img class="ds-r-light-icon" src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="22" height="22"></a>
     {%- endif -%}
   </div>
 </section>
+{%- endif -%}
 <section class="ds-r-menu-section" id="menu" aria-labelledby="{{ menu_title_id }}">
   <div class="ds-r-menu-heading">
     <h2 id="{{ menu_title_id }}">{{ section.settings.menu_title | escape }}</h2>
+    {%- if quote_mode -%}
+    <p>{{ section.settings.quote_menu_text | escape }}</p>
+    {%- else -%}
     <p>{{ section.settings.menu_text | escape }}</p>
     <a class="ds-r-button ds-r-menu-all" href="{{ routes.all_products_collection_url }}">{{ section.settings.menu_cta | escape }}<img src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="22" height="22"></a>
+    {%- endif -%}
   </div>
+  {%- if quote_mode -%}
+  {% render 'ds-category-grid', blocks: section.blocks, hide_empty: true, show_count: section.settings.show_count, heading_id: menu_title_id, home_only: true, use_blocks: true %}
+  {%- else -%}
   {% render 'ds-category-grid', blocks: section.blocks, hide_empty: section.settings.hide_empty, show_count: section.settings.show_count, heading_id: menu_title_id, home_only: true %}
+  {%- endif -%}
 </section>
+{%- if quote_mode -%}
+  {%- if wa_phone != blank or ig_url != blank -%}
+  <section class="ds-r-contact-card" id="contacto-rapido" aria-labelledby="{{ contact_title_id }}">
+    <h2 id="{{ contact_title_id }}">{{ section.settings.contact_title | escape }}</h2>
+    <p>{{ section.settings.contact_text | escape }}</p>
+    {%- if wa_phone != blank -%}
+      <a class="ds-r-contact-link" href="https://wa.me/{{ wa_digits }}" target="_blank" rel="noopener"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19z"></path><path d="M9 9.5c.3 2 2.5 4.3 4.6 4.6l1.2-1.2 1.7.8-.4 1.6c-3.6.2-7.4-3.6-7.2-7.2l1.6-.4.8 1.7z"></path></svg>WhatsApp {{ wa_phone }}<span class="ds-r-sr-only"> (se abre en una pestaña nueva)</span></a>
+    {%- endif -%}
+    {%- if ig_url != blank -%}
+      <a class="ds-r-contact-link" href="{{ ig_url | escape }}" target="_blank" rel="noopener"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><rect x="4" y="4" width="16" height="16" rx="5"></rect><circle cx="12" cy="12" r="3.5"></circle><circle cx="17" cy="7" r=".6"></circle></svg>Instagram{% if ig_user != blank %} @{{ ig_user | escape }}{% endif %}<span class="ds-r-sr-only"> (se abre en una pestaña nueva)</span></a>
+    {%- endif -%}
+  </section>
+  {%- endif -%}
+  <section class="ds-r-news-card" aria-labelledby="{{ news_title_id }}">
+    <h2 id="{{ news_title_id }}">{{ section.settings.news_title | escape }}</h2>
+    <p>{{ section.settings.news_text | escape }}</p>
+    {{ ds_newsletter_form }}
+    <p class="ds-r-news-note">{{ section.settings.news_note | escape }}</p>
+  </section>
+{%- endif -%}
 
 {% schema %}
 {
@@ -115,18 +191,38 @@
     {"type":"checkbox","id":"hide_empty","label":"Ocultar categorías sin productos disponibles","default":false},
     {"type":"text","id":"menu_title","label":"Título del menú","default":"Elige tu antojo"},
     {"type":"textarea","id":"menu_text","label":"Presentación del menú","default":"Sabores de Cuba y Estados Unidos, con nuestro toque, desde Houston."},
-    {"type":"text","id":"menu_cta","label":"Botón del catálogo","default":"Ver todo el menú"}
+    {"type":"text","id":"menu_cta","label":"Botón del catálogo","default":"Ver todo el menú"},
+    {"type":"header","content":"Venta por cotización","info":"Solo se muestran con Ajustes del tema > DS · Pedidos y envíos > Venta por cotización activada."},
+    {"type":"text","id":"quote_title","label":"Titular","default":"Dulces cubanos para cada"},
+    {"type":"text","id":"quote_title_em","label":"Titular · palabra destacada","default":"celebración."},
+    {"type":"textarea","id":"quote_text","label":"Presentación","default":"Pasteles de cumpleaños, postres y salados cubanos, hechos a mano en Fulshear."},
+    {"type":"text","id":"quote_cta","label":"Botón principal","default":"Cotiza tus dulces"},
+    {"type":"text","id":"quote_secondary","label":"Botón secundario","default":"Mira lo que preparamos"},
+    {"type":"text","id":"quote_note","label":"Nota bajo los botones","default":"Te enviamos tu cotización en menos de 12 horas."},
+    {"type":"text","id":"steps_title","label":"Título de los pasos","default":"Así se cotiza"},
+    {"type":"inline_richtext","id":"step_1","label":"Paso 1","default":"<strong>Cuéntanos tu pastel</strong> y, si quieres, los postres o salados que quieras sumar."},
+    {"type":"inline_richtext","id":"step_2","label":"Paso 2","default":"<strong>Dayana te envía la cotización</strong> en menos de 12 horas."},
+    {"type":"inline_richtext","id":"step_3","label":"Paso 3","default":"<strong>Aceptas y reservas tu fecha.</strong> Recoges en Fulshear, TX."},
+    {"type":"textarea","id":"quote_menu_text","label":"Presentación del menú","default":"Mira lo que preparamos y súmalo a la cotización de tu pastel."},
+    {"type":"text","id":"contact_title","label":"Contacto · título","default":"¿Prefieres escribirnos?"},
+    {"type":"text","id":"contact_text","label":"Contacto · texto","default":"Respondemos en menos de 1 hora."},
+    {"type":"text","id":"news_title","label":"Novedades · título","default":"Novedades y ofertas"},
+    {"type":"textarea","id":"news_text","label":"Novedades · texto","default":"Sabores nuevos, fechas especiales y ofertas, directo a tu correo."},
+    {"type":"text","id":"news_button","label":"Novedades · botón","default":"Suscribirme"},
+    {"type":"text","id":"news_note","label":"Novedades · nota","default":"Puedes darte de baja cuando quieras."},
+    {"type":"textarea","id":"news_success","label":"Novedades · suscripción confirmada","default":"¡Listo! Te escribiremos con novedades y ofertas."}
   ],
   "max_blocks": 12,
   "blocks": [{
     "type":"category","name":"Categoría","limit":12,
     "settings":[
       {"type":"collection","id":"collection","label":"Colección"},
+      {"type":"url","id":"url","label":"Enlace si no hay colección"},
       {"type":"text","id":"title","label":"Título de respaldo","default":"Galletas","info":"Si hay colección seleccionada, se muestra su título real."},
       {"type":"text","id":"link_label","label":"Texto del enlace","default":"Ver galletas"},
       {"type":"image_picker","id":"image","label":"Foto de categoría"},
       {"type":"text","id":"image_alt","label":"Descripción de la foto","default":"Caja rosa con galletas de chocolate"},
-      {"type":"select","id":"fallback_image","label":"Foto de respaldo","default":"cookies","options":[{"value":"cookies","label":"Galletas"},{"value":"brownies","label":"Brownies"}]}
+      {"type":"select","id":"fallback_image","label":"Foto de respaldo","default":"cookies","options":[{"value":"cookies","label":"Galletas"},{"value":"brownies","label":"Brownies"},{"value":"pastel","label":"Pastel (fondo rosa con cupcake)"},{"value":"plain","label":"Fondo rosa liso"}]}
     ]
   }],
   "presets":[{"name":"DS · Portada opción 1","blocks":[{"type":"category","settings":{"title":"Galletas","link_label":"Ver galletas","fallback_image":"cookies","image_alt":"Caja rosa con galletas de chocolate"}},{"type":"category","settings":{"title":"Brownies","link_label":"Ver brownies","fallback_image":"brownies","image_alt":"Brownie de chocolate de corteza crujiente"}}]}]

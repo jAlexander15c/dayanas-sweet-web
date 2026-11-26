@@ -19,7 +19,7 @@
     endif
   endfor
 -%}
-{%- if visible_count > 0 -%}
+{%- if visible_count > 0 and settings.ds_quote_mode != true -%}
 {%- capture ds_items -%}
   {%- for block in section.blocks -%}
     {%- liquid

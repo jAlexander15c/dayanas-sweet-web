@@ -29,7 +29,7 @@
 <div class="ds-pbatch">
   <div id="DSBatchStock-{{ section.id }}" aria-live="polite">
     {%- comment -%}Con la tanda cerrada, el aviso lo muestra buy-buttons en lugar del botón.{%- endcomment -%}
-    {%- if ds_closed == '1' -%}
+    {%- if ds_closed == '1' or settings.ds_quote_mode -%}
     {%- elsif variant.available == false -%}
       <p class="ds-pbatch__stock is-out"><strong>Agotado para este envío.</strong> Vuelve con el próximo menú.</p>
     {%- elsif tracked and variant.inventory_quantity > 0 and variant.inventory_quantity <= settings.ds_low_stock -%}

@@ -1471,6 +1471,19 @@
     "name": "DS · Pedidos y envíos",
     "settings": [
       {
+        "type": "checkbox",
+        "id": "ds_quote_mode",
+        "label": "Venta por cotización",
+        "default": false,
+        "info": "Oculta precios, carrito y avisos de tanda, y muestra los botones para cotizar. Desactívalo para volver a vender por tandas."
+      },
+      {
+        "type": "text",
+        "id": "ds_whatsapp",
+        "label": "WhatsApp (solo números, con código de país)",
+        "placeholder": "13462348436"
+      },
+      {
         "type": "paragraph",
         "content": "Cambia las fechas aquí una sola vez y guarda. Se comparten en los avisos, la portada, los productos y el carrito. Puedes dejar los pedidos cerrados y las fechas vacías hasta preparar la próxima apertura."
       },

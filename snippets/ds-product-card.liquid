@@ -17,6 +17,9 @@
   unless product.available
     assign sold_out = true
   endunless
+  if settings.ds_quote_mode
+    assign sold_out = false
+  endif
   assign badge = ''
   for tag in product.tags
     if tag contains 'badge:'
@@ -86,11 +89,15 @@
     {%- if excerpt != blank -%}<p class="ds-card__desc">{{ excerpt }}</p>{%- endif -%}
     {%- if low -%}<p class="ds-card__stock">Quedan {{ variant.inventory_quantity }} en esta tanda</p>{%- endif -%}
     <div class="ds-card__foot">
+      {%- unless settings.ds_quote_mode -%}
       <span class="ds-card__price">
         {%- if product.price_varies -%}Desde {% endif -%}
         {{ card_price | money }}
       </span>
-      {%- if card_quick_add == 'standard' -%}
+      {%- endunless -%}
+      {%- if settings.ds_quote_mode -%}
+        <a class="ds-add" href="{{ product.url }}" aria-label="Ver y cotizar {{ product.title | escape }}">Ver y cotizar</a>
+      {%- elsif card_quick_add == 'standard' -%}
       {%- if sold_out or ds_closed == '1' -%}
         <span class="ds-add is-disabled">{% if sold_out %}Agotado{% else %}Cerrado{% endif %}</span>
       {%- elsif requires_topping == '1' -%}

@@ -9,7 +9,9 @@
   assign bake_text = settings.ds_batch_bake | strip
   assign ship_text = settings.ds_batch_ship | strip
 -%}
-{%- if ds_closed == '1' -%}
+{%- if settings.ds_quote_mode -%}
+  {%- comment -%}Modo cotización: sin fechas de tanda.{%- endcomment -%}
+{%- elsif ds_closed == '1' -%}
   {%- if start_text != blank -%}
     <li>{% render 'ds-icon', name: 'clock' %}<span>Apertura de pedidos: {{ start_text | escape }}</span></li>
   {%- endif -%}

@@ -12,7 +12,9 @@
   assign closed = false
   assign close_text = settings.ds_batch_close | strip
   assign ship_text = settings.ds_batch_ship | strip
-  if settings.ds_batch_open != true or close_text == blank or ship_text == blank
+  if settings.ds_quote_mode
+    assign closed = true
+  elsif settings.ds_batch_open != true or close_text == blank or ship_text == blank
     assign closed = true
   elsif settings.ds_batch_close_at != blank
     assign close_s = settings.ds_batch_close_at | date: '%s'

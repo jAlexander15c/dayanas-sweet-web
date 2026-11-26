@@ -1,0 +1,21 @@
+{% comment %}
+  Botones de la ficha en modo cotización (ajuste ds_quote_mode), en lugar de buy-buttons.
+  Accepts:
+  - product: {Object} producto.
+  - block: {Object} bloque (para shopify_attributes).
+  Usage:
+  {% render 'ds-quote-buttons', block: block, product: product %}
+{% endcomment %}
+{%- liquid
+  assign quote_page = pages['pasteles-personalizados']
+  assign wa_digits = settings.ds_whatsapp | remove: ' ' | remove: '-' | remove: '+' | remove: '(' | remove: ')' | remove: '.'
+-%}
+<div class="ds-quote-buttons" {{ block.shopify_attributes }}>
+  {%- if quote_page != blank -%}
+    <a class="ds-r-button ds-quote-buttons__primary" href="{{ quote_page.url }}?agregar={{ product.title | url_encode }}">Agrégalo a tu cotización<img class="ds-r-light-icon" src="{{ 'ds-r-icon-arrow-right.svg' | asset_url }}" alt="" width="22" height="22"></a>
+    <p class="ds-quote-buttons__note">Lo anotamos en tu solicitud. Dayana te envía el precio en la cotización, en menos de 12 horas.</p>
+  {%- endif -%}
+  {%- if wa_digits != blank -%}
+    <a class="ds-r-button ds-r-button--secondary ds-quote-buttons__secondary" href="https://wa.me/{{ wa_digits }}?text={{ 'Hola, quiero preguntar por ' | append: product.title | url_encode }}" target="_blank" rel="noopener">Pregúntanos por WhatsApp<span class="ds-r-sr-only"> (se abre en una pestaña nueva)</span></a>
+  {%- endif -%}
+</div>
