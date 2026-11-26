@@ -341,3 +341,10 @@ rendered('A2b: carrito y drawer sin precios ni total en modo cotización; con ta
     }
   }
 });
+// Verificación Codex: el bloque de cantidad de featured-product tampoco muestra precio por unidad ni por volumen.
+test('A2c: featured-product protege precio, precio por unidad y volumen en modo cotización', () => {
+  const source = read('sections/featured-product.liquid');
+  assert.match(source, /{%- unless settings\.ds_quote_mode -%}\s*{%- render 'price',/);
+  assert.equal(source.match(/{%- if product\.quantity_price_breaks_configured\? and settings\.ds_quote_mode != true -%}/g)?.length, 3);
+  assert.doesNotMatch(source, /{%- if product\.quantity_price_breaks_configured\? -%}/);
+});

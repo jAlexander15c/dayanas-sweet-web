@@ -128,7 +128,7 @@
                     -%}
                     {%- endunless -%}
                   </div>
-                  {%- if product.quantity_price_breaks_configured? -%}
+                  {%- if product.quantity_price_breaks_configured? and settings.ds_quote_mode != true -%}
                     <div class="volume-pricing-note" id="Volume-Note-{{ section.id }}">
                       <span>{{ 'products.product.volume_pricing.note' | t }}</span>
                     </div>
@@ -241,7 +241,7 @@
                           assign current_qty_for_volume_pricing = cart_qty | plus: product.selected_or_first_available_variant.quantity_rule.increment
                         endif
                       -%}
-                      {%- if product.quantity_price_breaks_configured? -%}
+                      {%- if product.quantity_price_breaks_configured? and settings.ds_quote_mode != true -%}
                         <price-per-item
                           id="Price-Per-Item-{{ section.id }}"
                           data-section-id="{{ section.id }}"
@@ -348,7 +348,7 @@
                         </span>
                       {%- endif -%}
                     </div>
-                    {%- if product.quantity_price_breaks_configured? -%}
+                    {%- if product.quantity_price_breaks_configured? and settings.ds_quote_mode != true -%}
                       <volume-pricing class="parent-display" id="Volume-{{ section.id }}">
                         {%- if product.selected_or_first_available_variant.quantity_price_breaks.size > 0 -%}
                           <span class="caption-large">{{ 'products.product.volume_pricing.title' | t }}</span>
