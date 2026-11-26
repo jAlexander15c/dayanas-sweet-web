@@ -91,7 +91,7 @@
                       </a>
                     </facet-remove>
                   {%- endfor -%}
-                  {% if filter.type == 'price_range' %}
+                  {% if filter.type == 'price_range' and settings.ds_quote_mode != true %}
                     {% assign min = filter.min_value.value %}
                     {% assign max = filter.max_value.value %}
                     {%- if min != null or max != null -%}
@@ -128,7 +128,10 @@
                 endif
               %}
 
-              {% case filter.type %}
+              {%- comment -%} Modo cotización: sin filtro de precio. {%- endcomment -%}
+              {%- assign ds_filter_type = filter.type -%}
+              {%- if settings.ds_quote_mode and ds_filter_type == 'price_range' -%}{%- assign ds_filter_type = 'oculto' -%}{%- endif -%}
+              {% case ds_filter_type %}
                 {% when 'boolean', 'list' %}
                   <details
                     id="Details-{{ filter.param_name | escape }}-{{ section.id }}"
@@ -357,7 +360,7 @@
                     </a>
                   </facet-remove>
                 {%- endfor -%}
-                {% if filter.type == 'price_range' %}
+                {% if filter.type == 'price_range' and settings.ds_quote_mode != true %}
                   {% assign min = filter.min_value.value %}
                   {% assign max = filter.max_value.value %}
                   {%- if min != null or max != null -%}
@@ -523,7 +526,10 @@
                     endif
                   %}
 
-                  {% case filter.type %}
+                  {%- comment -%} Modo cotización: sin filtro de precio. {%- endcomment -%}
+              {%- assign ds_filter_type = filter.type -%}
+              {%- if settings.ds_quote_mode and ds_filter_type == 'price_range' -%}{%- assign ds_filter_type = 'oculto' -%}{%- endif -%}
+              {% case ds_filter_type %}
                     {% when 'boolean', 'list' %}
                       <details
                         id="Details-Mobile-{{ filter.param_name | escape }}-{{ section.id }}"
@@ -803,7 +809,7 @@
         </facet-remove>
       {%- endfor -%}
 
-      {%- if filter.type == 'price_range' -%}
+      {%- if filter.type == 'price_range' and settings.ds_quote_mode != true -%}
         {% assign min = filter.min_value.value %}
         {% assign max = filter.max_value.value %}
         {%- if min != null or max != null -%}
@@ -916,7 +922,7 @@
               </facet-remove>
             {%- endfor -%}
 
-            {%- if filter.type == 'price_range' -%}
+            {%- if filter.type == 'price_range' and settings.ds_quote_mode != true -%}
               {% assign min = filter.min_value.value %}
               {% assign max = filter.max_value.value %}
               {%- if min != null or max != null -%}

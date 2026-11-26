@@ -28,8 +28,11 @@ export function renderFixture({ guest = false } = {}) {
   markup = markup.replace(/{%[\s\S]*?%}/g, '');
   return `<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0}${readFileSync('assets/ds-celebracion-solicitud.css', 'utf8')}</style></head><body>${markup}<script>
     window.serviceCalls = []; window.failPhoto = true; window.calendarDays = []; window.failCalendar = false;
+    // ?fallar-envio=1: la primera creación de la solicitud se corta (una sola vez por pestaña, también tras recargar).
+    window.failCreate = location.search.includes('fallar-envio') && !sessionStorage.getItem('ds-test-create-failed');
     window.fetch = async (url, options = {}) => {
       window.serviceCalls.push({url, options});
+      if (String(url).endsWith('/guest/requests') && window.failCreate) { window.failCreate = false; sessionStorage.setItem('ds-test-create-failed', '1'); throw Error('Offline'); }
       if (String(url).startsWith('/contact')) return {ok:true, url:'http://127.0.0.1/?customer_posted=true', json:async()=>({})};
       if (url.endsWith('/calendar')) { if(window.failCalendar)throw Error('Calendar offline'); return {ok:true, json:async()=>({days:window.calendarDays})}; }
       if (!options.method) return {ok:true, json:async()=>({requests:[]})};

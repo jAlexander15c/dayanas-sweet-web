@@ -44,7 +44,12 @@ test('cotización con pastel y extras opcionales; el formulario anterior sigue i
  const legacy=s.createRequest(customer,input,'legacy');
  assert.deepEqual(legacy.details,input.details);
  assert.equal(Object.hasOwn(legacy.details,'cake'),false);
- assert.throws(()=>s.createRequest(customer,{...input,details:{...input.details,extras:'x'}},'extras-without-cake'),e=>e.code==='VALIDATION');
+ // Cada clave nueva es opcional por separado: cake=true y extras='' por defecto.
+ assert.deepEqual(s.createRequest(customer,{...input,details:{...input.details,extras:'Croquetas: 30\nBrownies: 12'}},'extras-only').details,
+  {...input.details,cake:true,extras:'Croquetas: 30\nBrownies: 12'});
+ assert.deepEqual(s.createRequest(customer,{...input,details:{...input.details,cake:true}},'cake-only').details,withCake);
+ assert.throws(()=>s.createRequest(customer,{...input,details:{...input.details,cake:true,extras:'x',otra:1}},'extra-key'),e=>e.code==='VALIDATION');
+ assert.throws(()=>s.createRequest(customer,{...input,details:{...input.details,extras:5}},'extras-number'),e=>e.code==='VALIDATION');
  } finally {s.close();}
 });
 test('photo bytes are private, idempotent, capped and absent from JSON snapshots',()=>{

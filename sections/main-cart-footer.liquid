@@ -47,7 +47,7 @@
             {%- when 'subtotal' -%}
               <div class="js-contents" {{ block.shopify_attributes }}>
                 <div>
-                  {%- if cart.cart_level_discount_applications.size > 0 -%}
+                  {%- if cart.cart_level_discount_applications.size > 0 and settings.ds_quote_mode != true -%}
                     <ul class="discounts list-unstyled" role="list" aria-label="{{ 'customer.order.discount' | t }}">
                       {%- for discount in cart.cart_level_discount_applications -%}
                         <li class="discounts__discount discounts__discount--position">
@@ -60,10 +60,13 @@
                   {%- endif -%}
                 </div>
 
+                {%- comment -%} Modo cotización: sin total en el carrito. {%- endcomment -%}
+                {%- unless settings.ds_quote_mode -%}
                 <div class="totals">
                   <h2 class="totals__total">{{ 'sections.cart.estimated_total' | t }}</h2>
                   <p class="totals__total-value">{{ cart.total_price | money_with_currency }}</p>
                 </div>
+                {%- endunless -%}
 
                 <small class="tax-note caption-large rte">
                   {%- if cart.duties_included and cart.taxes_included -%}

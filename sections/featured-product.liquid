@@ -118,6 +118,7 @@
                   </h2>
                 {%- when 'price' -%}
                   <div id="price-{{ section.id }}" role="status" {{ block.shopify_attributes }}>
+                    {%- unless settings.ds_quote_mode -%}
                     {%- render 'price',
                       product: product,
                       placeholder: placeholder,
@@ -125,6 +126,7 @@
                       show_badges: true,
                       price_class: 'price--large'
                     -%}
+                    {%- endunless -%}
                   </div>
                   {%- if product.quantity_price_breaks_configured? -%}
                     <div class="volume-pricing-note" id="Volume-Note-{{ section.id }}">

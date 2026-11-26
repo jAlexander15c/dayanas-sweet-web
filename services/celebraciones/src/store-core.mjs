@@ -100,12 +100,15 @@ function proposalInput(input, defaultMode) {
 }
 
 function detailsInput(value) {
-  // Formulario nuevo: trae `cake` y `extras` (postres o salados). El anterior, sin esas claves, sigue igual.
-  const extended = !!value && typeof value === 'object' && Object.hasOwn(value, 'cake');
-  const base = ['pickupAt', 'urgent', 'tiers', 'coating', 'decorations'];
-  object(value, extended ? [...base, 'cake', 'extras'] : base);
-  if (extended && typeof value.cake !== 'boolean') fail('VALIDATION');
-  const extras = extended ? text(value.extras, { empty: true, limit: 2000 }) : '';
+  // Formulario nuevo: puede traer `cake` y/o `extras` (postres o salados), cada una opcional
+  // (cake=true y extras='' por defecto). El anterior, sin ninguna de las dos, sigue igual.
+  const isObject = !!value && typeof value === 'object' && !Array.isArray(value);
+  const optional = isObject ? ['cake', 'extras'].filter(key => Object.hasOwn(value, key)) : [];
+  const extended = optional.length > 0;
+  object(value, ['pickupAt', 'urgent', 'tiers', 'coating', 'decorations', ...optional]);
+  if (Object.hasOwn(value, 'cake') && typeof value.cake !== 'boolean') fail('VALIDATION');
+  const cake = value.cake !== false;
+  const extras = Object.hasOwn(value, 'extras') ? text(value.extras, { empty: true, limit: 2000 }) : '';
   const pickupTime = Date.parse(value.pickupAt);
   if (typeof value.pickupAt !== 'string' || !/^\d{4}-\d{2}-\d{2}T.*Z$/.test(value.pickupAt) || !Number.isFinite(pickupTime) || typeof value.urgent !== 'boolean'
       || pickupTime < Date.now() + (value.urgent ? 1 : 7) * 86400000 || pickupTime > Date.now() + 366 * 86400000) fail('VALIDATION');
@@ -113,7 +116,7 @@ function detailsInput(value) {
   const minutes = Number(parts.hour)*60+Number(parts.minute);
   if(minutes<480 || minutes>1080) fail('VALIDATION');
   const pickupAt = new Date(pickupTime).toISOString();
-  if (extended && value.cake === false) {
+  if (!cake) {
     // Sin pastel: no se aceptan datos del pastel y los postres o salados son obligatorios.
     if (!Array.isArray(value.tiers) || value.tiers.length !== 0 || !Array.isArray(value.decorations) || value.decorations.length !== 0
         || value.coating !== '' || !extras) fail('VALIDATION');

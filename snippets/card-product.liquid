@@ -262,7 +262,7 @@
                     >
                       {{- 'icon-close.svg' | inline_asset_content -}}
                     </button>
-                    {%- if card_product.selected_or_first_available_variant.quantity_price_breaks.size > 0 -%}
+                    {%- if card_product.selected_or_first_available_variant.quantity_price_breaks.size > 0 and settings.ds_quote_mode != true -%}
                       <volume-pricing class="parent-display">
                         <ul class="list-unstyled">
                           <li>

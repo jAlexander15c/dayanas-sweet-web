@@ -320,3 +320,24 @@ test('A7: el ícono de WhatsApp mide 44 px y el CSS respeta movimiento reducido 
   assert.doesNotMatch(added, /font-weight:\s*(700|800|900)/);
   assert.doesNotMatch(added, /#(?:d03a67|b02c55|fbe3ec|9c7a88|e5c8d4|3a2430)\b/i, 'solo tokens del tema, no los hex de la maqueta');
 });
+
+// Hallazgo P1 de la revisión Codex: /cart y el drawer no muestran importes en modo cotización.
+rendered('A2b: carrito y drawer sin precios ni total en modo cotización; con tandas siguen igual', async () => {
+  const money = value => '$' + (Number(value || 0) / 100).toFixed(2);
+  const product = {id: 12, title: 'Brownie', url: '/products/brownie', price: 1200, available: true, has_only_default_variant: true};
+  const item = {index: 1, key: 'key', product, url: product.url, quantity: 2, original_price: 1200, final_price: 1200, original_line_price: 2400, final_line_price: 2400,
+    variant: {id: 7, price: 1200, quantity_rule: {min: 1, increment: 1, max: null}, quantity_price_breaks: [{minimum_quantity: 5, price: 1000}]}, line_level_discount_allocations: [], properties: []};
+  const cart = {items: [item], item_count: 2, total_price: 2400, cart_level_discount_applications: [{title: 'Promo', total_allocated_amount: 300}], currency: {iso_code: 'USD'}};
+  for (const quote of [true, false]) {
+    const context = {settings: {...quoteSettings, ds_quote_mode: quote, ds_batch_open: !quote, cart_type: 'drawer'}, cart, pages, routes, request: {}, shop: {policies: []},
+      section: {id: 'cart', settings: {}, blocks: [{type: 'subtotal', settings: {}}, {type: 'buttons', settings: {}}]}};
+    const liquid = engine(context);
+    liquid.registerFilter('money', money); liquid.registerFilter('money_with_currency', money);
+    for (const path of ['sections/main-cart-items.liquid', 'sections/main-cart-footer.liquid', 'snippets/cart-drawer.liquid']) {
+      const source = withoutSchema(read(path)).replace(/{%-?\s*style\s*-?%}/g, '<style>').replace(/{%-?\s*endstyle\s*-?%}/g, '</style>');
+      const text = clean((await liquid.parseAndRender(source, context)).replace(/<style[\s\S]*?<\/style>/g, ''));
+      if (quote) assert.doesNotMatch(text, /\$\d+\.\d{2}/, `${path}: sin importes en modo cotización`);
+      else assert.match(text, /\$24\.00/, `${path}: con tandas, el importe sigue visible`);
+    }
+  }
+});

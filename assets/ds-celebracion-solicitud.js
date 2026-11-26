@@ -173,6 +173,7 @@
     const storageKey = `ds-celebracion-photo-recovery:${guest ? 'guest' : root.dataset.customerKey}`;
     let recovery;
     try { recovery = JSON.parse(global.sessionStorage.getItem(storageKey)); } catch (_) { /* Storage may be unavailable. */ }
+    const newsletterKey = `${storageKey}:novedades`;
     const persist = record => { try { if (record) global.sessionStorage.setItem(storageKey, JSON.stringify(record)); else global.sessionStorage.removeItem(storageKey); } catch (_) { /* In-memory retry still works. */ } };
     const selection = { diameter: 8, tiers: [{ sponges: ['Vainilla', 'Chocolate'], fillings: ['Guayaba', 'Nutella'] }], coating: 'Buttercream', decorations: [], comments: '', cake: true, extras: '' };
     const secondTier = { sponges: ['Vainilla', 'Vainilla'], fillings: ['Dulce de leche', 'Dulce de leche'] };
@@ -213,9 +214,18 @@
           newsletterSent = true;
           subscribe(state.intent?.contact?.email || state.snapshot?.contact?.email || q('[data-newsletter-form] [name="contact[email]"]')?.value || '');
         }
+        rememberNewsletter(false);
       }
     }, persist, recovery, { guest });
     if (!controller.state.id && !controller.state.intent) recovery = null;
+    // La casilla de novedades se guarda junto a la recuperación: si el envío se completa al recargar,
+    // se respeta lo que la clienta marcó (y nada si no la marcó).
+    function rememberNewsletter(checked) {
+      try { if (checked) global.sessionStorage.setItem(newsletterKey, '1'); else global.sessionStorage.removeItem(newsletterKey); } catch (_) { /* Sin almacenamiento, solo vale la casilla visible. */ }
+    }
+    if (recovery && q('[data-newsletter]')) {
+      try { q('[data-newsletter]').checked = global.sessionStorage.getItem(newsletterKey) === '1'; } catch (_) { /* Storage may be unavailable. */ }
+    }
     q('[data-gate]').hidden = true;
     q('[data-live]').hidden = false;
     qa('[data-until-mount]').forEach(el => { el.removeAttribute('inert'); el.removeAttribute('data-until-mount'); });
@@ -243,7 +253,11 @@
       const data = new FormData(holder); data.set('contact[email]', email);
       try {
         const response = await global.fetch(holder.getAttribute('action') || '/contact', { method: 'POST', body: data, credentials: 'same-origin' });
-        const ok = response.ok && !/\/challenge\b/.test(response.url || '');
+        // Solo cuenta como hecho si Shopify redirige con customer_posted=true; un 200 con errores,
+        // la verificación (/challenge) o cualquier respuesta ambigua se informan como no confirmadas.
+        let posted = false;
+        try { posted = new URL(response.url || '', global.location.href).searchParams.get('customer_posted') === 'true'; } catch (_) { /* URL inválida: no confirmada. */ }
+        const ok = response.ok && posted && !/\/challenge\b/.test(response.url || '');
         if (status) status.textContent = ok ? `Listo: te escribiremos a ${email} con novedades y ofertas.` : failed;
       } catch (_) { if (status) status.textContent = failed; }
     }
@@ -255,7 +269,9 @@
       if (!value) return 'Este campo es obligatorio.';
       if (field.matches('[data-contact-email]') && !/^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,63}$/.test(value)) return 'Escribe un correo electrónico válido.';
       if (field.matches('[data-contact-phone]') && (!/^\+?[\d ().-]+$/.test(value) || value.replace(/\D/g, '').length < 7)) return 'Escribe un teléfono válido con al menos 7 dígitos.';
-      if (/[\x00-\x1f\x7f]/.test(value)) return 'Revisa este dato; contiene caracteres no válidos.';
+      // En los textos largos (textarea) los saltos de línea y tabulaciones son normales.
+      const control = field.matches('textarea') ? /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/ : /[\x00-\x1f\x7f]/;
+      if (control.test(value)) return 'Revisa este dato; contiene caracteres no válidos.';
       return field.validity.valid ? '' : 'Revisa el valor de este campo.';
     }
     function markField(field, message) {
@@ -456,6 +472,7 @@
       if (!calendarReady) { showStep(2); return; }
       const date = dateStatus(); if (!date) { showStep(2); return; }
       lastSnapshot = buildInput(selection, date);
+      rememberNewsletter(!!q('[data-newsletter]')?.checked);
       await controller.submit(lastSnapshot, files, guest ? contactInput() : null, guest ? q('[data-website]').value : '');
     });
     q('[data-retry]').addEventListener('click', () => controller.submit(lastSnapshot, files));

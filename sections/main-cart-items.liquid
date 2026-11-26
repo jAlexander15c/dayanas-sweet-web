@@ -121,7 +121,9 @@
                         -%}
                       </div>
 
-                      {%- if item.original_price != item.final_price -%}
+                      {%- comment -%} Modo cotización: sin importes en el carrito. {%- endcomment -%}
+                      {%- if settings.ds_quote_mode -%}
+                      {%- elsif item.original_price != item.final_price -%}
                         <div class="cart-item__discounted-prices">
                           <span class="visually-hidden">
                             {{ 'products.product.price.regular_price' | t }}
@@ -191,6 +193,7 @@
                     <td class="cart-item__totals right medium-hide large-up-hide">
                       {%- render 'loading-spinner' -%}
                       <div class="cart-item__price-wrapper">
+                        {%- unless settings.ds_quote_mode -%}
                         {%- if item.original_line_price != item.final_line_price -%}
                           <dl class="cart-item__discounted-prices">
                             <dt class="visually-hidden">
@@ -217,6 +220,7 @@
                         {%- if item.variant.available and item.unit_price_measurement -%}
                           {% render 'unit-price', price: item.unit_price, measurement: item.unit_price_measurement %}
                         {%- endif -%}
+                        {%- endunless -%}
                       </div>
                     </td>
                     {%- liquid
@@ -384,7 +388,7 @@
                                 {{- 'icon-close.svg' | inline_asset_content -}}
                               </span>
                             </button>
-                            {%- if item.variant.quantity_price_breaks.size > 0 -%}
+                            {%- if item.variant.quantity_price_breaks.size > 0 and settings.ds_quote_mode != true -%}
                               <volume-pricing class="parent-display">
                                 <ul class="list-unstyled">
                                   <li>
@@ -419,6 +423,7 @@
                     <td class="cart-item__totals right small-hide">
                       {%- render 'loading-spinner' -%}
                       <div class="cart-item__price-wrapper">
+                        {%- unless settings.ds_quote_mode -%}
                         {%- if item.original_line_price != item.final_line_price -%}
                           <dl class="cart-item__discounted-prices">
                             <dt class="visually-hidden">
@@ -445,6 +450,7 @@
                         {%- if item.variant.available and item.unit_price_measurement -%}
                           {% render 'unit-price', price: item.unit_price, measurement: item.unit_price_measurement %}
                         {%- endif -%}
+                        {%- endunless -%}
                       </div>
                     </td>
                   </tr>

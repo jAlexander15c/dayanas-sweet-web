@@ -168,7 +168,9 @@
                             -%}
                           </div>
 
-                          {%- if item.original_price != item.final_price -%}
+                          {%- comment -%} Modo cotización: sin importes en el carrito. {%- endcomment -%}
+                          {%- if settings.ds_quote_mode -%}
+                          {%- elsif item.original_price != item.final_price -%}
                             <div class="cart-item__discounted-prices">
                               <span class="visually-hidden">
                                 {{ 'products.product.price.regular_price' | t }}
@@ -250,6 +252,7 @@
                         <td class="cart-item__totals right" role="cell" headers="CartDrawer-ColumnTotal">
                           {%- render 'loading-spinner' -%}
                           <div class="cart-item__price-wrapper">
+                            {%- unless settings.ds_quote_mode -%}
                             {%- if item.original_line_price != item.final_line_price -%}
                               <div class="cart-item__discounted-prices">
                                 <span class="visually-hidden">
@@ -277,6 +280,7 @@
                                 measurement: item.unit_price_measurement
                               %}
                             {%- endif -%}
+                            {%- endunless -%}
                           </div>
                         </td>
                         {%- liquid
@@ -445,7 +449,7 @@
                                     {{- 'icon-close.svg' | inline_asset_content -}}
                                   </span>
                                 </button>
-                                {%- if item.variant.quantity_price_breaks.size > 0 -%}
+                                {%- if item.variant.quantity_price_breaks.size > 0 and settings.ds_quote_mode != true -%}
                                   <volume-pricing class="parent-display">
                                     <ul class="list-unstyled">
                                       <li>
@@ -519,7 +523,7 @@
 
         <div class="cart-drawer__footer" {{ block.shopify_attributes }}>
           <div>
-            {%- if cart.cart_level_discount_applications.size > 0 -%}
+            {%- if cart.cart_level_discount_applications.size > 0 and settings.ds_quote_mode != true -%}
               <ul class="discounts list-unstyled" role="list" aria-label="{{ 'customer.order.discount' | t }}">
                 {%- for discount in cart.cart_level_discount_applications -%}
                   <li class="discounts__discount discounts__discount--end">
@@ -532,10 +536,13 @@
             {%- endif -%}
           </div>
 
+          {%- comment -%} Modo cotización: sin total en el carrito. {%- endcomment -%}
+          {%- unless settings.ds_quote_mode -%}
           <div class="totals" role="status">
             <h2 class="totals__total">{{ 'sections.cart.estimated_total' | t }}</h2>
             <p class="totals__total-value">{{ cart.total_price | money_with_currency }}</p>
           </div>
+          {%- endunless -%}
 
           <small class="tax-note caption-large rte">
             {%- if cart.duties_included and cart.taxes_included -%}
