@@ -137,6 +137,8 @@
               <h3>¿Cómo te contactamos?</h3>
               {% if customer %}
               <p>Usaremos tu cuenta de Shopify: <strong>{{ customer.name | escape }}</strong> · {{ customer.email | escape }}</p>
+              {%- comment -%} Cambiar de cuenta: cierra la sesión y vuelve a esta página (Shopify respeta return_url). Sin sesión, sigue como invitada o entra con otra cuenta. {%- endcomment -%}
+              <p class="ds-request__muted ds-request__switch">¿No eres tú? <a href="{{ routes.account_logout_url }}?return_url={{ request.path | url_encode }}" data-switch-account>Usar otra cuenta</a> · Cerraremos esta sesión y volverás a esta página; lo que llenaste se borrará.</p>
               <p class="ds-request__muted">Podrás leer la cotización y responder a Dayana desde el seguimiento de tu solicitud.</p>
               {% else %}
               <div data-guest-contact class="ds-request__contact">
