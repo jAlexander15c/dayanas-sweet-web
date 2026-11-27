@@ -45,6 +45,11 @@
 .ds-request__decorations{margin-top:24px!important}
 .ds-request__actions{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:28px;padding-top:20px;border-top:1px solid var(--ds-line)}
 .ds-request .ds-request__back{padding:8px 0;border:0;background:none;color:var(--ds-pink);text-decoration:underline;text-underline-offset:5px;border-radius:0}
+/* Cambiar de cuenta: banner antes de los pasos y botones con aspecto de enlace (área táctil de 44 px). */
+.ds-request__account{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;margin:0 0 18px!important;padding:10px 16px;border:1px solid var(--ds-line);border-radius:10px;background:var(--ds-white)}
+.ds-request__account a{padding-block:10px}
+.ds-request .ds-request__link{display:inline;min-height:44px;padding:10px 0;border:0;background:none;color:var(--ds-pink);font:inherit;text-align:left;text-decoration:underline;text-underline-offset:4px;border-radius:0}
+.ds-request .ds-request__link:disabled{color:var(--ds-soft);cursor:not-allowed}
 .ds-request__error{color:#a02645;font-weight:600;margin-top:18px!important}
 .ds-request .ds-request__invalid{color:#b42318}
 .ds-request [aria-invalid="true"]{border:2px solid #b42318!important;outline-color:#b42318;background:#fff6f5!important}

@@ -57,6 +57,14 @@
     {% if customer or section.settings.guest_enabled %}
       <noscript><p class="ds-request__muted">Necesitas JavaScript para completar la solicitud y adjuntar fotos.</p><style>.ds-request [data-live]{display:none!important}</style></noscript>
       <div data-live{% unless ds_request_live %} hidden{% endunless %}>
+        {%- if customer -%}
+          {%- comment -%} La cuenta se muestra antes de llenar nada: cambiarla aquí no hace perder datos. El enlace funciona sin JS (cierra la sesión y vuelve a esta página). {%- endcomment -%}
+          <p class="ds-request__account" data-account-banner>
+            <span data-banner-account>Vas a cotizar como <strong>{{ customer.name | escape }}</strong>.</span>
+            <span data-banner-guest hidden>Enviarás esta solicitud con otro nombre y correo. Tu sesión de Shopify sigue abierta como <strong>{{ customer.name | escape }}</strong>.</span>
+            <span>¿No eres tú? <a href="{{ routes.account_logout_url }}?return_url={{ request.path | url_encode }}" data-switch-account>Usar otra cuenta</a></span>
+          </p>
+        {%- endif -%}
         <ol class="ds-request__steps" aria-label="Pasos de tu solicitud"{% if ds_request_live %} inert data-until-mount{% endif %}>
           <li data-marker="0" aria-current="step"><b>1</b>Tu pastel</li>
           <li data-marker="1"><b>2</b>Tu idea</li>
@@ -136,19 +144,23 @@
               <p class="ds-request__muted">Personalizados normales: desde 7 días. Entre 24 horas y menos de 7 días: solicitud urgente, sujeta a aprobación y recargo. No se aceptan solicitudes con menos de 24 horas. Dayana debe confirmar la disponibilidad.</p>
               <h3>¿Cómo te contactamos?</h3>
               {% if customer %}
-              <p>Usaremos tu cuenta de Shopify: <strong>{{ customer.name | escape }}</strong> · {{ customer.email | escape }}</p>
-              {%- comment -%} Cambiar de cuenta: cierra la sesión y vuelve a esta página (Shopify respeta return_url). Sin sesión, sigue como invitada o entra con otra cuenta. {%- endcomment -%}
-              <p class="ds-request__muted ds-request__switch">¿No eres tú? <a href="{{ routes.account_logout_url }}?return_url={{ request.path | url_encode }}" data-switch-account>Usar otra cuenta</a> · Cerraremos esta sesión y volverás a esta página; lo que llenaste se borrará.</p>
-              <p class="ds-request__muted">Podrás leer la cotización y responder a Dayana desde el seguimiento de tu solicitud.</p>
-              {% else %}
-              <div data-guest-contact class="ds-request__contact">
+              <div data-account-contact>
+                <p>Usaremos tu cuenta de Shopify: <strong>{{ customer.name | escape }}</strong> · {{ customer.email | escape }}</p>
+                {%- comment -%} Otro nombre y correo sin cerrar sesión: cambia el formulario a invitada en la misma página, sin perder selecciones ni fotos. {%- endcomment -%}
+                {% if section.settings.guest_enabled %}<p class="ds-request__muted">¿No eres tú o es para otra persona? <button type="button" class="ds-request__link" data-use-guest>Enviar con otro nombre y correo</button></p>{% endif %}
+                <p class="ds-request__muted">Podrás leer la cotización y responder a Dayana desde el seguimiento de tu solicitud.</p>
+              </div>
+              {% endif %}
+              {% if customer == blank or section.settings.guest_enabled %}
+              <div data-guest-contact class="ds-request__contact"{% if customer %} hidden{% endif %}>
                 <p>Te enviaremos el número de tu cotización y su enlace de seguimiento. No necesitas crear una cuenta.</p>
                 <p class="ds-request__muted">Nombre, correo y teléfono son obligatorios para continuar.</p>
-                <label>Nombre (obligatorio)<input data-contact-name name="name" autocomplete="name" maxlength="120" required></label>
-                <label>Correo electrónico (obligatorio)<input data-contact-email name="email" type="email" autocomplete="email" maxlength="254" required></label>
-                <label>Teléfono (obligatorio)<input data-contact-phone name="phone" type="tel" autocomplete="tel" maxlength="40" required></label>
+                <label>Nombre (obligatorio)<input data-contact-name name="name" autocomplete="name" maxlength="120"{% unless customer %} required{% endunless %}></label>
+                <label>Correo electrónico (obligatorio)<input data-contact-email name="email" type="email" autocomplete="email" maxlength="254"{% unless customer %} required{% endunless %}></label>
+                <label>Teléfono (obligatorio)<input data-contact-phone name="phone" type="tel" autocomplete="tel" maxlength="40"{% unless customer %} required{% endunless %}></label>
                 <label class="ds-request__honeypot" aria-hidden="true">Sitio web<input data-website name="website" tabindex="-1" autocomplete="off"></label>
                 <p class="ds-request__muted">Continuarás a la revisión de tu pastel, fotos y fecha antes de enviar la solicitud.</p>
+                {% if customer %}<p class="ds-request__muted"><button type="button" class="ds-request__link" data-use-account>Usar mi cuenta ({{ customer.name | escape }})</button></p>{% endif %}
               </div>
               {% endif %}
               <label class="ds-request__check"><input type="checkbox" data-newsletter>Quiero recibir novedades y ofertas de Dayana’s Sweet por correo. Puedo darme de baja cuando quiera.</label>
@@ -202,12 +214,13 @@
           </div>
           <p class="ds-request__muted" data-newsletter-status role="status"></p>
           <a class="ds-request__button" data-success-link hidden>Ver mi cotización</a>
-          {% unless customer %}
-          <button type="button" data-copy-link>Copiar enlace</button>
+          {% if customer == blank or section.settings.guest_enabled %}
+          {%- comment -%} Con sesión estos elementos quedan ocultos; el JS los muestra si la solicitud se envió con otro nombre y correo. {%- endcomment -%}
+          <button type="button" data-copy-link data-guest-only{% if customer %} hidden{% endif %}>Copiar enlace</button>
           <label class="ds-request__muted" hidden>Enlace privado<input data-private-link readonly hidden aria-label="Enlace privado de seguimiento"></label>
           <p class="ds-request__muted" data-copy-status role="status"></p>
-          <p class="ds-request__muted">La solicitud todavía no reserva la fecha.</p>
-          {% endunless %}
+          <p class="ds-request__muted" data-guest-only{% if customer %} hidden{% endif %}>La solicitud todavía no reserva la fecha.</p>
+          {% endif %}
         </section>
         {% if customer %}
         <section class="ds-request__requests" aria-labelledby="DSRequestList-{{ section.id }}">

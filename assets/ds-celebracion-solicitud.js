@@ -164,16 +164,25 @@
   }
 
   function mount(root) {
-    const guest = root.dataset.customer !== 'true';
-    if (root.dataset.mounted || root.dataset.enabled !== 'true' || (guest && root.dataset.guestEnabled !== 'true')) return;
+    // `guest` es el modo del envío. Con sesión puede pasar a invitada («otro nombre y correo») y volver,
+    // pero solo antes de enviar: el controlador se rehace y la selección y las fotos siguen en esta página.
+    const signedIn = root.dataset.customer === 'true', guestEnabled = root.dataset.guestEnabled === 'true';
+    let guest = !signedIn;
+    if (root.dataset.mounted || root.dataset.enabled !== 'true' || (guest && !guestEnabled)) return;
     root.dataset.mounted = 'true';
     const q = s => root.querySelector(s), qa = s => Array.from(root.querySelectorAll(s));
-    let service;
-    try { service = createService(root.dataset.proxy, { guest }); } catch (_) { const gate = q('[data-gate]'); gate.textContent = messages.UNAVAILABLE; gate.hidden = false; q('[data-live]').hidden = true; return; }
-    const storageKey = `ds-celebracion-photo-recovery:${guest ? 'guest' : root.dataset.customerKey}`;
-    let recovery;
-    try { recovery = JSON.parse(global.sessionStorage.getItem(storageKey)); } catch (_) { /* Storage may be unavailable. */ }
-    const newsletterKey = `${storageKey}:novedades`;
+    const keyFor = asGuest => `ds-celebracion-photo-recovery:${asGuest ? 'guest' : root.dataset.customerKey}`;
+    const readRecovery = key => { try { return JSON.parse(global.sessionStorage.getItem(key)); } catch (_) { return null; } };
+    // Con sesión, un envío con otro nombre y correo que quedó a medias se retoma en ese modo.
+    if (signedIn && guestEnabled && readRecovery(keyFor(true))?.intent?.capability) guest = true;
+    let service, accountService = null;
+    try {
+      if (signedIn) accountService = createService(root.dataset.proxy, { guest: false });
+      service = guest ? createService(root.dataset.proxy, { guest: true }) : accountService;
+    } catch (_) { const gate = q('[data-gate]'); gate.textContent = messages.UNAVAILABLE; gate.hidden = false; q('[data-live]').hidden = true; return; }
+    let storageKey = keyFor(guest);
+    let recovery = readRecovery(storageKey);
+    const newsletterKey = () => `${storageKey}:novedades`;
     const persist = record => { try { if (record) global.sessionStorage.setItem(storageKey, JSON.stringify(record)); else global.sessionStorage.removeItem(storageKey); } catch (_) { /* In-memory retry still works. */ } };
     const selection = { diameter: 8, tiers: [{ sponges: ['Vainilla', 'Chocolate'], fillings: ['Guayaba', 'Nutella'] }], coating: 'Buttercream', decorations: [], comments: '', cake: true, extras: '' };
     const secondTier = { sponges: ['Vainilla', 'Vainilla'], fillings: ['Dulce de leche', 'Dulce de leche'] };
@@ -188,7 +197,7 @@
       if (guest && controller.state.capability) url.hash = `acceso=${controller.state.capability}`;
       anchor.href = url.pathname + url.search + url.hash; anchor.rel = 'noreferrer'; anchor.hidden = false;
     };
-    const controller = createController(service, state => {
+    const notify = state => {
       form.setAttribute('aria-busy', String(state.busy));
       qa('[data-next], [data-retry], [data-recover-submit]').forEach(b => { b.disabled = state.busy; });
       qa('[data-step] input, [data-step] select, [data-step] textarea, [data-step] button, [data-back]').forEach(el => { el.disabled = !!(state.busy || state.intent || state.id); });
@@ -209,22 +218,47 @@
         q('[data-success]').hidden = false;
         link(q('[data-success-link]'), state.id);
         q('[data-success-title]').focus();
-        if (guest) renderReceipt(state); else loadRequests();
+        if (guest) { renderReceipt(state); qa('[data-guest-only]').forEach(el => { el.hidden = false; }); } else loadRequests();
         if (!newsletterSent && q('[data-newsletter]')?.checked) {
           newsletterSent = true;
           subscribe(state.intent?.contact?.email || state.snapshot?.contact?.email || q('[data-newsletter-form] [name="contact[email]"]')?.value || '');
         }
         rememberNewsletter(false);
       }
-    }, persist, recovery, { guest });
+    };
+    let controller = createController(service, notify, persist, recovery, { guest });
     if (!controller.state.id && !controller.state.intent) recovery = null;
+    // Cambia entre la cuenta y «otro nombre y correo» sin recargar. Solo antes de enviar: con una solicitud
+    // en curso (intent o id) el modo queda fijo para no duplicarla ni mezclar dueños.
+    function applyMode() {
+      if (!signedIn) return;
+      const account = q('[data-account-contact]'), guestContact = q('[data-guest-contact]');
+      if (account) account.hidden = guest;
+      if (guestContact) guestContact.hidden = !guest;
+      qa('[data-guest-contact] [data-contact-name], [data-guest-contact] [data-contact-email], [data-guest-contact] [data-contact-phone]').forEach(field => { field.required = guest; if (!guest) markField(field, ''); });
+      const bannerAccount = q('[data-banner-account]'), bannerGuest = q('[data-banner-guest]');
+      if (bannerAccount) bannerAccount.hidden = guest;
+      if (bannerGuest) bannerGuest.hidden = !guest;
+    }
+    function setMode(asGuest) {
+      if (!signedIn || (asGuest && !guestEnabled) || asGuest === guest) return false;
+      if (controller.state.busy || controller.state.intent || controller.state.id) return false;
+      guest = asGuest;
+      service = guest ? createService(root.dataset.proxy, { guest: true }) : accountService;
+      storageKey = keyFor(guest);
+      controller = createController(service, notify, persist, null, { guest });
+      applyMode();
+      q('[data-error]').hidden = true;
+      (guest ? q('[data-contact-name]') : q('[data-use-guest]'))?.focus();
+      return true;
+    }
     // La casilla de novedades se guarda junto a la recuperación: si el envío se completa al recargar,
     // se respeta lo que la clienta marcó (y nada si no la marcó).
     function rememberNewsletter(checked) {
-      try { if (checked) global.sessionStorage.setItem(newsletterKey, '1'); else global.sessionStorage.removeItem(newsletterKey); } catch (_) { /* Sin almacenamiento, solo vale la casilla visible. */ }
+      try { if (checked) global.sessionStorage.setItem(newsletterKey(), '1'); else global.sessionStorage.removeItem(newsletterKey()); } catch (_) { /* Sin almacenamiento, solo vale la casilla visible. */ }
     }
     if (recovery && q('[data-newsletter]')) {
-      try { q('[data-newsletter]').checked = global.sessionStorage.getItem(newsletterKey) === '1'; } catch (_) { /* Storage may be unavailable. */ }
+      try { q('[data-newsletter]').checked = global.sessionStorage.getItem(newsletterKey()) === '1'; } catch (_) { /* Storage may be unavailable. */ }
     }
     q('[data-gate]').hidden = true;
     q('[data-live]').hidden = false;
@@ -244,7 +278,7 @@
       try { await global.navigator.clipboard.writeText(anchor.href); q('[data-copy-status]').textContent = 'Enlace privado copiado. Guárdalo y no lo compartas.'; }
       catch (_) { q('[data-private-link]').parentElement.hidden = false; q('[data-private-link]').hidden = false; q('[data-private-link]').value = anchor.href; q('[data-private-link]').select(); q('[data-copy-status]').textContent = 'Copia y guarda este enlace privado.'; }
     }
-    if (guest) q('[data-copy-link]').addEventListener('click', copyTracking);
+    q('[data-copy-link]')?.addEventListener('click', copyTracking);
     // Mejor esfuerzo: la cotización ya está enviada; si Shopify pide verificación (captcha) o falla, solo se avisa.
     async function subscribe(email) {
       const status = q('[data-newsletter-status]'), holder = q('[data-newsletter-form] form');
@@ -389,7 +423,7 @@
       const status = q('[data-list-status]');
       status.textContent = 'Consultando tus solicitudes…';
       try {
-        const result = await service.list();
+        const result = await accountService.list();
         if (!Array.isArray(result?.requests)) throw fail('UNAVAILABLE');
         q('[data-requests]').replaceChildren();
         result.requests.forEach(item => {
@@ -479,7 +513,10 @@
     q('[data-edit]').addEventListener('click', () => {
       if (controller.edit()) { recovery = null; q('[data-recovery]').hidden = true; q('[data-layout]').hidden = false; showStep(0); }
     });
-    if (!guest) q('[data-list-retry]').addEventListener('click', loadRequests);
+    if (signedIn) q('[data-list-retry]').addEventListener('click', loadRequests);
+    q('[data-use-guest]')?.addEventListener('click', () => setMode(true));
+    q('[data-use-account]')?.addEventListener('click', () => setMode(false));
+    applyMode();
     q('[data-calendar-retry]').addEventListener('click', loadCalendar);
     if (controller.state.id || controller.state.intent) {
       q('[data-layout]').hidden = true; q('[data-recovery]').hidden = false;
@@ -489,7 +526,7 @@
       q('[data-pending-photos]').textContent = controller.state.photos.filter(p => !p.done).map(p => p.name).join(', ') || 'No hay fotos pendientes.';
       q('[data-recover-submit]').addEventListener('click', () => controller.submit(null, q('[data-recover-files]').files));
     }
-    renderFlavors(); updateSummary(); if (!guest) loadRequests(); loadCalendar();
+    renderFlavors(); updateSummary(); if (signedIn) loadRequests(); loadCalendar();
     global.addEventListener?.('pagehide', () => { previewUrls.forEach(url => global.URL.revokeObjectURL(url)); previewUrls = []; });
   }
   global.DSCelebracionSolicitud = { pickupInfo, validateCalendar, validatePhotos, validContact, buildInput, prefillText, createService, createController, mount };
